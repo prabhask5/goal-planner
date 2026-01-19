@@ -101,7 +101,51 @@ export async function performSync(): Promise<void> {
 }
 
 // ============================================================
-// READ OPERATIONS - Fetch from Supabase when online, cache for offline
+// MERGE HELPERS - Keep newer version based on updated_at
+// ============================================================
+
+interface Timestamped {
+  id: string;
+  updated_at: string;
+}
+
+// Returns true if local is newer than remote
+function isLocalNewer<T extends Timestamped>(local: T | undefined, remote: T): boolean {
+  if (!local) return false;
+  return new Date(local.updated_at) > new Date(remote.updated_at);
+}
+
+// Merge arrays, keeping the newer version of each entity by id
+function mergeByTimestamp<T extends Timestamped>(localItems: T[], remoteItems: T[]): T[] {
+  const localMap = new Map(localItems.map(item => [item.id, item]));
+  const remoteMap = new Map(remoteItems.map(item => [item.id, item]));
+
+  const result: T[] = [];
+  const seenIds = new Set<string>();
+
+  // Process remote items, keeping local if newer
+  for (const remote of remoteItems) {
+    const local = localMap.get(remote.id);
+    if (isLocalNewer(local, remote)) {
+      result.push(local!);
+    } else {
+      result.push(remote);
+    }
+    seenIds.add(remote.id);
+  }
+
+  // Add local-only items (items that exist locally but not in remote - pending creates)
+  for (const local of localItems) {
+    if (!seenIds.has(local.id)) {
+      result.push(local);
+    }
+  }
+
+  return result;
+}
+
+// ============================================================
+// READ OPERATIONS - Fetch from Supabase, merge with local cache
 // ============================================================
 
 // Helper to calculate progress for a list
@@ -136,33 +180,49 @@ export async function fetchGoalLists(): Promise<GoalListWithProgress[]> {
   }
 
   // Online: fetch from Supabase
-  const { data: lists, error } = await supabase
+  const { data: remoteLists, error } = await supabase
     .from('goal_lists')
     .select('*, goals(*)')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
 
-  // Clear and replace local cache with remote data
+  // Get local data for merging
+  const localLists = await db.goalLists.toArray();
+  const localGoals = await db.goals.toArray();
+
+  // Separate goals from lists for merging
+  const remoteGoals: Goal[] = [];
+  const remoteListsOnly: GoalList[] = (remoteLists || []).map(list => {
+    const { goals, ...listData } = list;
+    if (goals) remoteGoals.push(...goals);
+    return listData as GoalList;
+  });
+
+  // Merge keeping newer versions
+  const mergedLists = mergeByTimestamp(localLists, remoteListsOnly);
+  const mergedGoals = mergeByTimestamp(localGoals, remoteGoals);
+
+  // Update cache with merged data
   await db.transaction('rw', [db.goalLists, db.goals], async () => {
     await db.goalLists.clear();
     await db.goals.clear();
-
-    if (lists && lists.length > 0) {
-      for (const list of lists) {
-        const { goals, ...listData } = list;
-        await db.goalLists.put(listData);
-        if (goals && goals.length > 0) {
-          await db.goals.bulkPut(goals);
-        }
-      }
+    if (mergedLists.length > 0) {
+      await db.goalLists.bulkPut(mergedLists);
+    }
+    if (mergedGoals.length > 0) {
+      await db.goals.bulkPut(mergedGoals);
     }
   });
 
-  // Return with progress calculated
-  return (lists || []).map((list) => {
-    const goals = list.goals || [];
-    return { ...list, ...calculateListProgress(goals) };
+  // Return with progress calculated, sorted by created_at desc
+  const sortedLists = mergedLists.sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  return sortedLists.map((list) => {
+    const listGoals = mergedGoals.filter(g => g.goal_list_id === list.id);
+    return { ...list, ...calculateListProgress(listGoals) };
   });
 }
 
@@ -178,16 +238,16 @@ export async function fetchGoalList(id: string): Promise<(GoalList & { goals: Go
   }
 
   // Online: fetch from Supabase
-  const { data: list, error: listError } = await supabase
+  const { data: remoteList, error: listError } = await supabase
     .from('goal_lists')
     .select('*')
     .eq('id', id)
     .single();
 
   if (listError) throw listError;
-  if (!list) return null;
+  if (!remoteList) return null;
 
-  const { data: goals, error: goalsError } = await supabase
+  const { data: remoteGoals, error: goalsError } = await supabase
     .from('goals')
     .select('*')
     .eq('goal_list_id', id)
@@ -195,17 +255,26 @@ export async function fetchGoalList(id: string): Promise<(GoalList & { goals: Go
 
   if (goalsError) throw goalsError;
 
-  // Cache locally
-  await db.goalLists.put(list);
+  // Get local data for merging
+  const localList = await db.goalLists.get(id);
+  const localGoals = await db.goals.where('goal_list_id').equals(id).toArray();
+
+  // Merge keeping newer versions
+  const mergedList = isLocalNewer(localList, remoteList) ? localList! : remoteList;
+  const mergedGoals = mergeByTimestamp(localGoals, remoteGoals || []);
+
+  // Update cache
+  await db.goalLists.put(mergedList);
   await db.transaction('rw', db.goals, async () => {
-    // Remove old goals for this list and add fresh ones
     await db.goals.where('goal_list_id').equals(id).delete();
-    if (goals && goals.length > 0) {
-      await db.goals.bulkPut(goals);
+    if (mergedGoals.length > 0) {
+      await db.goals.bulkPut(mergedGoals);
     }
   });
 
-  return { ...list, goals: goals || [] };
+  // Sort by order and return
+  mergedGoals.sort((a, b) => a.order - b.order);
+  return { ...mergedList, goals: mergedGoals };
 }
 
 // Fetch all daily routine goals
@@ -216,22 +285,31 @@ export async function fetchDailyRoutineGoals(): Promise<DailyRoutineGoal[]> {
   }
 
   // Online: fetch from Supabase
-  const { data, error } = await supabase
+  const { data: remoteRoutines, error } = await supabase
     .from('daily_routine_goals')
     .select('*')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
 
-  // Clear and replace local cache
+  // Get local data for merging
+  const localRoutines = await db.dailyRoutineGoals.toArray();
+
+  // Merge keeping newer versions
+  const mergedRoutines = mergeByTimestamp(localRoutines, remoteRoutines || []);
+
+  // Update cache
   await db.transaction('rw', db.dailyRoutineGoals, async () => {
     await db.dailyRoutineGoals.clear();
-    if (data && data.length > 0) {
-      await db.dailyRoutineGoals.bulkPut(data);
+    if (mergedRoutines.length > 0) {
+      await db.dailyRoutineGoals.bulkPut(mergedRoutines);
     }
   });
 
-  return data || [];
+  // Sort by created_at desc
+  return mergedRoutines.sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 }
 
 // Fetch a single daily routine goal
@@ -242,19 +320,25 @@ export async function fetchDailyRoutineGoal(id: string): Promise<DailyRoutineGoa
   }
 
   // Online: fetch from Supabase
-  const { data, error } = await supabase
+  const { data: remoteRoutine, error } = await supabase
     .from('daily_routine_goals')
     .select('*')
     .eq('id', id)
     .single();
 
   if (error) throw error;
-  if (!data) return null;
+  if (!remoteRoutine) return null;
 
-  // Cache locally
-  await db.dailyRoutineGoals.put(data);
+  // Get local for merging
+  const localRoutine = await db.dailyRoutineGoals.get(id);
 
-  return data;
+  // Keep newer version
+  const mergedRoutine = isLocalNewer(localRoutine, remoteRoutine) ? localRoutine! : remoteRoutine;
+
+  // Update cache
+  await db.dailyRoutineGoals.put(mergedRoutine);
+
+  return mergedRoutine;
 }
 
 // Fetch active routines for a specific date
@@ -270,24 +354,30 @@ export async function fetchActiveRoutinesForDate(date: string): Promise<DailyRou
   }
 
   // Online: fetch from Supabase
-  const { data, error } = await supabase
+  const { data: remoteRoutines, error } = await supabase
     .from('daily_routine_goals')
     .select('*')
     .lte('start_date', date);
 
   if (error) throw error;
 
-  const filtered = (data || []).filter((routine: DailyRoutineGoal) => {
+  // Get local data for merging
+  const localRoutines = await db.dailyRoutineGoals.toArray();
+
+  // Merge keeping newer versions
+  const mergedRoutines = mergeByTimestamp(localRoutines, remoteRoutines || []);
+
+  // Update cache with merged routines
+  if (mergedRoutines.length > 0) {
+    await db.dailyRoutineGoals.bulkPut(mergedRoutines);
+  }
+
+  // Filter for active routines on this date
+  return mergedRoutines.filter((routine) => {
+    if (routine.start_date > date) return false;
     if (routine.end_date && routine.end_date < date) return false;
     return true;
   });
-
-  // Cache all fetched routines
-  if (data && data.length > 0) {
-    await db.dailyRoutineGoals.bulkPut(data);
-  }
-
-  return filtered;
 }
 
 // Fetch daily progress for a specific date
@@ -298,24 +388,28 @@ export async function fetchDailyProgress(date: string): Promise<DailyGoalProgres
   }
 
   // Online: fetch from Supabase
-  const { data, error } = await supabase
+  const { data: remoteProgress, error } = await supabase
     .from('daily_goal_progress')
     .select('*')
     .eq('date', date);
 
   if (error) throw error;
 
-  // Cache locally (replace for this date)
-  if (data) {
-    await db.transaction('rw', db.dailyGoalProgress, async () => {
-      await db.dailyGoalProgress.where('date').equals(date).delete();
-      if (data.length > 0) {
-        await db.dailyGoalProgress.bulkPut(data);
-      }
-    });
-  }
+  // Get local data for merging
+  const localProgress = await db.dailyGoalProgress.where('date').equals(date).toArray();
 
-  return data || [];
+  // Merge keeping newer versions
+  const mergedProgress = mergeByTimestamp(localProgress, remoteProgress || []);
+
+  // Update cache
+  await db.transaction('rw', db.dailyGoalProgress, async () => {
+    await db.dailyGoalProgress.where('date').equals(date).delete();
+    if (mergedProgress.length > 0) {
+      await db.dailyGoalProgress.bulkPut(mergedProgress);
+    }
+  });
+
+  return mergedProgress;
 }
 
 // Fetch month progress for calendar view
@@ -332,7 +426,7 @@ export async function fetchMonthProgress(year: number, month: number): Promise<D
   }
 
   // Online: fetch from Supabase
-  const { data, error } = await supabase
+  const { data: remoteProgress, error } = await supabase
     .from('daily_goal_progress')
     .select('*')
     .gte('date', startDate)
@@ -340,20 +434,27 @@ export async function fetchMonthProgress(year: number, month: number): Promise<D
 
   if (error) throw error;
 
-  // Cache locally (replace for this date range)
-  if (data) {
-    await db.transaction('rw', db.dailyGoalProgress, async () => {
-      await db.dailyGoalProgress
-        .where('date')
-        .between(startDate, endDate, true, true)
-        .delete();
-      if (data.length > 0) {
-        await db.dailyGoalProgress.bulkPut(data);
-      }
-    });
-  }
+  // Get local data for merging
+  const localProgress = await db.dailyGoalProgress
+    .where('date')
+    .between(startDate, endDate, true, true)
+    .toArray();
 
-  return data || [];
+  // Merge keeping newer versions
+  const mergedProgress = mergeByTimestamp(localProgress, remoteProgress || []);
+
+  // Update cache
+  await db.transaction('rw', db.dailyGoalProgress, async () => {
+    await db.dailyGoalProgress
+      .where('date')
+      .between(startDate, endDate, true, true)
+      .delete();
+    if (mergedProgress.length > 0) {
+      await db.dailyGoalProgress.bulkPut(mergedProgress);
+    }
+  });
+
+  return mergedProgress;
 }
 
 // ============================================================
