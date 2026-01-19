@@ -1,12 +1,20 @@
 import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/db/client';
-import { getPendingSync, removeSyncItem, incrementRetry } from './queue';
+import { getPendingSync, removeSyncItem, incrementRetry, getPendingItemsByEntityId, removeSyncItemsForEntity } from './queue';
 import type { SyncQueueItem, Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress } from '$lib/types';
 import { syncStatusStore } from '$lib/stores/sync';
 import { calculateGoalProgress } from '$lib/utils/colors';
 
 let syncTimeout: ReturnType<typeof setTimeout> | null = null;
 const SYNC_DEBOUNCE_MS = 1500; // 1.5 seconds debounce for writes
+
+// Callbacks for auto-refresh on reconnection
+const reconnectionCallbacks: Set<() => Promise<void>> = new Set();
+
+export function onReconnection(callback: () => Promise<void>): () => void {
+  reconnectionCallbacks.add(callback);
+  return () => reconnectionCallbacks.delete(callback);
+}
 
 // ============================================================
 // WRITE OPERATIONS - Debounced background sync to Supabase
@@ -62,8 +70,9 @@ export async function pushChanges(): Promise<void> {
   }
 }
 
-async function processSyncItem(item: SyncQueueItem): Promise<void> {
+async function processSyncItem(item: SyncQueueItem): Promise<'applied' | 'discarded' | 'error'> {
   const { table, operation, entityId, payload } = item;
+  const localUpdatedAt = payload.updated_at as string | undefined;
 
   switch (operation) {
     case 'create': {
@@ -74,15 +83,48 @@ async function processSyncItem(item: SyncQueueItem): Promise<void> {
       if (error && !error.message.includes('duplicate')) {
         throw error;
       }
-      break;
+      return 'applied';
     }
     case 'update': {
+      // First, fetch current remote data to compare timestamps
+      const { data: remoteData, error: fetchError } = await supabase
+        .from(table)
+        .select('updated_at')
+        .eq('id', entityId)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 = row not found
+        throw fetchError;
+      }
+
+      // If remote doesn't exist (was deleted), discard this update
+      if (!remoteData) {
+        console.log(`Entity ${entityId} no longer exists in remote, discarding update`);
+        return 'discarded';
+      }
+
+      // Compare timestamps - only apply if local is newer
+      const remoteUpdatedAt = remoteData.updated_at as string;
+      if (localUpdatedAt && remoteUpdatedAt) {
+        const localTime = new Date(localUpdatedAt).getTime();
+        const remoteTime = new Date(remoteUpdatedAt).getTime();
+
+        if (remoteTime > localTime) {
+          // Remote is newer, discard this sync and update local cache with remote data
+          console.log(`Remote is newer for ${entityId}, discarding local sync`);
+          await syncRemoteToLocal(table, entityId);
+          return 'discarded';
+        }
+      }
+
+      // Local is newer or equal, apply the update
       const { error } = await supabase
         .from(table)
         .update(payload)
         .eq('id', entityId);
       if (error) throw error;
-      break;
+      return 'applied';
     }
     case 'delete': {
       const { error } = await supabase
@@ -90,8 +132,35 @@ async function processSyncItem(item: SyncQueueItem): Promise<void> {
         .delete()
         .eq('id', entityId);
       if (error) throw error;
-      break;
+      return 'applied';
     }
+  }
+  return 'applied';
+}
+
+// Sync a single entity from remote to local cache
+async function syncRemoteToLocal(table: SyncQueueItem['table'], entityId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from(table)
+    .select('*')
+    .eq('id', entityId)
+    .single();
+
+  if (error || !data) return;
+
+  switch (table) {
+    case 'goal_lists':
+      await db.goalLists.put(data as GoalList);
+      break;
+    case 'goals':
+      await db.goals.put(data as Goal);
+      break;
+    case 'daily_routine_goals':
+      await db.dailyRoutineGoals.put(data as DailyRoutineGoal);
+      break;
+    case 'daily_goal_progress':
+      await db.dailyGoalProgress.put(data as DailyGoalProgress);
+      break;
   }
 }
 
@@ -116,19 +185,44 @@ function isLocalNewer<T extends Timestamped>(local: T | undefined, remote: T): b
 }
 
 // Merge arrays, keeping the newer version of each entity by id
-function mergeByTimestamp<T extends Timestamped>(localItems: T[], remoteItems: T[]): T[] {
+// pendingItems: map of entity IDs to pending sync items - used to compare timestamps
+// staleEntityIds: output set that will be populated with entity IDs whose pending syncs are stale
+function mergeByTimestamp<T extends Timestamped>(
+  localItems: T[],
+  remoteItems: T[],
+  pendingItems: Map<string, SyncQueueItem>,
+  staleEntityIds?: Set<string>
+): T[] {
   const localMap = new Map(localItems.map(item => [item.id, item]));
-  const remoteMap = new Map(remoteItems.map(item => [item.id, item]));
 
   const result: T[] = [];
   const seenIds = new Set<string>();
 
-  // Process remote items, keeping local if newer
+  // Process remote items
   for (const remote of remoteItems) {
     const local = localMap.get(remote.id);
-    if (isLocalNewer(local, remote)) {
+    const pendingItem = pendingItems.get(remote.id);
+
+    if (local && pendingItem) {
+      // There's a pending sync for this entity - compare actual timestamps
+      const localUpdatedAt = new Date(local.updated_at).getTime();
+      const remoteUpdatedAt = new Date(remote.updated_at).getTime();
+
+      if (remoteUpdatedAt > localUpdatedAt) {
+        // Remote is newer - use remote, mark pending as stale
+        result.push(remote);
+        if (staleEntityIds) {
+          staleEntityIds.add(remote.id);
+        }
+      } else {
+        // Local is newer or equal - use local
+        result.push(local);
+      }
+    } else if (isLocalNewer(local, remote)) {
+      // No pending sync but local is newer (shouldn't happen normally)
       result.push(local!);
     } else {
+      // Use remote
       result.push(remote);
     }
     seenIds.add(remote.id);
@@ -165,6 +259,14 @@ function calculateListProgress(goals: Goal[]): { totalGoals: number; completedGo
   };
 }
 
+// Discard stale pending syncs for entities where remote is newer
+async function discardStaleSyncs(staleEntityIds: Set<string>): Promise<void> {
+  for (const entityId of staleEntityIds) {
+    await removeSyncItemsForEntity(entityId);
+    console.log(`Discarded stale pending syncs for entity ${entityId}`);
+  }
+}
+
 // Fetch all goal lists with progress
 export async function fetchGoalLists(): Promise<GoalListWithProgress[]> {
   // If offline, return from cache
@@ -187,6 +289,10 @@ export async function fetchGoalLists(): Promise<GoalListWithProgress[]> {
 
   if (error) throw error;
 
+  // Get pending items for merge decisions
+  const pendingItems = await getPendingItemsByEntityId();
+  const staleEntityIds = new Set<string>();
+
   // Get local data for merging
   const localLists = await db.goalLists.toArray();
   const localGoals = await db.goals.toArray();
@@ -199,9 +305,12 @@ export async function fetchGoalLists(): Promise<GoalListWithProgress[]> {
     return listData as GoalList;
   });
 
-  // Merge keeping newer versions
-  const mergedLists = mergeByTimestamp(localLists, remoteListsOnly);
-  const mergedGoals = mergeByTimestamp(localGoals, remoteGoals);
+  // Merge keeping newer versions, track stale entities
+  const mergedLists = mergeByTimestamp(localLists, remoteListsOnly, pendingItems, staleEntityIds);
+  const mergedGoals = mergeByTimestamp(localGoals, remoteGoals, pendingItems, staleEntityIds);
+
+  // Discard stale pending syncs
+  await discardStaleSyncs(staleEntityIds);
 
   // Update cache with merged data
   await db.transaction('rw', [db.goalLists, db.goals], async () => {
@@ -255,13 +364,37 @@ export async function fetchGoalList(id: string): Promise<(GoalList & { goals: Go
 
   if (goalsError) throw goalsError;
 
+  // Get pending items for merge decisions
+  const pendingItems = await getPendingItemsByEntityId();
+  const staleEntityIds = new Set<string>();
+
   // Get local data for merging
   const localList = await db.goalLists.get(id);
   const localGoals = await db.goals.where('goal_list_id').equals(id).toArray();
 
   // Merge keeping newer versions
-  const mergedList = isLocalNewer(localList, remoteList) ? localList! : remoteList;
-  const mergedGoals = mergeByTimestamp(localGoals, remoteGoals || []);
+  const pendingItem = pendingItems.get(id);
+  let mergedList: GoalList;
+
+  if (localList && pendingItem) {
+    const localTime = new Date(localList.updated_at).getTime();
+    const remoteTime = new Date(remoteList.updated_at).getTime();
+    if (remoteTime > localTime) {
+      mergedList = remoteList;
+      staleEntityIds.add(id);
+    } else {
+      mergedList = localList;
+    }
+  } else if (isLocalNewer(localList, remoteList)) {
+    mergedList = localList!;
+  } else {
+    mergedList = remoteList;
+  }
+
+  const mergedGoals = mergeByTimestamp(localGoals, remoteGoals || [], pendingItems, staleEntityIds);
+
+  // Discard stale pending syncs
+  await discardStaleSyncs(staleEntityIds);
 
   // Update cache
   await db.goalLists.put(mergedList);
@@ -292,11 +425,18 @@ export async function fetchDailyRoutineGoals(): Promise<DailyRoutineGoal[]> {
 
   if (error) throw error;
 
+  // Get pending items for merge decisions
+  const pendingItems = await getPendingItemsByEntityId();
+  const staleEntityIds = new Set<string>();
+
   // Get local data for merging
   const localRoutines = await db.dailyRoutineGoals.toArray();
 
-  // Merge keeping newer versions
-  const mergedRoutines = mergeByTimestamp(localRoutines, remoteRoutines || []);
+  // Merge keeping newer versions, track stale entities
+  const mergedRoutines = mergeByTimestamp(localRoutines, remoteRoutines || [], pendingItems, staleEntityIds);
+
+  // Discard stale pending syncs
+  await discardStaleSyncs(staleEntityIds);
 
   // Update cache
   await db.transaction('rw', db.dailyRoutineGoals, async () => {
@@ -329,11 +469,30 @@ export async function fetchDailyRoutineGoal(id: string): Promise<DailyRoutineGoa
   if (error) throw error;
   if (!remoteRoutine) return null;
 
+  // Get pending items for merge decisions
+  const pendingItems = await getPendingItemsByEntityId();
+
   // Get local for merging
   const localRoutine = await db.dailyRoutineGoals.get(id);
+  const pendingItem = pendingItems.get(id);
 
-  // Keep newer version
-  const mergedRoutine = isLocalNewer(localRoutine, remoteRoutine) ? localRoutine! : remoteRoutine;
+  let mergedRoutine: DailyRoutineGoal;
+
+  if (localRoutine && pendingItem) {
+    const localTime = new Date(localRoutine.updated_at).getTime();
+    const remoteTime = new Date(remoteRoutine.updated_at).getTime();
+    if (remoteTime > localTime) {
+      mergedRoutine = remoteRoutine;
+      // Discard stale sync
+      await removeSyncItemsForEntity(id);
+    } else {
+      mergedRoutine = localRoutine;
+    }
+  } else if (isLocalNewer(localRoutine, remoteRoutine)) {
+    mergedRoutine = localRoutine!;
+  } else {
+    mergedRoutine = remoteRoutine;
+  }
 
   // Update cache
   await db.dailyRoutineGoals.put(mergedRoutine);
@@ -361,11 +520,18 @@ export async function fetchActiveRoutinesForDate(date: string): Promise<DailyRou
 
   if (error) throw error;
 
+  // Get pending items for merge decisions
+  const pendingItems = await getPendingItemsByEntityId();
+  const staleEntityIds = new Set<string>();
+
   // Get local data for merging
   const localRoutines = await db.dailyRoutineGoals.toArray();
 
-  // Merge keeping newer versions
-  const mergedRoutines = mergeByTimestamp(localRoutines, remoteRoutines || []);
+  // Merge keeping newer versions, track stale entities
+  const mergedRoutines = mergeByTimestamp(localRoutines, remoteRoutines || [], pendingItems, staleEntityIds);
+
+  // Discard stale pending syncs
+  await discardStaleSyncs(staleEntityIds);
 
   // Update cache with merged routines
   if (mergedRoutines.length > 0) {
@@ -395,11 +561,18 @@ export async function fetchDailyProgress(date: string): Promise<DailyGoalProgres
 
   if (error) throw error;
 
+  // Get pending items for merge decisions
+  const pendingItems = await getPendingItemsByEntityId();
+  const staleEntityIds = new Set<string>();
+
   // Get local data for merging
   const localProgress = await db.dailyGoalProgress.where('date').equals(date).toArray();
 
-  // Merge keeping newer versions
-  const mergedProgress = mergeByTimestamp(localProgress, remoteProgress || []);
+  // Merge keeping newer versions, track stale entities
+  const mergedProgress = mergeByTimestamp(localProgress, remoteProgress || [], pendingItems, staleEntityIds);
+
+  // Discard stale pending syncs
+  await discardStaleSyncs(staleEntityIds);
 
   // Update cache
   await db.transaction('rw', db.dailyGoalProgress, async () => {
@@ -434,14 +607,21 @@ export async function fetchMonthProgress(year: number, month: number): Promise<D
 
   if (error) throw error;
 
+  // Get pending items for merge decisions
+  const pendingItems = await getPendingItemsByEntityId();
+  const staleEntityIds = new Set<string>();
+
   // Get local data for merging
   const localProgress = await db.dailyGoalProgress
     .where('date')
     .between(startDate, endDate, true, true)
     .toArray();
 
-  // Merge keeping newer versions
-  const mergedProgress = mergeByTimestamp(localProgress, remoteProgress || []);
+  // Merge keeping newer versions, track stale entities
+  const mergedProgress = mergeByTimestamp(localProgress, remoteProgress || [], pendingItems, staleEntityIds);
+
+  // Discard stale pending syncs
+  await discardStaleSyncs(staleEntityIds);
 
   // Update cache
   await db.transaction('rw', db.dailyGoalProgress, async () => {
@@ -461,12 +641,27 @@ export async function fetchMonthProgress(year: number, month: number): Promise<D
 // LIFECYCLE - Start/stop sync engine
 // ============================================================
 
+// Handler for online event
+async function handleOnline(): Promise<void> {
+  console.log('Connection restored - syncing and refreshing...');
+
+  // First push any valid pending changes (stale ones will be discarded by processSyncItem)
+  await pushChanges();
+
+  // Then trigger all reconnection callbacks to refresh UI with latest data
+  for (const callback of reconnectionCallbacks) {
+    try {
+      await callback();
+    } catch (error) {
+      console.error('Reconnection callback failed:', error);
+    }
+  }
+}
+
 export function startSyncEngine(): void {
   if (typeof window === 'undefined') return;
 
-  window.addEventListener('online', () => {
-    pushChanges();
-  });
+  window.addEventListener('online', handleOnline);
 
   // Push any pending changes on start
   if (navigator.onLine) {
@@ -477,7 +672,7 @@ export function startSyncEngine(): void {
 export function stopSyncEngine(): void {
   if (typeof window === 'undefined') return;
 
-  window.removeEventListener('online', pushChanges);
+  window.removeEventListener('online', handleOnline);
   if (syncTimeout) {
     clearTimeout(syncTimeout);
     syncTimeout = null;
