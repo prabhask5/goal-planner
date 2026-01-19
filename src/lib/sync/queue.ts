@@ -51,33 +51,3 @@ export async function pruneFailedItems(): Promise<void> {
     }
   }
 }
-
-// Get entity IDs that have pending sync operations
-export async function getPendingEntityIds(): Promise<Set<string>> {
-  const pending = await db.syncQueue.toArray();
-  return new Set(pending.map(item => item.entityId));
-}
-
-// Get pending items mapped by entity ID for timestamp comparison
-export async function getPendingItemsByEntityId(): Promise<Map<string, SyncQueueItem>> {
-  const pending = await db.syncQueue.toArray();
-  const map = new Map<string, SyncQueueItem>();
-  // Keep the most recent sync item for each entity
-  for (const item of pending) {
-    const existing = map.get(item.entityId);
-    if (!existing || new Date(item.timestamp) > new Date(existing.timestamp)) {
-      map.set(item.entityId, item);
-    }
-  }
-  return map;
-}
-
-// Remove sync items for a specific entity
-export async function removeSyncItemsForEntity(entityId: string): Promise<void> {
-  const items = await db.syncQueue.where('entityId').equals(entityId).toArray();
-  for (const item of items) {
-    if (item.id) {
-      await db.syncQueue.delete(item.id);
-    }
-  }
-}
