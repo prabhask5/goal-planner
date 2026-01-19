@@ -34,7 +34,7 @@ export async function createGoal(
 
   await db.goals.add(newGoal);
 
-  // Queue for sync
+  // Queue for sync - include all fields for consistency
   await queueSync('goals', 'create', newGoal.id, {
     goal_list_id: goalListId,
     name,
@@ -42,7 +42,9 @@ export async function createGoal(
     target_value: newGoal.target_value,
     current_value: 0,
     completed: false,
-    order: nextOrder
+    order: nextOrder,
+    created_at: timestamp,
+    updated_at: timestamp
   });
 
   return newGoal;

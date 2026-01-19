@@ -67,12 +67,13 @@ export async function upsertDailyProgress(
 
   await db.dailyGoalProgress.add(newProgress);
 
-  // Queue for sync
+  // Queue for sync - include all fields for consistency
   await queueSync('daily_goal_progress', 'create', newProgress.id, {
     daily_routine_goal_id: dailyRoutineGoalId,
     date,
     current_value: currentValue,
-    completed
+    completed,
+    updated_at: timestamp
   });
 
   return newProgress;

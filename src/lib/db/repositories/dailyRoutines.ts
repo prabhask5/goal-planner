@@ -45,14 +45,16 @@ export async function createDailyRoutineGoal(
 
   await db.dailyRoutineGoals.add(newRoutine);
 
-  // Queue for sync
+  // Queue for sync - include all fields for consistency
   await queueSync('daily_routine_goals', 'create', newRoutine.id, {
     user_id: userId,
     name,
     type,
     target_value: newRoutine.target_value,
     start_date: startDate,
-    end_date: endDate
+    end_date: endDate,
+    created_at: timestamp,
+    updated_at: timestamp
   });
 
   return newRoutine;

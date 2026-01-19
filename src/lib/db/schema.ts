@@ -11,13 +11,13 @@ export class GoalPlannerDB extends Dexie {
   constructor() {
     super('GoalPlannerDB');
 
-    this.version(1).stores({
-      // Primary key is id, indexed by user_id and updated_at for sync
-      goalLists: 'id, user_id, updated_at',
+    this.version(2).stores({
+      // Primary key is id, indexed by user_id, created_at for sorting, updated_at for sync
+      goalLists: 'id, user_id, created_at, updated_at',
       // Primary key is id, indexed by goal_list_id for fetching goals in a list
-      goals: 'id, goal_list_id, updated_at',
-      // Primary key is id, indexed by user_id, start_date, end_date for date filtering
-      dailyRoutineGoals: 'id, user_id, start_date, end_date, updated_at',
+      goals: 'id, goal_list_id, created_at, updated_at',
+      // Primary key is id, indexed by user_id, start_date, end_date for date filtering, created_at for sorting
+      dailyRoutineGoals: 'id, user_id, start_date, end_date, created_at, updated_at',
       // Primary key is id, compound index for finding progress by goal+date
       dailyGoalProgress: 'id, daily_routine_goal_id, date, [daily_routine_goal_id+date], updated_at',
       // Auto-increment id for sync queue, indexed by table for batch operations

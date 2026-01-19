@@ -1,7 +1,8 @@
 import { browser } from '$app/environment';
 import { getSession } from '$lib/supabase/auth';
 import { isOnline } from '$lib/stores/network';
-import { startSyncEngine, fullSync } from '$lib/sync/engine';
+import { startSyncEngine, fullSync, performSync } from '$lib/sync/engine';
+import { db } from '$lib/db/client';
 import type { LayoutLoad } from './$types';
 
 export const ssr = true;
@@ -34,10 +35,22 @@ export const load: LayoutLoad = async () => {
 
     // If user is logged in, initialize sync
     if (session) {
-      // Do full sync on first load to populate IndexedDB
       const hasInitialized = localStorage.getItem('lastSyncTimestamp');
-      if (!hasInitialized) {
+
+      // Check if IndexedDB is empty (could have been cleared by browser)
+      // If localStorage has timestamp but IndexedDB is empty, we need a full sync
+      const localCount = await db.goalLists.count();
+      const needsFullSync = !hasInitialized || (hasInitialized && localCount === 0 && navigator.onLine);
+
+      if (needsFullSync) {
+        // Clear stale timestamp if IndexedDB was empty
+        if (hasInitialized && localCount === 0) {
+          localStorage.removeItem('lastSyncTimestamp');
+        }
         await fullSync();
+      } else {
+        // Do an immediate sync to pull any recent changes
+        await performSync();
       }
 
       // Start the sync engine for background sync

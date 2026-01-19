@@ -56,10 +56,12 @@ export async function createGoalList(name: string, userId: string): Promise<Goal
 
   await db.goalLists.add(newList);
 
-  // Queue for sync
+  // Queue for sync - include all fields for consistency
   await queueSync('goal_lists', 'create', newList.id, {
     name,
-    user_id: userId
+    user_id: userId,
+    created_at: timestamp,
+    updated_at: timestamp
   });
 
   return newList;
