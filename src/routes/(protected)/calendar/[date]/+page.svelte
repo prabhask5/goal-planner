@@ -1,14 +1,9 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import {
-    getDailyRoutineGoals,
-    getDailyProgress,
-    upsertDailyProgress,
-    incrementDailyProgress
-  } from '$lib/supabase/database';
-  import { formatDisplayDate, isDateInRange, isPastDay, isTodayDate } from '$lib/utils/dates';
+  import { onMount, onDestroy } from 'svelte';
+  import { dailyProgressStore } from '$lib/stores/data';
+  import { formatDisplayDate, isPastDay, isTodayDate } from '$lib/utils/dates';
   import { calculateGoalProgress } from '$lib/utils/colors';
   import type { DailyRoutineGoal, DailyGoalProgress } from '$lib/types';
   import GoalItem from '$lib/components/GoalItem.svelte';
@@ -20,7 +15,8 @@
     progress?: DailyGoalProgress;
   }
 
-  let goalsWithProgress = $state<GoalWithProgress[]>([]);
+  let routines = $state<DailyRoutineGoal[]>([]);
+  let progressMap = $state<Map<string, DailyGoalProgress>>(new Map());
   let loading = $state(true);
   let error = $state<string | null>(null);
 
@@ -28,6 +24,14 @@
   const date = $derived(parseISO(dateStr));
   const displayDate = $derived(formatDisplayDate(dateStr));
   const canEdit = $derived(isPastDay(date) || isTodayDate(date));
+
+  // Derive goals with their progress attached
+  const goalsWithProgress = $derived<GoalWithProgress[]>(
+    routines.map((routine) => ({
+      ...routine,
+      progress: progressMap.get(routine.id)
+    }))
+  );
 
   const totalProgress = $derived(() => {
     if (goalsWithProgress.length === 0) return 0;
@@ -39,31 +43,38 @@
     return Math.round(total / goalsWithProgress.length);
   });
 
+  // Subscribe to store
+  $effect(() => {
+    const unsubStore = dailyProgressStore.subscribe((value) => {
+      if (value) {
+        routines = value.routines;
+        progressMap = value.progress;
+      }
+    });
+    const unsubLoading = dailyProgressStore.loading.subscribe((value) => {
+      loading = value;
+    });
+
+    return () => {
+      unsubStore();
+      unsubLoading();
+    };
+  });
+
   onMount(async () => {
     await loadData();
   });
 
+  onDestroy(() => {
+    dailyProgressStore.clear();
+  });
+
   async function loadData() {
     try {
-      loading = true;
       error = null;
-
-      const [allGoals, dayProgress] = await Promise.all([
-        getDailyRoutineGoals(),
-        getDailyProgress(dateStr)
-      ]);
-
-      // Filter goals active on this date and attach progress
-      goalsWithProgress = allGoals
-        .filter((goal) => isDateInRange(date, goal.start_date, goal.end_date))
-        .map((goal) => ({
-          ...goal,
-          progress: dayProgress.find((p) => p.daily_routine_goal_id === goal.id)
-        }));
+      await dailyProgressStore.load(dateStr);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load data';
-    } finally {
-      loading = false;
     }
   }
 
@@ -71,17 +82,7 @@
     if (!canEdit) return;
 
     try {
-      const newCompleted = !(goal.progress?.completed ?? false);
-      const newProgress = await upsertDailyProgress(
-        goal.id,
-        dateStr,
-        newCompleted ? 1 : 0,
-        newCompleted
-      );
-
-      goalsWithProgress = goalsWithProgress.map((g) =>
-        g.id === goal.id ? { ...g, progress: newProgress } : g
-      );
+      await dailyProgressStore.toggleComplete(goal.id, dateStr);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to update progress';
     }
@@ -91,28 +92,7 @@
     if (!canEdit || goal.type !== 'incremental') return;
 
     try {
-      if (amount > 0) {
-        const newProgress = await incrementDailyProgress(
-          goal.id,
-          dateStr,
-          goal.target_value ?? 1,
-          amount
-        );
-
-        goalsWithProgress = goalsWithProgress.map((g) =>
-          g.id === goal.id ? { ...g, progress: newProgress } : g
-        );
-      } else {
-        const currentValue = goal.progress?.current_value ?? 0;
-        const newValue = Math.max(0, currentValue + amount);
-        const completed = goal.target_value ? newValue >= goal.target_value : false;
-
-        const newProgress = await upsertDailyProgress(goal.id, dateStr, newValue, completed);
-
-        goalsWithProgress = goalsWithProgress.map((g) =>
-          g.id === goal.id ? { ...g, progress: newProgress } : g
-        );
-      }
+      await dailyProgressStore.increment(goal.id, dateStr, goal.target_value ?? 1, amount);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to update progress';
     }

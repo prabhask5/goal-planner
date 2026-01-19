@@ -1,34 +1,39 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { getGoalLists, createGoalList, deleteGoalList } from '$lib/supabase/database';
+  import { page } from '$app/stores';
+  import { goalListsStore } from '$lib/stores/data';
   import type { GoalListWithProgress } from '$lib/types';
   import ProgressBar from '$lib/components/ProgressBar.svelte';
   import Modal from '$lib/components/Modal.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
 
-  let lists = $state<GoalListWithProgress[]>([]);
-  let loading = $state(true);
   let error = $state<string | null>(null);
   let showCreateModal = $state(false);
   let newListName = $state('');
   let creating = $state(false);
 
-  onMount(async () => {
-    await loadLists();
+  // Subscribe to stores
+  let lists = $state<GoalListWithProgress[]>([]);
+  let loading = $state(true);
+
+  $effect(() => {
+    const unsubLists = goalListsStore.subscribe((value) => {
+      lists = value;
+    });
+    const unsubLoading = goalListsStore.loading.subscribe((value) => {
+      loading = value;
+    });
+
+    return () => {
+      unsubLists();
+      unsubLoading();
+    };
   });
 
-  async function loadLists() {
-    try {
-      loading = true;
-      error = null;
-      lists = await getGoalLists();
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load lists';
-    } finally {
-      loading = false;
-    }
-  }
+  onMount(async () => {
+    await goalListsStore.load();
+  });
 
   async function handleCreateList(event: Event) {
     event.preventDefault();
@@ -36,8 +41,12 @@
 
     try {
       creating = true;
-      const newList = await createGoalList(newListName.trim());
-      lists = [{ ...newList, totalGoals: 0, completedGoals: 0, completionPercentage: 0 }, ...lists];
+      const session = $page.data.session;
+      if (!session?.user?.id) {
+        error = 'Not authenticated';
+        return;
+      }
+      await goalListsStore.create(newListName.trim(), session.user.id);
       newListName = '';
       showCreateModal = false;
     } catch (e) {
@@ -51,8 +60,7 @@
     if (!confirm('Are you sure you want to delete this list and all its goals?')) return;
 
     try {
-      await deleteGoalList(id);
-      lists = lists.filter((l) => l.id !== id);
+      await goalListsStore.delete(id);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to delete list';
     }

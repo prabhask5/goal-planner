@@ -1,12 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import {
-    getDailyRoutineGoal,
-    updateDailyRoutineGoal,
-    deleteDailyRoutineGoal
-  } from '$lib/supabase/database';
+  import { onMount, onDestroy } from 'svelte';
+  import { routineStore, dailyRoutinesStore } from '$lib/stores/data';
   import type { DailyRoutineGoal, GoalType } from '$lib/types';
   import RoutineForm from '$lib/components/RoutineForm.svelte';
 
@@ -17,21 +13,28 @@
 
   const routineId = $derived($page.params.id);
 
-  onMount(async () => {
-    await loadRoutine();
+  // Subscribe to store
+  $effect(() => {
+    const unsubRoutine = routineStore.subscribe((value) => {
+      routine = value;
+    });
+    const unsubLoading = routineStore.loading.subscribe((value) => {
+      loading = value;
+    });
+
+    return () => {
+      unsubRoutine();
+      unsubLoading();
+    };
   });
 
-  async function loadRoutine() {
-    try {
-      loading = true;
-      error = null;
-      routine = await getDailyRoutineGoal(routineId);
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load routine';
-    } finally {
-      loading = false;
-    }
-  }
+  onMount(async () => {
+    await routineStore.load(routineId);
+  });
+
+  onDestroy(() => {
+    routineStore.clear();
+  });
 
   async function handleUpdateRoutine(data: {
     name: string;
@@ -44,7 +47,7 @@
 
     try {
       saving = true;
-      await updateDailyRoutineGoal(routine.id, {
+      await routineStore.update(routine.id, {
         name: data.name,
         type: data.type,
         target_value: data.targetValue,
@@ -63,7 +66,7 @@
     if (!confirm('Delete this routine? All associated progress data will be lost.')) return;
 
     try {
-      await deleteDailyRoutineGoal(routine.id);
+      await dailyRoutinesStore.delete(routine.id);
       goto('/routines');
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to delete routine';

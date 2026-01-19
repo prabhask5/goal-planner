@@ -1,11 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import {
-    getDailyRoutineGoals,
-    createDailyRoutineGoal,
-    deleteDailyRoutineGoal
-  } from '$lib/supabase/database';
+  import { page } from '$app/stores';
+  import { dailyRoutinesStore } from '$lib/stores/data';
   import { formatDisplayDate, isDateInRange, formatDate } from '$lib/utils/dates';
   import type { DailyRoutineGoal, GoalType } from '$lib/types';
   import Modal from '$lib/components/Modal.svelte';
@@ -26,21 +23,24 @@
     routines.filter((r) => !isDateInRange(today, r.start_date, r.end_date))
   );
 
-  onMount(async () => {
-    await loadRoutines();
+  // Subscribe to store
+  $effect(() => {
+    const unsubRoutines = dailyRoutinesStore.subscribe((value) => {
+      routines = value;
+    });
+    const unsubLoading = dailyRoutinesStore.loading.subscribe((value) => {
+      loading = value;
+    });
+
+    return () => {
+      unsubRoutines();
+      unsubLoading();
+    };
   });
 
-  async function loadRoutines() {
-    try {
-      loading = true;
-      error = null;
-      routines = await getDailyRoutineGoals();
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load routines';
-    } finally {
-      loading = false;
-    }
-  }
+  onMount(async () => {
+    await dailyRoutinesStore.load();
+  });
 
   async function handleCreateRoutine(data: {
     name: string;
@@ -50,14 +50,19 @@
     endDate: string | null;
   }) {
     try {
-      const newRoutine = await createDailyRoutineGoal(
+      const session = $page.data.session;
+      if (!session?.user?.id) {
+        error = 'Not authenticated';
+        return;
+      }
+      await dailyRoutinesStore.create(
         data.name,
         data.type,
         data.targetValue,
         data.startDate,
-        data.endDate
+        data.endDate,
+        session.user.id
       );
-      routines = [newRoutine, ...routines];
       showCreateModal = false;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to create routine';
@@ -68,8 +73,7 @@
     if (!confirm('Delete this routine? All associated progress data will be lost.')) return;
 
     try {
-      await deleteDailyRoutineGoal(id);
-      routines = routines.filter((r) => r.id !== id);
+      await dailyRoutinesStore.delete(id);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to delete routine';
     }

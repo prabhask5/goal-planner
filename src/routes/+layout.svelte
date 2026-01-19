@@ -3,6 +3,10 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { signOut } from '$lib/supabase/auth';
+  import { clearAllData } from '$lib/db/client';
+  import { stopSyncEngine } from '$lib/sync/engine';
+  import { syncStatusStore } from '$lib/stores/sync';
+  import SyncStatus from '$lib/components/SyncStatus.svelte';
   import type { Session } from '@supabase/supabase-js';
 
   interface Props {
@@ -19,6 +23,15 @@
   ];
 
   async function handleSignOut() {
+    // Stop sync engine
+    stopSyncEngine();
+    // Clear local data on logout
+    await clearAllData();
+    // Clear sync timestamp
+    localStorage.removeItem('lastSyncTimestamp');
+    // Reset sync status
+    syncStatusStore.reset();
+    // Sign out from Supabase
     await signOut();
     goto('/login');
   }
@@ -43,6 +56,7 @@
         {/each}
       </div>
       <div class="nav-auth">
+        <SyncStatus />
         <span class="user-email">{data.session.user.email}</span>
         <button class="btn btn-secondary btn-sm" onclick={handleSignOut}>Logout</button>
       </div>

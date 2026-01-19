@@ -1,15 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import {
-    getGoalList,
-    updateGoalList,
-    createGoal,
-    updateGoal,
-    deleteGoal,
-    incrementGoal
-  } from '$lib/supabase/database';
+  import { onMount, onDestroy } from 'svelte';
+  import { goalListStore } from '$lib/stores/data';
   import type { GoalList, Goal, GoalType } from '$lib/types';
   import { calculateGoalProgress } from '$lib/utils/colors';
   import GoalItem from '$lib/components/GoalItem.svelte';
@@ -36,29 +29,35 @@
     return Math.round(total / list.goals.length);
   });
 
-  onMount(async () => {
-    await loadList();
+  // Subscribe to store
+  $effect(() => {
+    const unsubList = goalListStore.subscribe((value) => {
+      list = value;
+      if (value) newListName = value.name;
+    });
+    const unsubLoading = goalListStore.loading.subscribe((value) => {
+      loading = value;
+    });
+
+    return () => {
+      unsubList();
+      unsubLoading();
+    };
   });
 
-  async function loadList() {
-    try {
-      loading = true;
-      error = null;
-      list = await getGoalList(listId);
-      newListName = list.name;
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load list';
-    } finally {
-      loading = false;
-    }
-  }
+  onMount(async () => {
+    await goalListStore.load(listId);
+  });
+
+  onDestroy(() => {
+    goalListStore.clear();
+  });
 
   async function handleAddGoal(data: { name: string; type: GoalType; targetValue: number | null }) {
     if (!list) return;
 
     try {
-      const newGoal = await createGoal(list.id, data.name, data.type, data.targetValue);
-      list.goals = [...list.goals, newGoal];
+      await goalListStore.addGoal(list.id, data.name, data.type, data.targetValue);
       showAddModal = false;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to create goal';
@@ -70,14 +69,13 @@
 
     try {
       const typeChanged = editingGoal.type !== data.type;
-      const updated = await updateGoal(editingGoal.id, {
+      await goalListStore.updateGoal(editingGoal.id, {
         name: data.name,
         type: data.type,
         target_value: data.targetValue,
         // Reset progress when changing type
         ...(typeChanged && { current_value: 0, completed: false })
       });
-      list.goals = list.goals.map((g) => (g.id === updated.id ? updated : g));
       editingGoal = null;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to update goal';
@@ -88,8 +86,7 @@
     if (!list) return;
 
     try {
-      const updated = await updateGoal(goal.id, { completed: !goal.completed });
-      list.goals = list.goals.map((g) => (g.id === updated.id ? updated : g));
+      await goalListStore.updateGoal(goal.id, { completed: !goal.completed });
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to update goal';
     }
@@ -100,13 +97,11 @@
 
     try {
       if (amount > 0) {
-        const updated = await incrementGoal(goal.id, amount);
-        list.goals = list.goals.map((g) => (g.id === updated.id ? updated : g));
+        await goalListStore.incrementGoal(goal.id, amount);
       } else {
         const newValue = Math.max(0, goal.current_value + amount);
         const completed = goal.target_value ? newValue >= goal.target_value : false;
-        const updated = await updateGoal(goal.id, { current_value: newValue, completed });
-        list.goals = list.goals.map((g) => (g.id === updated.id ? updated : g));
+        await goalListStore.updateGoal(goal.id, { current_value: newValue, completed });
       }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to update goal';
@@ -117,8 +112,7 @@
     if (!list || !confirm('Delete this goal?')) return;
 
     try {
-      await deleteGoal(goal.id);
-      list.goals = list.goals.filter((g) => g.id !== goal.id);
+      await goalListStore.deleteGoal(goal.id);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to delete goal';
     }
@@ -128,8 +122,7 @@
     if (!list || !newListName.trim()) return;
 
     try {
-      await updateGoalList(list.id, newListName.trim());
-      list.name = newListName.trim();
+      await goalListStore.updateName(list.id, newListName.trim());
       editingListName = false;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to update list name';

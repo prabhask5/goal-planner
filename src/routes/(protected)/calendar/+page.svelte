@@ -1,95 +1,61 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
-  import { getDailyRoutineGoals, getMonthProgress } from '$lib/supabase/database';
-  import { formatDate, isDateInRange, isPastDay, isTodayDate } from '$lib/utils/dates';
-  import { calculateGoalProgress } from '$lib/utils/colors';
-  import type { DailyRoutineGoal, DailyGoalProgress, DayProgress } from '$lib/types';
+  import { monthProgressStore } from '$lib/stores/data';
+  import { formatDate, isPastDay, isTodayDate } from '$lib/utils/dates';
+  import type { DayProgress } from '$lib/types';
   import Calendar from '$lib/components/Calendar.svelte';
 
   let currentDate = $state(new Date());
-  let routineGoals = $state<DailyRoutineGoal[]>([]);
-  let monthProgress = $state<DailyGoalProgress[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
+  let monthProgressData = $state<Map<string, DayProgress>>(new Map());
 
+  // Derive dayProgressMap from store, filtering for past days and today only
   const dayProgressMap = $derived(() => {
-    const map = new Map<string, DayProgress>();
+    const filteredMap = new Map<string, DayProgress>();
 
-    // Get all days that have active goals
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const dateStr = formatDate(date);
-
-      // Only calculate for past days and today
-      if (!isPastDay(date) && !isTodayDate(date)) continue;
-
-      // Find active routine goals for this day
-      const activeGoals = routineGoals.filter((goal) =>
-        isDateInRange(date, goal.start_date, goal.end_date)
-      );
-
-      if (activeGoals.length === 0) continue;
-
-      // Calculate progress for each active goal
-      let totalProgress = 0;
-      let totalGoals = activeGoals.length;
-      let completedGoals = 0;
-
-      for (const goal of activeGoals) {
-        const progress = monthProgress.find(
-          (p) => p.daily_routine_goal_id === goal.id && p.date === dateStr
-        );
-
-        const currentValue = progress?.current_value ?? 0;
-        const completed = progress?.completed ?? false;
-
-        const goalProgress = calculateGoalProgress(
-          goal.type,
-          completed,
-          currentValue,
-          goal.target_value
-        );
-
-        totalProgress += goalProgress;
-        if (goalProgress === 100) completedGoals++;
+    for (const [dateStr, progress] of monthProgressData) {
+      const date = new Date(dateStr + 'T00:00:00');
+      if (isPastDay(date) || isTodayDate(date)) {
+        filteredMap.set(dateStr, progress);
       }
-
-      map.set(dateStr, {
-        date: dateStr,
-        totalGoals,
-        completedGoals,
-        completionPercentage: Math.round(totalProgress / totalGoals)
-      });
     }
 
-    return map;
+    return filteredMap;
+  });
+
+  // Subscribe to store
+  $effect(() => {
+    const unsubStore = monthProgressStore.subscribe((value) => {
+      if (value) {
+        monthProgressData = value.dayProgress;
+      }
+    });
+    const unsubLoading = monthProgressStore.loading.subscribe((value) => {
+      loading = value;
+    });
+
+    return () => {
+      unsubStore();
+      unsubLoading();
+    };
   });
 
   onMount(async () => {
     await loadData();
   });
 
+  onDestroy(() => {
+    monthProgressStore.clear();
+  });
+
   async function loadData() {
     try {
-      loading = true;
       error = null;
-
-      const [goals, progress] = await Promise.all([
-        getDailyRoutineGoals(),
-        getMonthProgress(currentDate.getFullYear(), currentDate.getMonth() + 1)
-      ]);
-
-      routineGoals = goals;
-      monthProgress = progress;
+      await monthProgressStore.load(currentDate.getFullYear(), currentDate.getMonth() + 1);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load data';
-    } finally {
-      loading = false;
     }
   }
 

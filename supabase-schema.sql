@@ -9,7 +9,8 @@ create table if not exists goal_lists (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users(id) on delete cascade,
   name text not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- Goals table (for goal lists)
@@ -22,7 +23,8 @@ create table if not exists goals (
   current_value integer default 0 not null,
   completed boolean default false not null,
   "order" integer default 0 not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- Daily Routine Goals table
@@ -34,7 +36,8 @@ create table if not exists daily_routine_goals (
   target_value integer,
   start_date date not null,
   end_date date,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- Daily Goal Progress table
@@ -44,6 +47,7 @@ create table if not exists daily_goal_progress (
   date date not null,
   current_value integer default 0 not null,
   completed boolean default false not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique(daily_routine_goal_id, date)
 );
 
@@ -53,6 +57,12 @@ create index if not exists idx_goals_goal_list_id on goals(goal_list_id);
 create index if not exists idx_daily_routine_goals_user_id on daily_routine_goals(user_id);
 create index if not exists idx_daily_goal_progress_date on daily_goal_progress(date);
 create index if not exists idx_daily_goal_progress_goal_id on daily_goal_progress(daily_routine_goal_id);
+
+-- Indexes on updated_at for efficient sync queries
+create index if not exists idx_goal_lists_updated_at on goal_lists(updated_at);
+create index if not exists idx_goals_updated_at on goals(updated_at);
+create index if not exists idx_daily_routine_goals_updated_at on daily_routine_goals(updated_at);
+create index if not exists idx_daily_goal_progress_updated_at on daily_goal_progress(updated_at);
 
 -- Row Level Security (RLS) Policies
 alter table goal_lists enable row level security;
@@ -193,3 +203,29 @@ create trigger set_goal_lists_user_id
 create trigger set_daily_routine_goals_user_id
   before insert on daily_routine_goals
   for each row execute function set_user_id();
+
+-- Function to automatically update updated_at timestamp
+create or replace function update_updated_at_column()
+returns trigger as $$
+begin
+  new.updated_at = timezone('utc'::text, now());
+  return new;
+end;
+$$ language plpgsql;
+
+-- Triggers to auto-update updated_at on row changes
+create trigger update_goal_lists_updated_at
+  before update on goal_lists
+  for each row execute function update_updated_at_column();
+
+create trigger update_goals_updated_at
+  before update on goals
+  for each row execute function update_updated_at_column();
+
+create trigger update_daily_routine_goals_updated_at
+  before update on daily_routine_goals
+  for each row execute function update_updated_at_column();
+
+create trigger update_daily_goal_progress_updated_at
+  before update on daily_goal_progress
+  for each row execute function update_updated_at_column();
