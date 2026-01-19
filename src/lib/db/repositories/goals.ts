@@ -1,6 +1,7 @@
 import { db, generateId, now } from '../client';
 import type { Goal, GoalType } from '$lib/types';
 import { queueSync } from '$lib/sync/queue';
+import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createGoal(
   goalListId: string,
@@ -34,7 +35,7 @@ export async function createGoal(
 
   await db.goals.add(newGoal);
 
-  // Queue for sync - include all fields for consistency
+  // Queue for sync and schedule debounced push
   await queueSync('goals', 'create', newGoal.id, {
     goal_list_id: goalListId,
     name,
@@ -46,6 +47,7 @@ export async function createGoal(
     created_at: timestamp,
     updated_at: timestamp
   });
+  scheduleSyncPush();
 
   return newGoal;
 }
@@ -61,8 +63,9 @@ export async function updateGoal(
   const updated = await db.goals.get(id);
   if (!updated) return undefined;
 
-  // Queue for sync
-  await queueSync('goals', 'update', id, updates);
+  // Queue for sync and schedule debounced push
+  await queueSync('goals', 'update', id, { ...updates, updated_at: timestamp });
+  scheduleSyncPush();
 
   return updated;
 }
@@ -70,8 +73,9 @@ export async function updateGoal(
 export async function deleteGoal(id: string): Promise<void> {
   await db.goals.delete(id);
 
-  // Queue for sync
+  // Queue for sync and schedule debounced push
   await queueSync('goals', 'delete', id, {});
+  scheduleSyncPush();
 }
 
 export async function incrementGoal(id: string, amount: number = 1): Promise<Goal | undefined> {

@@ -1,6 +1,7 @@
 import { db, generateId, now } from '../client';
 import type { DailyGoalProgress } from '$lib/types';
 import { queueSync } from '$lib/sync/queue';
+import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function getDailyProgress(date: string): Promise<DailyGoalProgress[]> {
   return db.dailyGoalProgress.where('date').equals(date).toArray();
@@ -46,11 +47,13 @@ export async function upsertDailyProgress(
 
     const updated = await db.dailyGoalProgress.get(existing.id);
     if (updated) {
-      // Queue for sync
+      // Queue for sync and schedule debounced push
       await queueSync('daily_goal_progress', 'update', existing.id, {
         current_value: currentValue,
-        completed
+        completed,
+        updated_at: timestamp
       });
+      scheduleSyncPush();
       return updated;
     }
   }
@@ -67,7 +70,7 @@ export async function upsertDailyProgress(
 
   await db.dailyGoalProgress.add(newProgress);
 
-  // Queue for sync - include all fields for consistency
+  // Queue for sync and schedule debounced push
   await queueSync('daily_goal_progress', 'create', newProgress.id, {
     daily_routine_goal_id: dailyRoutineGoalId,
     date,
@@ -75,6 +78,7 @@ export async function upsertDailyProgress(
     completed,
     updated_at: timestamp
   });
+  scheduleSyncPush();
 
   return newProgress;
 }

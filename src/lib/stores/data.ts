@@ -1,6 +1,7 @@
 import { writable, type Writable } from 'svelte/store';
 import type { GoalListWithProgress, Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, DayProgress } from '$lib/types';
 import * as repo from '$lib/db/repositories';
+import * as sync from '$lib/sync/engine';
 import { calculateGoalProgress } from '$lib/utils/colors';
 
 // Goal Lists Store
@@ -14,13 +15,15 @@ function createGoalListsStore() {
     load: async () => {
       loading.set(true);
       try {
-        const lists = await repo.getGoalLists();
+        // Fetch from Supabase when online, cache when offline
+        const lists = await sync.fetchGoalLists();
         set(lists);
       } finally {
         loading.set(false);
       }
     },
     create: async (name: string, userId: string) => {
+      // Write to local DB immediately, sync in background
       const newList = await repo.createGoalList(name, userId);
       update(lists => [
         { ...newList, totalGoals: 0, completedGoals: 0, completionPercentage: 0 },
@@ -40,7 +43,7 @@ function createGoalListsStore() {
       update(lists => lists.filter(l => l.id !== id));
     },
     refresh: async () => {
-      const lists = await repo.getGoalLists();
+      const lists = await sync.fetchGoalLists();
       set(lists);
     }
   };
@@ -59,8 +62,9 @@ function createGoalListStore() {
     load: async (id: string) => {
       loading.set(true);
       try {
-        const list = await repo.getGoalList(id);
-        set(list ?? null);
+        // Fetch from Supabase when online, cache when offline
+        const list = await sync.fetchGoalList(id);
+        set(list);
       } finally {
         loading.set(false);
       }
@@ -118,7 +122,8 @@ function createDailyRoutinesStore() {
     load: async () => {
       loading.set(true);
       try {
-        const routines = await repo.getDailyRoutineGoals();
+        // Fetch from Supabase when online, cache when offline
+        const routines = await sync.fetchDailyRoutineGoals();
         set(routines);
       } finally {
         loading.set(false);
@@ -148,7 +153,7 @@ function createDailyRoutinesStore() {
       update(routines => routines.filter(r => r.id !== id));
     },
     refresh: async () => {
-      const routines = await repo.getDailyRoutineGoals();
+      const routines = await sync.fetchDailyRoutineGoals();
       set(routines);
     }
   };
@@ -167,8 +172,9 @@ function createRoutineStore() {
     load: async (id: string) => {
       loading.set(true);
       try {
-        const routine = await repo.getDailyRoutineGoal(id);
-        set(routine ?? null);
+        // Fetch from Supabase when online, cache when offline
+        const routine = await sync.fetchDailyRoutineGoal(id);
+        set(routine);
       } finally {
         loading.set(false);
       }
@@ -203,9 +209,10 @@ function createDailyProgressStore() {
     load: async (date: string) => {
       loading.set(true);
       try {
+        // Fetch from Supabase when online, cache when offline
         const [routines, progressList] = await Promise.all([
-          repo.getActiveRoutinesForDate(date),
-          repo.getDailyProgress(date)
+          sync.fetchActiveRoutinesForDate(date),
+          sync.fetchDailyProgress(date)
         ]);
 
         const progressMap = new Map<string, DailyGoalProgress>();
@@ -277,9 +284,10 @@ function createMonthProgressStore() {
     load: async (year: number, month: number) => {
       loading.set(true);
       try {
+        // Fetch from Supabase when online, cache when offline
         const [routines, progressList] = await Promise.all([
-          repo.getDailyRoutineGoals(),
-          repo.getMonthProgress(year, month)
+          sync.fetchDailyRoutineGoals(),
+          sync.fetchMonthProgress(year, month)
         ]);
 
         // Group progress by date

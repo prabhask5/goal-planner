@@ -1,6 +1,7 @@
 import { db, generateId, now } from '../client';
 import type { DailyRoutineGoal, GoalType } from '$lib/types';
 import { queueSync } from '$lib/sync/queue';
+import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function getDailyRoutineGoals(): Promise<DailyRoutineGoal[]> {
   return db.dailyRoutineGoals.orderBy('created_at').reverse().toArray();
@@ -45,7 +46,7 @@ export async function createDailyRoutineGoal(
 
   await db.dailyRoutineGoals.add(newRoutine);
 
-  // Queue for sync - include all fields for consistency
+  // Queue for sync and schedule debounced push
   await queueSync('daily_routine_goals', 'create', newRoutine.id, {
     user_id: userId,
     name,
@@ -56,6 +57,7 @@ export async function createDailyRoutineGoal(
     created_at: timestamp,
     updated_at: timestamp
   });
+  scheduleSyncPush();
 
   return newRoutine;
 }
@@ -71,8 +73,9 @@ export async function updateDailyRoutineGoal(
   const updated = await db.dailyRoutineGoals.get(id);
   if (!updated) return undefined;
 
-  // Queue for sync
-  await queueSync('daily_routine_goals', 'update', id, updates);
+  // Queue for sync and schedule debounced push
+  await queueSync('daily_routine_goals', 'update', id, { ...updates, updated_at: timestamp });
+  scheduleSyncPush();
 
   return updated;
 }
@@ -84,6 +87,7 @@ export async function deleteDailyRoutineGoal(id: string): Promise<void> {
     await db.dailyRoutineGoals.delete(id);
   });
 
-  // Queue for sync
+  // Queue for sync and schedule debounced push
   await queueSync('daily_routine_goals', 'delete', id, {});
+  scheduleSyncPush();
 }

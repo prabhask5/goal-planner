@@ -3,8 +3,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { signOut } from '$lib/supabase/auth';
-  import { clearAllData } from '$lib/db/client';
-  import { stopSyncEngine } from '$lib/sync/engine';
+  import { stopSyncEngine, clearLocalCache } from '$lib/sync/engine';
   import { syncStatusStore } from '$lib/stores/sync';
   import SyncStatus from '$lib/components/SyncStatus.svelte';
   import type { Session } from '@supabase/supabase-js';
@@ -26,7 +25,7 @@
     // Stop sync engine
     stopSyncEngine();
     // Clear local data on logout
-    await clearAllData();
+    await clearLocalCache();
     // Clear sync timestamp
     localStorage.removeItem('lastSyncTimestamp');
     // Reset sync status

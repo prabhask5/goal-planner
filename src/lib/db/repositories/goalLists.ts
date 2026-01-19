@@ -2,6 +2,7 @@ import { db, generateId, now } from '../client';
 import type { GoalList, GoalListWithProgress, Goal } from '$lib/types';
 import { calculateGoalProgress } from '$lib/utils/colors';
 import { queueSync } from '$lib/sync/queue';
+import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function getGoalLists(): Promise<GoalListWithProgress[]> {
   const lists = await db.goalLists.orderBy('created_at').reverse().toArray();
@@ -56,13 +57,14 @@ export async function createGoalList(name: string, userId: string): Promise<Goal
 
   await db.goalLists.add(newList);
 
-  // Queue for sync - include all fields for consistency
+  // Queue for sync and schedule debounced push
   await queueSync('goal_lists', 'create', newList.id, {
     name,
     user_id: userId,
     created_at: timestamp,
     updated_at: timestamp
   });
+  scheduleSyncPush();
 
   return newList;
 }
@@ -75,8 +77,9 @@ export async function updateGoalList(id: string, name: string): Promise<GoalList
   const updated = await db.goalLists.get(id);
   if (!updated) return undefined;
 
-  // Queue for sync
-  await queueSync('goal_lists', 'update', id, { name });
+  // Queue for sync and schedule debounced push
+  await queueSync('goal_lists', 'update', id, { name, updated_at: timestamp });
+  scheduleSyncPush();
 
   return updated;
 }
@@ -88,6 +91,7 @@ export async function deleteGoalList(id: string): Promise<void> {
     await db.goalLists.delete(id);
   });
 
-  // Queue for sync
+  // Queue for sync and schedule debounced push
   await queueSync('goal_lists', 'delete', id, {});
+  scheduleSyncPush();
 }
