@@ -131,7 +131,7 @@
         {/if}
       </div>
     </div>
-    <a href="/routines" class="btn btn-secondary">Manage Routines</a>
+    <a href="/calendar" class="btn btn-secondary">Manage Routines</a>
   </header>
 
   {#if error}
@@ -149,7 +149,7 @@
       title="No routines for this day"
       description="No daily routine goals are active on this date. Create routines with date ranges that include this day."
     >
-      <a href="/routines" class="btn btn-primary">Create Routine</a>
+      <a href="/calendar" class="btn btn-primary">Create Routine</a>
     </EmptyState>
   {:else}
     {#if canEdit}
