@@ -22,7 +22,7 @@
       if (result.error) {
         error = result.error;
       } else {
-        goto('/lists');
+        goto('/');
       }
     } else {
       if (!firstName.trim()) {
@@ -34,7 +34,7 @@
       if (result.error) {
         error = result.error;
       } else if (result.session) {
-        goto('/lists');
+        goto('/');
       } else {
         success = 'Check your email for the confirmation link!';
         mode = 'login';
