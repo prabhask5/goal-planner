@@ -18,6 +18,7 @@ import { calculateGoalProgress } from '$lib/utils/colors';
 
 let syncTimeout: ReturnType<typeof setTimeout> | null = null;
 let syncInterval: ReturnType<typeof setInterval> | null = null;
+let isSyncing = false; // Lock to prevent concurrent syncs
 const SYNC_DEBOUNCE_MS = 2000; // 2 seconds debounce after writes
 const SYNC_INTERVAL_MS = 60000; // 1 minute periodic sync
 
@@ -421,6 +422,10 @@ export async function runFullSync(): Promise<void> {
     return;
   }
 
+  // Prevent concurrent syncs
+  if (isSyncing) return;
+  isSyncing = true;
+
   try {
     syncStatusStore.setStatus('syncing');
 
@@ -442,12 +447,17 @@ export async function runFullSync(): Promise<void> {
     console.error('Sync failed:', error);
     syncStatusStore.setStatus('error');
     syncStatusStore.setError(error instanceof Error ? error.message : 'Sync failed');
+  } finally {
+    isSyncing = false;
   }
 }
 
 // Initial hydration: if local DB is empty, pull everything from remote
 export async function hydrateFromRemote(): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.onLine) return;
+
+  // Prevent concurrent syncs/hydrations
+  if (isSyncing) return;
 
   // Check if local DB is empty
   const localListCount = await db.goalLists.count();
@@ -460,6 +470,7 @@ export async function hydrateFromRemote(): Promise<void> {
   }
 
   // Local is empty, do a full pull
+  isSyncing = true;
   syncStatusStore.setStatus('syncing');
 
   try {
@@ -513,6 +524,8 @@ export async function hydrateFromRemote(): Promise<void> {
   } catch (error) {
     console.error('Hydration failed:', error);
     syncStatusStore.setStatus('error');
+  } finally {
+    isSyncing = false;
   }
 }
 
@@ -553,6 +566,7 @@ export function stopSyncEngine(): void {
     clearInterval(syncInterval);
     syncInterval = null;
   }
+  isSyncing = false;
 }
 
 // Clear local cache (for logout)
