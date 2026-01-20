@@ -22,8 +22,7 @@
 
   const navItems = [
     { href: '/lists', label: 'Goal Lists', icon: '☐' },
-    { href: '/calendar', label: 'Calendar', icon: '📅' },
-    { href: '/routines', label: 'Routines', icon: '🔄' }
+    { href: '/calendar', label: 'Daily Routines', icon: '📅' }
   ];
 
   async function handleSignOut() {
