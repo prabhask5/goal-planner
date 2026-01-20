@@ -22,15 +22,17 @@
 
   // Helper to display active days as a short string
   const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  function getActiveDaysDisplay(activeDays: DayOfWeek[] | null): string {
-    if (activeDays === null) return 'Every day';
+  function getActiveDaysDisplay(activeDays: DayOfWeek[] | null | undefined): string {
+    // null or undefined means all days (backwards compatible with existing routines)
+    if (activeDays == null || activeDays.length === 0) return 'Every day';
+    if (activeDays.length === 7) return 'Every day';
     if (activeDays.length === 5 && !activeDays.includes(0) && !activeDays.includes(6)) {
       return 'Weekdays';
     }
     if (activeDays.length === 2 && activeDays.includes(0) && activeDays.includes(6)) {
       return 'Weekends';
     }
-    return activeDays.sort((a, b) => a - b).map(d => dayLabels[d]).join(' ');
+    return [...activeDays].sort((a, b) => a - b).map(d => dayLabels[d]).join(' ');
   }
 
   // Derive dayProgressMap from store, filtering for past days and today only
@@ -246,6 +248,7 @@
               <div class="routine-skeleton-title"></div>
               <div class="routine-skeleton-meta">
                 <div class="routine-skeleton-badge"></div>
+                <div class="routine-skeleton-badge days"></div>
                 <div class="routine-skeleton-date"></div>
               </div>
             </div>
@@ -556,6 +559,11 @@
     height: 1.5rem;
     background: rgba(108, 92, 231, 0.1);
     border-radius: var(--radius-lg);
+  }
+
+  .routine-skeleton-badge.days {
+    width: 70px;
+    background: rgba(255, 255, 255, 0.05);
   }
 
   .routine-skeleton-date {

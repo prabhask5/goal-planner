@@ -114,9 +114,19 @@
           <div class="form-skeleton-radio"></div>
         </div>
       </div>
+      <!-- Days Selector Skeleton -->
       <div class="form-skeleton-group">
         <div class="form-skeleton-label"></div>
-        <div class="form-skeleton-input"></div>
+        <div class="form-skeleton-days">
+          {#each Array(7) as _}
+            <div class="form-skeleton-day"></div>
+          {/each}
+        </div>
+        <div class="form-skeleton-quick-btns">
+          <div class="form-skeleton-quick-btn"></div>
+          <div class="form-skeleton-quick-btn"></div>
+          <div class="form-skeleton-quick-btn"></div>
+        </div>
       </div>
       <div class="form-skeleton-row">
         <div class="form-skeleton-group">
@@ -128,6 +138,7 @@
           <div class="form-skeleton-input"></div>
         </div>
       </div>
+      <div class="form-skeleton-help"></div>
       <div class="form-skeleton-actions">
         <div class="form-skeleton-btn secondary"></div>
         <div class="form-skeleton-btn primary"></div>
@@ -310,6 +321,42 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
+  }
+
+  .form-skeleton-days {
+    display: flex;
+    gap: 0.375rem;
+    justify-content: space-between;
+  }
+
+  .form-skeleton-day {
+    flex: 1;
+    height: 48px;
+    min-width: 36px;
+    background: rgba(108, 92, 231, 0.08);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(108, 92, 231, 0.15);
+  }
+
+  .form-skeleton-quick-btns {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .form-skeleton-quick-btn {
+    flex: 1;
+    height: 32px;
+    background: rgba(108, 92, 231, 0.06);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(108, 92, 231, 0.1);
+  }
+
+  .form-skeleton-help {
+    height: 48px;
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.08) 0%, rgba(108, 92, 231, 0.04) 100%);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(108, 92, 231, 0.1);
   }
 
   .form-skeleton-actions {
