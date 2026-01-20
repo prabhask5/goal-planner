@@ -46,19 +46,26 @@
   const strokeDashoffset = $derived(circumference - (progress / 100) * circumference);
 </script>
 
-<div class="timer-container">
-  <!-- Background stars animation -->
-  <div class="stars">
-    {#each Array(20) as _, i}
-      <div
-        class="star"
-        style:--delay="{i * 0.5}s"
-        style:--x="{Math.random() * 100}%"
-        style:--y="{Math.random() * 100}%"
-        style:--size="{1 + Math.random() * 2}px"
-      ></div>
-    {/each}
+<div class="timer-container" class:running={isRunning}>
+  <!-- 3-Layer CSS Starfield -->
+  <div class="stars-container">
+    <div class="stars stars-small"></div>
+    <div class="stars stars-medium"></div>
+    <div class="stars stars-large"></div>
   </div>
+
+  <!-- Nebula background -->
+  <div class="nebula" class:active={isRunning}></div>
+
+  <!-- Orbital rings (visible when running) -->
+  {#if isRunning}
+    <div class="orbital-ring orbital-ring-1" class:break={isBreak}>
+      <div class="orbital-dot"></div>
+    </div>
+    <div class="orbital-ring orbital-ring-2" class:break={isBreak}>
+      <div class="orbital-dot"></div>
+    </div>
+  {/if}
 
   <!-- Timer ring -->
   <svg class="timer-ring" viewBox="0 0 320 320">
@@ -132,30 +139,148 @@
     margin: 0 auto;
   }
 
-  /* Stars animation */
-  .stars {
+  /* 3-Layer CSS Starfield */
+  .stars-container {
     position: absolute;
-    inset: -40px;
+    inset: -60px;
     overflow: hidden;
     pointer-events: none;
+    border-radius: 50%;
   }
 
-  .star {
+  .stars {
     position: absolute;
-    left: var(--x);
-    top: var(--y);
-    width: var(--size);
-    height: var(--size);
-    background: white;
-    border-radius: 50%;
-    opacity: 0;
-    animation: twinkle 3s ease-in-out infinite;
-    animation-delay: var(--delay);
+    inset: 0;
+    background-repeat: repeat;
+  }
+
+  .stars-small {
+    background-image:
+      radial-gradient(1px 1px at 20px 30px, white, transparent),
+      radial-gradient(1px 1px at 40px 70px, rgba(255, 255, 255, 0.8), transparent),
+      radial-gradient(1px 1px at 50px 160px, rgba(255, 255, 255, 0.6), transparent),
+      radial-gradient(1px 1px at 90px 40px, white, transparent),
+      radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.7), transparent),
+      radial-gradient(1px 1px at 160px 120px, white, transparent),
+      radial-gradient(1px 1px at 200px 60px, rgba(255, 255, 255, 0.5), transparent),
+      radial-gradient(1px 1px at 240px 150px, white, transparent),
+      radial-gradient(1px 1px at 280px 90px, rgba(255, 255, 255, 0.8), transparent),
+      radial-gradient(1px 1px at 320px 140px, white, transparent),
+      radial-gradient(1px 1px at 360px 180px, rgba(255, 255, 255, 0.6), transparent),
+      radial-gradient(1px 1px at 380px 50px, white, transparent);
+    background-size: 400px 220px;
+    animation: twinkle 4s ease-in-out infinite;
+  }
+
+  .stars-medium {
+    background-image:
+      radial-gradient(1.5px 1.5px at 100px 50px, white, transparent),
+      radial-gradient(1.5px 1.5px at 200px 120px, rgba(255, 255, 255, 0.9), transparent),
+      radial-gradient(1.5px 1.5px at 70px 180px, white, transparent),
+      radial-gradient(1.5px 1.5px at 250px 200px, rgba(255, 255, 255, 0.7), transparent),
+      radial-gradient(1.5px 1.5px at 30px 100px, white, transparent),
+      radial-gradient(1.5px 1.5px at 330px 80px, rgba(255, 255, 255, 0.8), transparent),
+      radial-gradient(1.5px 1.5px at 380px 160px, white, transparent);
+    background-size: 400px 280px;
+    animation: twinkle 5s ease-in-out infinite reverse;
+    animation-delay: 0.5s;
+  }
+
+  .stars-large {
+    background-image:
+      radial-gradient(2px 2px at 150px 100px, white, transparent),
+      radial-gradient(2px 2px at 50px 220px, rgba(255, 255, 255, 0.9), transparent),
+      radial-gradient(2px 2px at 220px 30px, white, transparent),
+      radial-gradient(2px 2px at 320px 120px, rgba(255, 255, 255, 0.8), transparent),
+      radial-gradient(2px 2px at 380px 200px, white, transparent);
+    background-size: 420px 300px;
+    animation: twinkle 6s ease-in-out infinite;
+    animation-delay: 1s;
   }
 
   @keyframes twinkle {
-    0%, 100% { opacity: 0; transform: scale(0.5); }
-    50% { opacity: 0.8; transform: scale(1); }
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.9; }
+  }
+
+  /* Nebula Background */
+  .nebula {
+    position: absolute;
+    inset: -80px;
+    background: radial-gradient(
+      ellipse at 50% 50%,
+      rgba(108, 92, 231, 0.2) 0%,
+      rgba(255, 121, 198, 0.15) 30%,
+      transparent 60%
+    );
+    pointer-events: none;
+    opacity: 0.4;
+    transition: opacity 0.5s ease;
+  }
+
+  .nebula.active {
+    opacity: 1;
+    animation: nebulaPulse 8s ease-in-out infinite;
+  }
+
+  @keyframes nebulaPulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+
+  /* Orbital Rings */
+  .orbital-ring {
+    position: absolute;
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .orbital-ring-1 {
+    inset: -20px;
+    animation: orbitRotate 12s linear infinite;
+  }
+
+  .orbital-ring-2 {
+    inset: -40px;
+    animation: orbitRotate 18s linear infinite reverse;
+  }
+
+  .orbital-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    top: 50%;
+    left: 0;
+    transform: translate(-50%, -50%);
+    box-shadow:
+      0 0 8px var(--color-primary),
+      0 0 16px var(--color-primary-glow);
+  }
+
+  .orbital-ring-2 .orbital-dot {
+    left: auto;
+    right: 0;
+    transform: translate(50%, -50%);
+  }
+
+  @keyframes orbitRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Break phase orbital styling */
+  .orbital-ring.break {
+    border-color: rgba(38, 222, 129, 0.2);
+  }
+
+  .orbital-ring.break .orbital-dot {
+    background: #26de81;
+    box-shadow:
+      0 0 8px #26de81,
+      0 0 16px rgba(38, 222, 129, 0.5);
   }
 
   /* Timer ring */
@@ -179,11 +304,17 @@
   }
 
   .progress-ring.running {
-    filter: drop-shadow(0 0 8px var(--color-primary-glow));
+    filter:
+      drop-shadow(0 0 4px var(--color-primary))
+      drop-shadow(0 0 8px var(--color-primary-glow))
+      drop-shadow(0 0 16px var(--color-primary-glow));
   }
 
   .progress-ring.running.break {
-    filter: drop-shadow(0 0 8px rgba(38, 222, 129, 0.5));
+    filter:
+      drop-shadow(0 0 4px #26de81)
+      drop-shadow(0 0 8px rgba(38, 222, 129, 0.5))
+      drop-shadow(0 0 16px rgba(38, 222, 129, 0.3));
   }
 
   .glow-ring {
@@ -216,11 +347,15 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
     color: var(--color-text);
-    transition: text-shadow 0.3s;
+    transition: text-shadow 0.5s ease, color 0.5s ease;
   }
 
   .time-display.running {
-    text-shadow: 0 0 30px var(--color-primary-glow);
+    text-shadow:
+      0 0 10px var(--color-primary-glow),
+      0 0 20px var(--color-primary-glow),
+      0 0 40px var(--color-primary-glow),
+      0 0 60px rgba(108, 92, 231, 0.3);
   }
 
   .phase-text {

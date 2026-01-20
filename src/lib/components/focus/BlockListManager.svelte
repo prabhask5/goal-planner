@@ -84,6 +84,27 @@
 
   {#if isOpen}
     <div class="panel">
+      <!-- Extension Banner -->
+      <div class="extension-banner">
+        <div class="banner-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div class="banner-content">
+          <span class="banner-title">Browser Extension Required</span>
+          <span class="banner-desc">Website blocking requires the Stellar Focus extension</span>
+        </div>
+        <a href="https://github.com/stellar-focus/extension/releases" target="_blank" rel="noopener" class="banner-btn">
+          Get Extension
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+        </a>
+      </div>
+
       {#if editingListId}
         <!-- Editing a specific list -->
         {@const list = $blockListStore.find(l => l.id === editingListId)}
@@ -486,5 +507,89 @@
     text-align: center;
     padding: 1rem;
     margin: 0;
+  }
+
+  /* Extension Banner */
+  .extension-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.15) 0%, rgba(255, 121, 198, 0.1) 100%);
+    border: 1px solid rgba(108, 92, 231, 0.25);
+    border-radius: var(--radius-lg);
+    animation: fadeInDown 0.3s ease-out;
+  }
+
+  @keyframes fadeInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .banner-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+    border-radius: var(--radius-md);
+    color: white;
+    box-shadow: 0 4px 12px var(--color-primary-glow);
+  }
+
+  .banner-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .banner-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .banner-desc {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    line-height: 1.3;
+  }
+
+  .banner-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+    background: var(--gradient-primary);
+    border: none;
+    border-radius: var(--radius-full);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px var(--color-primary-glow);
+  }
+
+  .banner-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--color-primary-glow);
+  }
+
+  .banner-btn:active {
+    transform: translateY(0);
   }
 </style>
