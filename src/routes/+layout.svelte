@@ -156,8 +156,8 @@
         </div>
       </div>
     </nav>
-  {:else}
-    <!-- Unauthenticated header -->
+  {:else if !$page.url.pathname.startsWith('/login')}
+    <!-- Unauthenticated header (hidden on login page) -->
     <nav class="nav-desktop nav-simple">
       <div class="nav-inner">
         <a href="/" class="nav-brand">
