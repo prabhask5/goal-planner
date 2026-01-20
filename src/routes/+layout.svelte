@@ -33,7 +33,8 @@
     localStorage.removeItem('lastSyncTimestamp');
     syncStatusStore.reset();
     await signOut();
-    goto('/login');
+    // Use hard navigation to ensure session state is fully cleared
+    window.location.href = '/login';
   }
 
   function isActive(href: string): boolean {

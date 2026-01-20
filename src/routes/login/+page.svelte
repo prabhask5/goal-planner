@@ -189,14 +189,14 @@
             <span class="loading-spinner"></span>
             Loading...
           {:else}
-            {mode === 'login' ? 'Launch In' : 'Begin Journey'}
+            {mode === 'login' ? 'Log In' : 'Sign in'}
           {/if}
         </button>
       </form>
 
       <div class="toggle-mode">
         {#if mode === 'login'}
-          New explorer?
+          Don't have an account?
           <button type="button" class="link-btn" onclick={toggleMode}>Create account</button>
         {:else}
           Already have an account?
