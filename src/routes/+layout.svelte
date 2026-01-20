@@ -75,6 +75,31 @@
   onMount(() => {
     // Register reconnect handler
     setReconnectHandler(handleReconnectAuthCheck);
+
+    // Proactively cache app shell for offline support
+    // This ensures all JS/CSS assets are cached after first load
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      // Give the page time to load all assets, then cache what we have
+      setTimeout(() => {
+        // Find all script and link tags and cache their URLs
+        const scripts = Array.from(document.querySelectorAll('script[src]'))
+          .map((el) => (el as HTMLScriptElement).src)
+          .filter((src) => src.startsWith(location.origin));
+
+        const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+          .map((el) => (el as HTMLLinkElement).href)
+          .filter((href) => href.startsWith(location.origin));
+
+        const urls = [...scripts, ...styles];
+
+        if (urls.length > 0) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'CACHE_URLS',
+            urls
+          });
+        }
+      }, 2000);
+    }
   });
 
   onDestroy(() => {
