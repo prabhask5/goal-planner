@@ -4,14 +4,16 @@
   "description": "Firefox extension to block distracting websites during Stellar focus sessions",
   "type": "module",
   "scripts": {
-    "build": "tsc && node build.js",
-    "watch": "tsc --watch",
-    "clean": "rm -rf dist"
+    "build": "node build.js",
+    "watch": "node build.js --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.30.1",
     "@supabase/supabase-js": "^2.45.0",
     "@types/webextension-polyfill": "^0.10.7",
+    "esbuild": "^0.27.2",
     "typescript": "^5.3.0",
     "webextension-polyfill": "^0.12.0"
   },
