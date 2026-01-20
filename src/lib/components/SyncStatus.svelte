@@ -14,6 +14,7 @@
   let showTooltip = $state(false);
   let showDetails = $state(false);
   let tooltipTimeout: ReturnType<typeof setTimeout> | null = null;
+  let isMouseOver = $state(false);
 
   // Subscribe to stores
   $effect(() => {
@@ -43,16 +44,23 @@
   }
 
   function handleMouseEnter() {
+    isMouseOver = true;
     if (tooltipTimeout) clearTimeout(tooltipTimeout);
     tooltipTimeout = setTimeout(() => {
-      showTooltip = true;
+      if (isMouseOver) {
+        showTooltip = true;
+      }
     }, 200);
   }
 
   function handleMouseLeave() {
+    isMouseOver = false;
     if (tooltipTimeout) clearTimeout(tooltipTimeout);
     tooltipTimeout = setTimeout(() => {
-      showTooltip = false;
+      if (!isMouseOver) {
+        showTooltip = false;
+        showDetails = false;
+      }
     }, 150);
   }
 
@@ -120,8 +128,6 @@
   class="sync-wrapper"
   onmouseenter={handleMouseEnter}
   onmouseleave={handleMouseLeave}
-  onfocusin={handleMouseEnter}
-  onfocusout={handleMouseLeave}
 >
   <button
     class="sync-indicator"
