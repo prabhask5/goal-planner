@@ -1,27 +1,53 @@
 /**
  * Stellar Focus Extension - Popup Logic
- * Handles authentication, block list display, and focus status
+ * Simple, beautiful, read-only view with real-time sync
  */
 
 import browser from 'webextension-polyfill';
-import { getSupabase, signIn, signOut, getSession, getUser, type Session, type User } from '../auth/supabase';
-import { cacheOfflineCredentials, getOfflineCredentials, verifyOfflinePassword, clearOfflineCredentials } from '../auth/offlineCredentials';
-import { createOfflineSession, getValidOfflineSession, clearOfflineSession } from '../auth/offlineSession';
-import { blockListsCache, focusSessionCacheStore, type CachedBlockList } from '../lib/storage';
-import { getNetworkStatus, onNetworkChange } from '../lib/network';
+import { createClient, type RealtimeChannel } from '@supabase/supabase-js';
 import { config } from '../config';
 
-// Simple user type for offline mode (doesn't need all Supabase User fields)
-interface OfflineUser {
+// Types
+interface FocusSession {
   id: string;
-  email: string;
-  user_metadata?: {
-    first_name?: string;
-    last_name?: string;
-  };
+  user_id: string;
+  phase: 'focus' | 'break';
+  status: 'running' | 'paused' | 'completed';
+  phase_started_at: string;
+  focus_duration: number;
+  break_duration: number;
 }
 
+interface BlockList {
+  id: string;
+  name: string;
+  is_enabled: boolean;
+}
+
+type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
+
+// Supabase client
+const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey, {
+  auth: {
+    storage: {
+      getItem: async (key: string) => {
+        const result = await browser.storage.local.get(key);
+        return result[key] ?? null;
+      },
+      setItem: async (key: string, value: string) => {
+        await browser.storage.local.set({ [key]: value });
+      },
+      removeItem: async (key: string) => {
+        await browser.storage.local.remove(key);
+      }
+    },
+    autoRefreshToken: true,
+    persistSession: true
+  }
+});
+
 // DOM Elements
+const offlinePlaceholder = document.getElementById('offlinePlaceholder') as HTMLElement;
 const authSection = document.getElementById('authSection') as HTMLElement;
 const mainSection = document.getElementById('mainSection') as HTMLElement;
 const loginForm = document.getElementById('loginForm') as HTMLFormElement;
@@ -30,10 +56,7 @@ const passwordInput = document.getElementById('passwordInput') as HTMLInputEleme
 const loginError = document.getElementById('loginError') as HTMLElement;
 const loginBtn = document.getElementById('loginBtn') as HTMLButtonElement;
 const logoutBtn = document.getElementById('logoutBtn') as HTMLButtonElement;
-const refreshBtn = document.getElementById('refreshBtn') as HTMLButtonElement;
-const updateBanner = document.getElementById('updateBanner') as HTMLElement;
-const updateBtn = document.getElementById('updateBtn') as HTMLButtonElement;
-const offlineBanner = document.getElementById('offlineBanner') as HTMLElement;
+const syncIndicator = document.getElementById('syncIndicator') as HTMLElement;
 const statusIndicator = document.getElementById('statusIndicator') as HTMLElement;
 const statusLabel = document.getElementById('statusLabel') as HTMLElement;
 const statusDesc = document.getElementById('statusDesc') as HTMLElement;
@@ -44,98 +67,85 @@ const openStellarBtn = document.getElementById('openStellarBtn') as HTMLAnchorEl
 const signupLink = document.getElementById('signupLink') as HTMLAnchorElement;
 
 // State
-let currentUser: User | OfflineUser | null = null;
-let isOnline = getNetworkStatus();
+let isOnline = navigator.onLine;
+let currentUserId: string | null = null;
+let focusSubscription: RealtimeChannel | null = null;
+let syncStatus: SyncStatus = 'idle';
+let syncTimeout: ReturnType<typeof setTimeout> | null = null;
 
-// Initialize popup
-document.addEventListener('DOMContentLoaded', () => {
-  init();
-});
+// Initialize
+document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  // Set app URL from config
-  if (openStellarBtn) {
-    openStellarBtn.href = config.appUrl;
+  // Set links
+  if (openStellarBtn) openStellarBtn.href = config.appUrl;
+  if (signupLink) signupLink.href = config.appUrl + '/auth/signup';
+
+  // Network listeners
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+
+  // Initial state
+  updateView();
+
+  // Event listeners
+  loginForm?.addEventListener('submit', handleLogin);
+  logoutBtn?.addEventListener('click', handleLogout);
+
+  // Check auth if online
+  if (isOnline) {
+    await checkAuth();
   }
-
-  // Set signup link URL
-  if (signupLink) {
-    signupLink.href = config.appUrl + '/auth/signup';
-  }
-
-  // Set up network listener
-  onNetworkChange((online) => {
-    isOnline = online;
-    updateOfflineBanner();
-    if (online && currentUser) {
-      refreshData();
-    }
-  });
-
-  updateOfflineBanner();
-  await checkAuth();
-
-  // Set up event listeners
-  loginForm.addEventListener('submit', handleLogin);
-  logoutBtn.addEventListener('click', handleLogout);
-  refreshBtn.addEventListener('click', refreshData);
-  updateBtn.addEventListener('click', handleUpdate);
-
-  // Check for updates
-  checkForUpdates();
 }
 
-function updateOfflineBanner() {
+function handleOnline() {
+  isOnline = true;
+  updateView();
+  checkAuth();
+}
+
+function handleOffline() {
+  isOnline = false;
+  unsubscribeFromRealtime();
+  updateView();
+}
+
+function updateView() {
+  // Hide all sections first
+  offlinePlaceholder?.classList.add('hidden');
+  authSection?.classList.add('hidden');
+  mainSection?.classList.add('hidden');
+
   if (!isOnline) {
-    offlineBanner.classList.remove('hidden');
-    // Hide main content when offline (show graceful placeholder instead)
-    if (currentUser) {
-      mainSection.classList.add('hidden');
-    }
+    // Offline: only show placeholder
+    offlinePlaceholder?.classList.remove('hidden');
+  } else if (!currentUserId) {
+    // Online but not logged in: show auth
+    authSection?.classList.remove('hidden');
   } else {
-    offlineBanner.classList.add('hidden');
-    // Show main content when online
-    if (currentUser) {
-      mainSection.classList.remove('hidden');
-    }
+    // Online and logged in: show main
+    mainSection?.classList.remove('hidden');
   }
 }
 
 async function checkAuth() {
   try {
-    if (isOnline) {
-      // Try Supabase session first
-      const session = await getSession();
-      if (session) {
-        currentUser = (await getUser())!;
-        showMainSection();
-        return;
-      }
-    }
+    const { data: { session } } = await supabase.auth.getSession();
 
-    // Try offline session
-    const offlineSession = await getValidOfflineSession();
-    if (offlineSession) {
-      const credentials = await getOfflineCredentials();
-      if (credentials) {
-        currentUser = {
-          id: credentials.userId,
-          email: credentials.email,
-          user_metadata: {
-            first_name: credentials.firstName,
-            last_name: credentials.lastName
-          }
-        } as OfflineUser;
-        showMainSection();
-        return;
-      }
+    if (session?.user) {
+      currentUserId = session.user.id;
+      updateUserInfo(session.user);
+      updateView();
+      await loadData();
+      subscribeToRealtime();
+    } else {
+      currentUserId = null;
+      updateView();
     }
-
-    // Not authenticated
-    showAuthSection();
   } catch (error) {
     console.error('Auth check failed:', error);
-    showAuthSection();
+    currentUserId = null;
+    updateView();
   }
 }
 
@@ -154,50 +164,20 @@ async function handleLogin(e: Event) {
   hideLoginError();
 
   try {
-    if (isOnline) {
-      // Online login via Supabase
-      const { user, session, error } = await signIn(email, password);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-      if (error) {
-        showLoginError(error.message);
-        setLoginLoading(false);
-        return;
-      }
+    if (error) {
+      showLoginError(error.message);
+      setLoginLoading(false);
+      return;
+    }
 
-      if (user && session) {
-        // Cache credentials for offline use
-        await cacheOfflineCredentials(email, password, user, session);
-        currentUser = user;
-        showMainSection();
-      }
-    } else {
-      // Offline login
-      const credentials = await getOfflineCredentials();
-
-      if (!credentials || credentials.email !== email) {
-        showLoginError('No offline credentials for this account');
-        setLoginLoading(false);
-        return;
-      }
-
-      const isValid = await verifyOfflinePassword(password);
-      if (!isValid) {
-        showLoginError('Invalid password');
-        setLoginLoading(false);
-        return;
-      }
-
-      // Create offline session
-      await createOfflineSession(credentials.userId);
-      currentUser = {
-        id: credentials.userId,
-        email: credentials.email,
-        user_metadata: {
-          first_name: credentials.firstName,
-          last_name: credentials.lastName
-        }
-      } as OfflineUser;
-      showMainSection();
+    if (data.user) {
+      currentUserId = data.user.id;
+      updateUserInfo(data.user);
+      updateView();
+      await loadData();
+      subscribeToRealtime();
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -209,316 +189,261 @@ async function handleLogin(e: Event) {
 
 async function handleLogout() {
   try {
-    if (isOnline) {
-      await signOut();
-    }
-    await clearOfflineSession();
-    // Don't clear credentials - allow offline login later
-    currentUser = null;
-    showAuthSection();
+    unsubscribeFromRealtime();
+    await supabase.auth.signOut();
+    currentUserId = null;
+    updateView();
+    emailInput.value = '';
+    passwordInput.value = '';
+    hideLoginError();
   } catch (error) {
     console.error('Logout error:', error);
   }
 }
 
-function showAuthSection() {
-  authSection.classList.remove('hidden');
-  mainSection.classList.add('hidden');
-  emailInput.value = '';
-  passwordInput.value = '';
-  hideLoginError();
+function updateUserInfo(user: { email?: string; user_metadata?: { first_name?: string } }) {
+  const firstName = user.user_metadata?.first_name || '';
+  const initial = firstName.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || '?';
+  if (userAvatar) userAvatar.textContent = initial;
+  if (userName) userName.textContent = firstName || user.email || 'User';
 }
 
-function showMainSection() {
-  authSection.classList.add('hidden');
-  mainSection.classList.remove('hidden');
-  updateUserInfo();
-  loadFocusStatus();
-  loadBlockLists();
-}
+// Data loading with sync indicator
+async function loadData() {
+  setSyncStatus('syncing');
 
-function updateUserInfo() {
-  if (currentUser) {
-    const firstName = currentUser.user_metadata?.first_name || '';
-    const initial = firstName.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase() || '?';
-    userAvatar.textContent = initial;
-    userName.textContent = firstName || currentUser.email || 'User';
+  try {
+    await Promise.all([
+      loadFocusStatus(),
+      loadBlockLists()
+    ]);
+    setSyncStatus('synced');
+  } catch (error) {
+    console.error('Failed to load data:', error);
+    setSyncStatus('error');
   }
 }
 
 async function loadFocusStatus() {
-  try {
-    // Get cached focus session
-    const cached = await focusSessionCacheStore.get('current');
+  if (!currentUserId) return;
 
-    if (cached && cached.status === 'running') {
-      const phase = cached.phase;
-      updateStatusDisplay(phase === 'focus' ? 'focus' : 'break', 'running');
-    } else if (cached && cached.status === 'paused') {
-      updateStatusDisplay('paused', 'paused');
-    } else {
-      updateStatusDisplay('idle', 'idle');
-    }
+  const { data, error } = await supabase
+    .from('focus_sessions')
+    .select('*')
+    .eq('user_id', currentUserId)
+    .is('ended_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1);
 
-    // If online, refresh from server
-    if (isOnline && currentUser) {
-      await refreshFocusStatus();
-    }
-  } catch (error) {
-    console.error('Failed to load focus status:', error);
-  }
-}
+  if (error) throw error;
 
-async function refreshFocusStatus() {
-  if (!currentUser) return;
-
-  try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from('focus_sessions')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .is('ended_at', null)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (data && data.length > 0 && !error) {
-      const session = data[0];
-      // Cache the session
-      await focusSessionCacheStore.put({
-        id: 'current',
-        user_id: session.user_id,
-        phase: session.phase,
-        status: session.status,
-        phase_started_at: session.phase_started_at,
-        focus_duration: session.focus_duration,
-        break_duration: session.break_duration,
-        cached_at: new Date().toISOString()
-      });
-
-      // Update UI based on session state
-      if (session.status === 'running') {
-        updateStatusDisplay(session.phase === 'focus' ? 'focus' : 'break', 'running');
-      } else if (session.status === 'paused') {
-        updateStatusDisplay('paused', 'paused');
-      }
-    } else {
-      // No active session
-      await focusSessionCacheStore.clear();
-      updateStatusDisplay('idle', 'idle');
-    }
-  } catch (error) {
-    console.error('Failed to refresh focus status:', error);
+  if (data && data.length > 0) {
+    const session = data[0] as FocusSession;
+    updateStatusDisplay(session);
+  } else {
+    updateStatusDisplay(null);
   }
 }
 
 async function loadBlockLists() {
-  try {
-    // Load from cache first
-    const cached = await blockListsCache.getAll();
-    if (cached.length > 0) {
-      renderBlockLists(cached);
-    }
+  if (!currentUserId) return;
 
-    // If online, refresh from server
-    if (isOnline && currentUser) {
-      await refreshBlockLists();
-    } else if (cached.length === 0) {
-      blockListsContainer.innerHTML = '<div class="empty-message">No block lists available</div>';
-    }
-  } catch (error) {
-    console.error('Failed to load block lists:', error);
-    blockListsContainer.innerHTML = '<div class="empty-message">Failed to load block lists</div>';
+  const { data, error } = await supabase
+    .from('block_lists')
+    .select('id, name, is_enabled')
+    .eq('user_id', currentUserId)
+    .eq('deleted', false)
+    .order('order', { ascending: true });
+
+  if (error) throw error;
+
+  renderBlockLists(data || []);
+}
+
+function updateStatusDisplay(session: FocusSession | null) {
+  statusIndicator?.classList.remove('focus', 'break', 'paused', 'idle');
+
+  if (!session) {
+    statusIndicator?.classList.add('idle');
+    if (statusLabel) statusLabel.textContent = 'Ready to Focus';
+    if (statusDesc) statusDesc.textContent = 'Start a session in Stellar';
+    return;
+  }
+
+  if (session.status === 'running') {
+    const phase = session.phase;
+    statusIndicator?.classList.add(phase);
+    if (statusLabel) statusLabel.textContent = phase === 'focus' ? 'Focus Time' : 'Break Time';
+    if (statusDesc) statusDesc.textContent = phase === 'focus'
+      ? 'Stay focused — distractions blocked'
+      : 'Take a breather, you earned it';
+  } else if (session.status === 'paused') {
+    statusIndicator?.classList.add('paused');
+    if (statusLabel) statusLabel.textContent = 'Session Paused';
+    if (statusDesc) statusDesc.textContent = 'Resume when you\'re ready';
   }
 }
 
-async function refreshBlockLists() {
-  if (!currentUser) return;
+function renderBlockLists(lists: BlockList[]) {
+  if (!blockListsContainer) return;
 
-  try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from('block_lists')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .eq('deleted', false)
-      .order('order', { ascending: true });
-
-    if (data && !error) {
-      // Clear and update cache
-      await blockListsCache.clear();
-      for (const list of data) {
-        await blockListsCache.put({
-          id: list.id,
-          user_id: list.user_id,
-          name: list.name,
-          is_enabled: list.is_enabled,
-          order: list.order
-        });
-      }
-      renderBlockLists(data);
-    }
-  } catch (error) {
-    console.error('Failed to refresh block lists:', error);
-  }
-}
-
-function renderBlockLists(lists: CachedBlockList[]) {
   if (lists.length === 0) {
-    blockListsContainer.innerHTML = '<div class="empty-message">No block lists. Create one in Stellar.</div>';
+    blockListsContainer.innerHTML = `
+      <div class="empty-message">
+        <p>No block lists yet</p>
+        <a href="${config.appUrl}/focus" target="_blank" rel="noopener" class="create-link">Create one in Stellar</a>
+      </div>
+    `;
     return;
   }
 
   blockListsContainer.innerHTML = lists.map(list => `
-    <div class="block-list-item" data-id="${list.id}">
-      <button class="block-list-toggle ${list.is_enabled ? 'active' : ''}" data-id="${list.id}">
-        <span class="knob"></span>
-      </button>
+    <div class="block-list-item">
+      <span class="list-status ${list.is_enabled ? 'enabled' : 'disabled'}"></span>
       <span class="block-list-name">${escapeHtml(list.name)}</span>
+      <a href="${config.appUrl}/focus?list=${list.id}" target="_blank" rel="noopener" class="edit-link" title="Edit in Stellar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </a>
     </div>
   `).join('');
+}
 
-  // Add toggle listeners
-  blockListsContainer.querySelectorAll('.block-list-toggle').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const id = (e.currentTarget as HTMLElement).dataset.id!;
-      await toggleBlockList(id);
+// Real-time subscription
+function subscribeToRealtime() {
+  if (!currentUserId || focusSubscription) return;
+
+  focusSubscription = supabase
+    .channel('focus-sessions')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'focus_sessions',
+        filter: `user_id=eq.${currentUserId}`
+      },
+      (payload) => {
+        console.log('[Stellar Focus] Real-time update:', payload.eventType);
+        setSyncStatus('syncing');
+
+        // Small delay to ensure data consistency
+        setTimeout(async () => {
+          await loadFocusStatus();
+          setSyncStatus('synced');
+        }, 100);
+      }
+    )
+    .subscribe((status) => {
+      console.log('[Stellar Focus] Subscription status:', status);
     });
-  });
+
+  // Also poll periodically as backup (every 30s)
+  startPolling();
 }
 
-async function toggleBlockList(id: string) {
-  if (!isOnline) {
-    // Can't toggle offline
-    return;
+function unsubscribeFromRealtime() {
+  if (focusSubscription) {
+    supabase.removeChannel(focusSubscription);
+    focusSubscription = null;
   }
+  stopPolling();
+}
 
-  const list = await blockListsCache.get(id);
-  if (!list) return;
+let pollInterval: ReturnType<typeof setInterval> | null = null;
 
-  const previousState = list.is_enabled;
-  const newEnabled = !previousState;
-
-  // Optimistic update: Update UI immediately
-  const toggle = blockListsContainer.querySelector(`[data-id="${id}"].block-list-toggle`);
-  if (toggle) {
-    toggle.classList.toggle('active', newEnabled);
-  }
-
-  // Update cache optimistically
-  await blockListsCache.put({ ...list, is_enabled: newEnabled });
-
-  try {
-    // Update server
-    const supabase = getSupabase();
-    const { error } = await supabase
-      .from('block_lists')
-      .update({ is_enabled: newEnabled, updated_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (error) {
-      throw error;
+function startPolling() {
+  stopPolling();
+  pollInterval = setInterval(async () => {
+    if (isOnline && currentUserId) {
+      await loadFocusStatus();
     }
+  }, 30000); // 30 seconds
+}
 
-    // Notify background script on success
-    browser.runtime.sendMessage({ type: 'BLOCK_LIST_UPDATED' });
-  } catch (error) {
-    console.error('Failed to toggle block list:', error);
-
-    // Rollback: Restore previous state in cache
-    await blockListsCache.put({ ...list, is_enabled: previousState });
-
-    // Rollback: Restore UI to previous state
-    if (toggle) {
-      toggle.classList.toggle('active', previousState);
-    }
+function stopPolling() {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
   }
 }
 
-async function refreshData() {
-  if (!isOnline) return;
+// Track previous state for transitions
+let prevSyncStatus: SyncStatus = 'idle';
 
-  // Add spinning animation to refresh button
-  refreshBtn.style.animation = 'spin 1s linear infinite';
+// Sync status indicator (matches main app SyncStatus behavior)
+function setSyncStatus(status: SyncStatus) {
+  const prevStatus = syncStatus;
+  syncStatus = status;
 
-  await Promise.all([
-    refreshFocusStatus(),
-    refreshBlockLists()
-  ]);
+  // Remove all state classes from indicator
+  syncIndicator?.classList.remove('idle', 'syncing', 'synced', 'error', 'transitioning');
+  syncIndicator?.classList.add(status);
 
-  // Stop spinning
-  setTimeout(() => {
-    refreshBtn.style.animation = '';
-  }, 500);
-}
+  // Remove active class from all icons
+  const icons = syncIndicator?.querySelectorAll('.icon');
+  icons?.forEach(icon => icon.classList.remove('active', 'morph-in'));
 
-async function checkForUpdates() {
-  try {
-    // Check if there's a newer version available
-    const response = await browser.runtime.sendMessage({ type: 'CHECK_UPDATE' });
-    if (response?.updateAvailable) {
-      updateBanner.classList.remove('hidden');
+  // Add active class to the correct icon
+  const activeIcon = syncIndicator?.querySelector(`.icon-${status}`);
+  if (activeIcon) {
+    activeIcon.classList.add('active');
+
+    // Add morph-in animation when transitioning from syncing to synced/error
+    if (prevStatus === 'syncing' && (status === 'synced' || status === 'error')) {
+      activeIcon.classList.add('morph-in');
+      syncIndicator?.classList.add('transitioning');
+
+      // Remove transitioning class after animation
+      setTimeout(() => {
+        syncIndicator?.classList.remove('transitioning');
+      }, 600);
     }
-  } catch (error) {
-    // Ignore - background script might not support this
   }
+
+  // Auto-hide synced status after 2 seconds
+  if (syncTimeout) clearTimeout(syncTimeout);
+
+  if (status === 'synced') {
+    syncTimeout = setTimeout(() => {
+      syncIndicator?.classList.remove('synced');
+      syncIndicator?.classList.add('idle');
+      // Remove active from synced icon
+      const syncedIcon = syncIndicator?.querySelector('.icon-synced');
+      syncedIcon?.classList.remove('active', 'morph-in');
+    }, 2000);
+  }
+
+  prevSyncStatus = status;
 }
 
-function handleUpdate() {
-  browser.runtime.reload();
-}
-
+// UI helpers
 function setLoginLoading(loading: boolean) {
-  const btnText = loginBtn.querySelector('.btn-text') as HTMLElement;
-  const btnLoading = loginBtn.querySelector('.btn-loading') as HTMLElement;
+  const btnText = loginBtn?.querySelector('.btn-text') as HTMLElement;
+  const btnLoading = loginBtn?.querySelector('.btn-loading') as HTMLElement;
 
   if (loading) {
-    btnText.classList.add('hidden');
-    btnLoading.classList.remove('hidden');
-    loginBtn.disabled = true;
+    btnText?.classList.add('hidden');
+    btnLoading?.classList.remove('hidden');
+    if (loginBtn) loginBtn.disabled = true;
   } else {
-    btnText.classList.remove('hidden');
-    btnLoading.classList.add('hidden');
-    loginBtn.disabled = false;
+    btnText?.classList.remove('hidden');
+    btnLoading?.classList.add('hidden');
+    if (loginBtn) loginBtn.disabled = false;
   }
 }
 
 function showLoginError(message: string) {
-  loginError.textContent = message;
-  loginError.classList.remove('hidden');
+  if (loginError) {
+    loginError.textContent = message;
+    loginError.classList.remove('hidden');
+  }
 }
 
 function hideLoginError() {
-  loginError.classList.add('hidden');
-}
-
-function updateStatusDisplay(phase: 'focus' | 'break' | 'paused' | 'idle', status: 'running' | 'paused' | 'idle') {
-  // Remove all state classes
-  statusIndicator.classList.remove('focus', 'break', 'paused', 'idle');
-
-  switch (phase) {
-    case 'focus':
-      statusIndicator.classList.add('focus');
-      statusLabel.textContent = 'Focus Time';
-      statusDesc.textContent = 'Stay focused — distractions blocked';
-      break;
-    case 'break':
-      statusIndicator.classList.add('break');
-      statusLabel.textContent = 'Break Time';
-      statusDesc.textContent = 'Take a breather, you earned it';
-      break;
-    case 'paused':
-      statusIndicator.classList.add('paused');
-      statusLabel.textContent = 'Session Paused';
-      statusDesc.textContent = 'Resume when you\'re ready';
-      break;
-    case 'idle':
-    default:
-      statusIndicator.classList.add('idle');
-      statusLabel.textContent = 'Ready to Focus';
-      statusDesc.textContent = 'Start a session in Stellar';
-      break;
-  }
+  loginError?.classList.add('hidden');
 }
 
 function escapeHtml(str: string): string {

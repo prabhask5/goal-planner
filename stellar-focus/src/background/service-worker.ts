@@ -1,12 +1,11 @@
 /**
  * Stellar Focus Extension - Background Service Worker
  * Handles focus session polling and website blocking
- * CRITICAL: Only blocks websites when ONLINE
+ * CRITICAL: Only blocks websites when ONLINE and authenticated
  */
 
 import browser from 'webextension-polyfill';
 import { getSupabase, getSession, getUser } from '../auth/supabase';
-import { getValidOfflineSession } from '../auth/offlineSession';
 import { blockListsCache, blockedWebsitesCache, focusSessionCacheStore, type FocusSessionCache } from '../lib/storage';
 import { getNetworkStatus, checkConnectivity, getSupabaseUrl } from '../lib/network';
 
@@ -129,16 +128,12 @@ async function pollFocusSession() {
   }
 
   try {
-    // Check auth
+    // Check auth - no offline fallback, must be online and logged in
     const session = await getSession();
     if (!session) {
-      // Try offline session
-      const offlineSession = await getValidOfflineSession();
-      if (!offlineSession) {
-        currentFocusSession = null;
-        await focusSessionCacheStore.clear();
-        return;
-      }
+      currentFocusSession = null;
+      await focusSessionCacheStore.clear();
+      return;
     }
 
     const user = await getUser();
@@ -188,10 +183,9 @@ async function refreshBlockLists() {
   if (!isOnline) return;
 
   try {
+    // Must be online and authenticated
     const session = await getSession();
-    const offlineSession = await getValidOfflineSession();
-
-    if (!session && !offlineSession) return;
+    if (!session) return;
 
     const user = await getUser();
     if (!user) return;

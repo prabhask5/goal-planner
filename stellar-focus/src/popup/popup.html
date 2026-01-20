@@ -35,14 +35,30 @@
         </svg>
         <span class="brand-text">Stellar Focus</span>
       </div>
-      <button id="refreshBtn" class="refresh-btn" title="Refresh">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 4v6h-6"/>
-          <path d="M1 20v-6h6"/>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/>
-          <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/>
-        </svg>
-      </button>
+      <!-- Sync Indicator (matches main app SyncStatus) -->
+      <div class="sync-wrapper">
+        <button id="syncIndicator" class="sync-indicator idle" aria-label="Sync status">
+          <span class="indicator-ring"></span>
+          <span class="indicator-core">
+            <!-- Syncing Spinner -->
+            <svg class="icon icon-syncing" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <circle class="spinner-track" cx="12" cy="12" r="9" stroke-opacity="0.2"/>
+              <path class="spinner-arc" d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            <!-- Success Checkmark -->
+            <svg class="icon icon-synced" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle class="check-circle" cx="12" cy="12" r="9"/>
+              <polyline class="check-mark" points="8 12 11 15 16 9"/>
+            </svg>
+            <!-- Error Icon -->
+            <svg class="icon icon-error" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <circle class="error-circle" cx="12" cy="12" r="9"/>
+              <line class="error-line" x1="12" y1="8" x2="12" y2="12"/>
+              <line class="error-dot" x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </span>
+        </button>
+      </div>
     </header>
 
     <!-- Update Banner (hidden by default) -->
@@ -51,29 +67,41 @@
       <button id="updateBtn" class="update-btn">Update Now</button>
     </div>
 
-    <!-- Offline Placeholder (beautiful full-section) -->
-    <div id="offlineBanner" class="offline-placeholder hidden">
-      <div class="offline-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" opacity="0.3"/>
-          <line x1="1" y1="1" x2="23" y2="23" stroke-width="2"/>
-          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
-          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
-          <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
-          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
-          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-          <circle cx="12" cy="20" r="1" fill="currentColor"/>
-        </svg>
+    <!-- Offline Placeholder -->
+    <section id="offlinePlaceholder" class="offline-placeholder hidden">
+      <div class="offline-visual">
+        <div class="offline-rings">
+          <div class="ring ring-1"></div>
+          <div class="ring ring-2"></div>
+          <div class="ring ring-3"></div>
+        </div>
+        <div class="offline-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M1 1l22 22" stroke-width="2"/>
+            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+            <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
+            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+            <circle cx="12" cy="20" r="1" fill="currentColor"/>
+          </svg>
+        </div>
       </div>
       <h3 class="offline-title">You're Offline</h3>
-      <p class="offline-desc">Connect to the internet to sync your focus sessions and enable website blocking.</p>
-      <div class="offline-pulse"></div>
-    </div>
+      <p class="offline-desc">Connect to the internet to view your focus sessions and block lists.</p>
+    </section>
 
-    <!-- Auth Section (shown when not logged in) -->
+    <!-- Auth Section -->
     <section id="authSection" class="section auth-section hidden">
-      <h2>Sign In</h2>
-      <p class="auth-desc">Use your Stellar account credentials</p>
+      <div class="auth-visual">
+        <div class="auth-glow"></div>
+        <svg class="auth-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>
+        </svg>
+      </div>
+      <h2>Log In</h2>
+      <p class="auth-desc">Access your Stellar Focus account</p>
       <form id="loginForm" class="login-form">
         <div class="form-group">
           <input type="email" id="emailInput" placeholder="Email" required autocomplete="email">
@@ -83,7 +111,7 @@
         </div>
         <div id="loginError" class="error-message hidden"></div>
         <button type="submit" class="btn btn-primary" id="loginBtn">
-          <span class="btn-text">Sign In</span>
+          <span class="btn-text">Log In</span>
           <span class="btn-loading hidden">
             <svg class="spinner" width="16" height="16" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4" stroke-dashoffset="31.4"/>
@@ -92,11 +120,11 @@
         </button>
       </form>
       <p class="signup-note">
-        Don't have an account? <a id="signupLink" href="#" target="_blank" rel="noopener">Sign up on the main app</a>
+        Don't have an account? <a id="signupLink" href="#" target="_blank" rel="noopener">Sign up on Stellar</a>
       </p>
     </section>
 
-    <!-- Main Section (shown when logged in) -->
+    <!-- Main Section -->
     <section id="mainSection" class="section main-section hidden">
       <!-- Focus Status Card -->
       <div id="focusStatus" class="focus-status-card">
@@ -104,24 +132,20 @@
           <div class="status-glow"></div>
           <div class="status-ring"></div>
           <div class="status-icon">
-            <!-- Focus icon -->
             <svg class="icon-focus" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <circle cx="12" cy="12" r="6"/>
               <circle cx="12" cy="12" r="2"/>
             </svg>
-            <!-- Break icon -->
             <svg class="icon-break" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
               <line x1="12" y1="2" x2="12" y2="12"/>
             </svg>
-            <!-- Paused icon -->
             <svg class="icon-paused" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <line x1="10" y1="15" x2="10" y2="9"/>
               <line x1="14" y1="15" x2="14" y2="9"/>
             </svg>
-            <!-- Idle icon -->
             <svg class="icon-idle" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
@@ -138,13 +162,15 @@
       <div class="block-lists-section">
         <h3>Block Lists</h3>
         <div id="blockLists" class="block-lists">
-          <div class="loading-placeholder">Loading...</div>
+          <div class="loading-placeholder">
+            <div class="loading-shimmer"></div>
+          </div>
         </div>
       </div>
 
       <!-- User Info -->
       <div class="user-section">
-        <div class="user-info" id="userInfo">
+        <div class="user-info">
           <span class="user-avatar" id="userAvatar">?</span>
           <span class="user-name" id="userName">Loading...</span>
         </div>
@@ -155,7 +181,7 @@
     <!-- Open Stellar Button -->
     <footer class="popup-footer">
       <a id="openStellarBtn" href="#" target="_blank" rel="noopener" class="open-stellar-btn">
-        Open Stellar
+        <span>Open Stellar</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
           <polyline points="15 3 21 3 21 9"/>
