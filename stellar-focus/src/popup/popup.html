@@ -7,6 +7,14 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
+  <!-- Cinematic background effects -->
+  <div class="stars-container">
+    <div class="stars stars-small"></div>
+    <div class="stars stars-medium"></div>
+    <div class="stars stars-large"></div>
+  </div>
+  <div class="nebula"></div>
+
   <div class="popup-container">
     <!-- Header -->
     <header class="popup-header">
@@ -43,18 +51,23 @@
       <button id="updateBtn" class="update-btn">Update Now</button>
     </div>
 
-    <!-- Offline Banner -->
-    <div id="offlineBanner" class="offline-banner hidden">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="1" y1="1" x2="23" y2="23"/>
-        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
-        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
-        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
-        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
-        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-        <line x1="12" y1="20" x2="12.01" y2="20"/>
-      </svg>
-      <span>Offline - blocking disabled</span>
+    <!-- Offline Placeholder (beautiful full-section) -->
+    <div id="offlineBanner" class="offline-placeholder hidden">
+      <div class="offline-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" opacity="0.3"/>
+          <line x1="1" y1="1" x2="23" y2="23" stroke-width="2"/>
+          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+          <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
+          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+          <circle cx="12" cy="20" r="1" fill="currentColor"/>
+        </svg>
+      </div>
+      <h3 class="offline-title">You're Offline</h3>
+      <p class="offline-desc">Connect to the internet to sync your focus sessions and enable website blocking.</p>
+      <div class="offline-pulse"></div>
     </div>
 
     <!-- Auth Section (shown when not logged in) -->
@@ -78,25 +91,46 @@
           </span>
         </button>
       </form>
+      <p class="signup-note">
+        Don't have an account? <a id="signupLink" href="#" target="_blank" rel="noopener">Sign up on the main app</a>
+      </p>
     </section>
 
     <!-- Main Section (shown when logged in) -->
     <section id="mainSection" class="section main-section hidden">
-      <!-- Focus Status -->
-      <div id="focusStatus" class="focus-status">
+      <!-- Focus Status Card -->
+      <div id="focusStatus" class="focus-status-card">
         <div class="status-indicator" id="statusIndicator">
+          <div class="status-glow"></div>
           <div class="status-ring"></div>
           <div class="status-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- Focus icon -->
+            <svg class="icon-focus" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <circle cx="12" cy="12" r="6"/>
               <circle cx="12" cy="12" r="2"/>
             </svg>
+            <!-- Break icon -->
+            <svg class="icon-break" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+              <line x1="12" y1="2" x2="12" y2="12"/>
+            </svg>
+            <!-- Paused icon -->
+            <svg class="icon-paused" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="10" y1="15" x2="10" y2="9"/>
+              <line x1="14" y1="15" x2="14" y2="9"/>
+            </svg>
+            <!-- Idle icon -->
+            <svg class="icon-idle" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+            </svg>
           </div>
         </div>
-        <div class="status-info">
-          <span class="status-label" id="statusLabel">Not Running</span>
-          <span class="status-desc" id="statusDesc">Start a focus session in Stellar</span>
+        <div class="status-content">
+          <span class="status-label" id="statusLabel">Ready to Focus</span>
+          <span class="status-desc" id="statusDesc">Start a session in Stellar</span>
         </div>
       </div>
 

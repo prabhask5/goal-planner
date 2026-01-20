@@ -151,25 +151,27 @@ async function pollFocusSession() {
       .select('*')
       .eq('user_id', user.id)
       .is('ended_at', null)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-    if (data && !error) {
+    if (data && data.length > 0 && !error) {
+      const session = data[0];
       // Update cached session
       const sessionData: FocusSessionCache = {
         id: 'current',
-        user_id: data.user_id,
-        phase: data.phase,
-        status: data.status,
-        phase_started_at: data.phase_started_at,
-        focus_duration: data.focus_duration,
-        break_duration: data.break_duration,
+        user_id: session.user_id,
+        phase: session.phase,
+        status: session.status,
+        phase_started_at: session.phase_started_at,
+        focus_duration: session.focus_duration,
+        break_duration: session.break_duration,
         cached_at: new Date().toISOString()
       };
 
       await focusSessionCacheStore.put(sessionData);
       currentFocusSession = sessionData;
 
-      console.log('[Stellar Focus] Focus session active:', data.phase, data.status);
+      console.log('[Stellar Focus] Focus session active:', session.phase, session.status);
     } else {
       // No active session
       await focusSessionCacheStore.clear();

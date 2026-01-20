@@ -41,6 +41,7 @@ const blockListsContainer = document.getElementById('blockLists') as HTMLElement
 const userAvatar = document.getElementById('userAvatar') as HTMLElement;
 const userName = document.getElementById('userName') as HTMLElement;
 const openStellarBtn = document.getElementById('openStellarBtn') as HTMLAnchorElement;
+const signupLink = document.getElementById('signupLink') as HTMLAnchorElement;
 
 // State
 let currentUser: User | OfflineUser | null = null;
@@ -55,6 +56,11 @@ async function init() {
   // Set app URL from config
   if (openStellarBtn) {
     openStellarBtn.href = config.appUrl;
+  }
+
+  // Set signup link URL
+  if (signupLink) {
+    signupLink.href = config.appUrl + '/auth/signup';
   }
 
   // Set up network listener
@@ -82,8 +88,16 @@ async function init() {
 function updateOfflineBanner() {
   if (!isOnline) {
     offlineBanner.classList.remove('hidden');
+    // Hide main content when offline (show graceful placeholder instead)
+    if (currentUser) {
+      mainSection.classList.add('hidden');
+    }
   } else {
     offlineBanner.classList.add('hidden');
+    // Show main content when online
+    if (currentUser) {
+      mainSection.classList.remove('hidden');
+    }
   }
 }
 
@@ -239,14 +253,11 @@ async function loadFocusStatus() {
 
     if (cached && cached.status === 'running') {
       const phase = cached.phase;
-      statusIndicator.classList.remove('focus', 'break');
-      statusIndicator.classList.add(phase === 'focus' ? 'focus' : 'break');
-      statusLabel.textContent = phase === 'focus' ? 'Focus Time' : 'Break Time';
-      statusDesc.textContent = 'Blocking is active';
+      updateStatusDisplay(phase === 'focus' ? 'focus' : 'break', 'running');
+    } else if (cached && cached.status === 'paused') {
+      updateStatusDisplay('paused', 'paused');
     } else {
-      statusIndicator.classList.remove('focus', 'break');
-      statusLabel.textContent = 'Not Running';
-      statusDesc.textContent = 'Start a focus session in Stellar';
+      updateStatusDisplay('idle', 'idle');
     }
 
     // If online, refresh from server
@@ -268,39 +279,33 @@ async function refreshFocusStatus() {
       .select('*')
       .eq('user_id', currentUser.id)
       .is('ended_at', null)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-    if (data && !error) {
+    if (data && data.length > 0 && !error) {
+      const session = data[0];
       // Cache the session
       await focusSessionCacheStore.put({
         id: 'current',
-        user_id: data.user_id,
-        phase: data.phase,
-        status: data.status,
-        phase_started_at: data.phase_started_at,
-        focus_duration: data.focus_duration,
-        break_duration: data.break_duration,
+        user_id: session.user_id,
+        phase: session.phase,
+        status: session.status,
+        phase_started_at: session.phase_started_at,
+        focus_duration: session.focus_duration,
+        break_duration: session.break_duration,
         cached_at: new Date().toISOString()
       });
 
-      // Update UI
-      const phase = data.phase;
-      statusIndicator.classList.remove('focus', 'break');
-
-      if (data.status === 'running') {
-        statusIndicator.classList.add(phase === 'focus' ? 'focus' : 'break');
-        statusLabel.textContent = phase === 'focus' ? 'Focus Time' : 'Break Time';
-        statusDesc.textContent = 'Blocking is active';
-      } else if (data.status === 'paused') {
-        statusLabel.textContent = 'Paused';
-        statusDesc.textContent = 'Blocking is paused';
+      // Update UI based on session state
+      if (session.status === 'running') {
+        updateStatusDisplay(session.phase === 'focus' ? 'focus' : 'break', 'running');
+      } else if (session.status === 'paused') {
+        updateStatusDisplay('paused', 'paused');
       }
     } else {
       // No active session
       await focusSessionCacheStore.clear();
-      statusIndicator.classList.remove('focus', 'break');
-      statusLabel.textContent = 'Not Running';
-      statusDesc.textContent = 'Start a focus session in Stellar';
+      updateStatusDisplay('idle', 'idle');
     }
   } catch (error) {
     console.error('Failed to refresh focus status:', error);
@@ -388,34 +393,45 @@ async function toggleBlockList(id: string) {
     return;
   }
 
+  const list = await blockListsCache.get(id);
+  if (!list) return;
+
+  const previousState = list.is_enabled;
+  const newEnabled = !previousState;
+
+  // Optimistic update: Update UI immediately
+  const toggle = blockListsContainer.querySelector(`[data-id="${id}"].block-list-toggle`);
+  if (toggle) {
+    toggle.classList.toggle('active', newEnabled);
+  }
+
+  // Update cache optimistically
+  await blockListsCache.put({ ...list, is_enabled: newEnabled });
+
   try {
-    const list = await blockListsCache.get(id);
-    if (!list) return;
-
-    const newEnabled = !list.is_enabled;
-
-    // Update UI immediately
-    const toggle = blockListsContainer.querySelector(`[data-id="${id}"].block-list-toggle`);
-    if (toggle) {
-      toggle.classList.toggle('active', newEnabled);
-    }
-
-    // Update cache
-    await blockListsCache.put({ ...list, is_enabled: newEnabled });
-
     // Update server
     const supabase = getSupabase();
-    await supabase
+    const { error } = await supabase
       .from('block_lists')
       .update({ is_enabled: newEnabled, updated_at: new Date().toISOString() })
       .eq('id', id);
 
-    // Notify background script
+    if (error) {
+      throw error;
+    }
+
+    // Notify background script on success
     browser.runtime.sendMessage({ type: 'BLOCK_LIST_UPDATED' });
   } catch (error) {
     console.error('Failed to toggle block list:', error);
-    // Revert UI on error
-    await loadBlockLists();
+
+    // Rollback: Restore previous state in cache
+    await blockListsCache.put({ ...list, is_enabled: previousState });
+
+    // Rollback: Restore UI to previous state
+    if (toggle) {
+      toggle.classList.toggle('active', previousState);
+    }
   }
 }
 
@@ -474,6 +490,35 @@ function showLoginError(message: string) {
 
 function hideLoginError() {
   loginError.classList.add('hidden');
+}
+
+function updateStatusDisplay(phase: 'focus' | 'break' | 'paused' | 'idle', status: 'running' | 'paused' | 'idle') {
+  // Remove all state classes
+  statusIndicator.classList.remove('focus', 'break', 'paused', 'idle');
+
+  switch (phase) {
+    case 'focus':
+      statusIndicator.classList.add('focus');
+      statusLabel.textContent = 'Focus Time';
+      statusDesc.textContent = 'Stay focused — distractions blocked';
+      break;
+    case 'break':
+      statusIndicator.classList.add('break');
+      statusLabel.textContent = 'Break Time';
+      statusDesc.textContent = 'Take a breather, you earned it';
+      break;
+    case 'paused':
+      statusIndicator.classList.add('paused');
+      statusLabel.textContent = 'Session Paused';
+      statusDesc.textContent = 'Resume when you\'re ready';
+      break;
+    case 'idle':
+    default:
+      statusIndicator.classList.add('idle');
+      statusLabel.textContent = 'Ready to Focus';
+      statusDesc.textContent = 'Start a session in Stellar';
+      break;
+  }
 }
 
 function escapeHtml(str: string): string {
