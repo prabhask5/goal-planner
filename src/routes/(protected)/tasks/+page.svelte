@@ -19,6 +19,7 @@
   import LongTermTaskList from '$lib/components/LongTermTaskList.svelte';
   import LongTermTaskModal from '$lib/components/LongTermTaskModal.svelte';
   import LongTermTaskForm from '$lib/components/LongTermTaskForm.svelte';
+  import CategoryCreateModal from '$lib/components/CategoryCreateModal.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
 
   // State
@@ -36,8 +37,12 @@
   let showCommitmentsModal = $state(false);
   let showTaskForm = $state(false);
   let showTaskModal = $state(false);
+  let showCategoryCreate = $state(false);
   let selectedTask = $state<LongTermTaskWithCategory | null>(null);
   let defaultTaskDate = $state<string | undefined>(undefined);
+
+  // Saved task form state (for when switching to category creation)
+  let savedTaskFormState = $state<{ name: string; dueDate: string; categoryId: string | null } | null>(null);
 
   // Calendar state
   let currentDate = $state(new Date());
@@ -80,6 +85,12 @@
     longTermTasks
       .filter(t => t.due_date >= today && !t.completed)
       .sort((a, b) => a.due_date.localeCompare(b.due_date))
+  );
+
+  const completedTasks = $derived(
+    longTermTasks
+      .filter(t => t.completed)
+      .sort((a, b) => b.due_date.localeCompare(a.due_date)) // Most recent first
   );
 
   // Helper to get user ID
@@ -135,6 +146,30 @@
 
   async function handleDeleteCategory(id: string) {
     await taskCategoriesStore.delete(id);
+  }
+
+  // Modal swapping for category creation
+  function handleRequestCreateCategory(formState: { name: string; dueDate: string; categoryId: string | null }) {
+    savedTaskFormState = formState;
+    showTaskForm = false;
+    // Small delay for smooth transition
+    setTimeout(() => {
+      showCategoryCreate = true;
+    }, 150);
+  }
+
+  function handleCategoryCreateClose() {
+    showCategoryCreate = false;
+    // Return to task form with saved state
+    setTimeout(() => {
+      showTaskForm = true;
+    }, 150);
+  }
+
+  async function handleCategoryCreateSubmit(name: string, color: string) {
+    await handleCreateCategory(name, color);
+    // Close category modal and return to task form
+    handleCategoryCreateClose();
   }
 
   // Long-term task handlers
@@ -256,6 +291,15 @@
           onDelete={handleDeleteLongTermTask}
         />
 
+        <LongTermTaskList
+          title="Completed"
+          tasks={completedTasks}
+          variant="completed"
+          onTaskClick={handleTaskClick}
+          onToggle={handleToggleLongTermTask}
+          onDelete={handleDeleteLongTermTask}
+        />
+
         {#if longTermTasks.filter(t => !t.completed).length === 0}
           <EmptyState
             icon="📅"
@@ -286,11 +330,19 @@
 <LongTermTaskForm
   open={showTaskForm}
   {categories}
-  defaultDate={defaultTaskDate}
-  onClose={() => showTaskForm = false}
+  defaultDate={savedTaskFormState?.dueDate ?? defaultTaskDate}
+  initialName={savedTaskFormState?.name ?? ''}
+  initialCategoryId={savedTaskFormState?.categoryId ?? null}
+  onClose={() => { showTaskForm = false; savedTaskFormState = null; }}
   onCreate={handleCreateLongTermTask}
-  onCreateCategory={handleCreateCategory}
   onDeleteCategory={handleDeleteCategory}
+  onRequestCreateCategory={handleRequestCreateCategory}
+/>
+
+<CategoryCreateModal
+  open={showCategoryCreate}
+  onClose={handleCategoryCreateClose}
+  onCreate={handleCategoryCreateSubmit}
 />
 
 <LongTermTaskModal

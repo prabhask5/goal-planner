@@ -6,13 +6,26 @@
     open: boolean;
     categories: TaskCategory[];
     defaultDate?: string;
+    // Allow restoring form state when coming back from category creation
+    initialName?: string;
+    initialCategoryId?: string | null;
     onClose: () => void;
     onCreate: (name: string, dueDate: string, categoryId: string | null) => void;
-    onCreateCategory: (name: string, color: string) => void;
     onDeleteCategory: (id: string) => void;
+    onRequestCreateCategory: (formState: { name: string; dueDate: string; categoryId: string | null }) => void;
   }
 
-  let { open, categories, defaultDate, onClose, onCreate, onCreateCategory, onDeleteCategory }: Props = $props();
+  let {
+    open,
+    categories,
+    defaultDate,
+    initialName = '',
+    initialCategoryId = null,
+    onClose,
+    onCreate,
+    onDeleteCategory,
+    onRequestCreateCategory
+  }: Props = $props();
 
   // Form state
   let name = $state('');
@@ -21,30 +34,14 @@
 
   // Dropdown state
   let dropdownOpen = $state(false);
-  let showAddCategory = $state(false);
-  let newCategoryName = $state('');
-  let newCategoryColor = $state('#6c5ce7');
-
-  const presetColors = [
-    '#6c5ce7', // Purple
-    '#ff79c6', // Pink
-    '#00cec9', // Teal
-    '#fdcb6e', // Yellow
-    '#e17055', // Orange
-    '#d63031', // Red
-    '#00b894', // Green
-    '#0984e3', // Blue
-  ];
 
   $effect(() => {
     if (open) {
-      name = '';
+      // Restore state if provided, otherwise reset
+      name = initialName || '';
       dueDate = defaultDate || getTodayString();
-      categoryId = null;
+      categoryId = initialCategoryId;
       dropdownOpen = false;
-      showAddCategory = false;
-      newCategoryName = '';
-      newCategoryColor = presetColors[0];
     }
   });
 
@@ -62,9 +59,7 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
-      if (showAddCategory) {
-        showAddCategory = false;
-      } else if (dropdownOpen) {
+      if (dropdownOpen) {
         dropdownOpen = false;
       } else {
         onClose();
@@ -81,28 +76,16 @@
     e.stopPropagation();
     if (confirm('Delete this category? Tasks will keep their data but lose the category tag.')) {
       onDeleteCategory(id);
-      // If we just deleted the selected category, clear selection
       if (categoryId === id) {
         categoryId = null;
       }
     }
   }
 
-  function handleAddCategorySubmit() {
-    if (!newCategoryName.trim()) return;
-    onCreateCategory(newCategoryName.trim(), newCategoryColor);
-    showAddCategory = false;
-    newCategoryName = '';
-    newCategoryColor = presetColors[0];
-  }
-
-  function handleAddCategoryKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddCategorySubmit();
-    } else if (e.key === 'Escape') {
-      showAddCategory = false;
-    }
+  function handleAddCategoryClick() {
+    dropdownOpen = false;
+    // Pass current form state so it can be restored
+    onRequestCreateCategory({ name, dueDate, categoryId });
   }
 
   // Get selected category
@@ -224,59 +207,18 @@
             <!-- Divider -->
             <div class="dropdown-divider"></div>
 
-            <!-- Add Category -->
-            {#if showAddCategory}
-              <div class="add-category-form">
-                <input
-                  type="text"
-                  bind:value={newCategoryName}
-                  placeholder="Category name"
-                  class="add-category-input"
-                  onkeydown={handleAddCategoryKeydown}
-                  autofocus
-                />
-                <div class="color-picker">
-                  {#each presetColors as color}
-                    <button
-                      type="button"
-                      class="color-btn"
-                      class:selected={newCategoryColor === color}
-                      style="--btn-color: {color}"
-                      onclick={() => newCategoryColor = color}
-                    ></button>
-                  {/each}
-                </div>
-                <div class="add-category-actions">
-                  <button
-                    type="button"
-                    class="add-confirm-btn"
-                    onclick={handleAddCategorySubmit}
-                    disabled={!newCategoryName.trim()}
-                  >
-                    Create
-                  </button>
-                  <button
-                    type="button"
-                    class="add-cancel-btn"
-                    onclick={() => { showAddCategory = false; newCategoryName = ''; }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            {:else}
-              <button
-                type="button"
-                class="dropdown-item add-category-btn"
-                onclick={() => showAddCategory = true}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Add Category
-              </button>
-            {/if}
+            <!-- Add Category Button -->
+            <button
+              type="button"
+              class="dropdown-item add-category-btn"
+              onclick={handleAddCategoryClick}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add Category
+            </button>
           </div>
         {/if}
       </div>
@@ -339,10 +281,7 @@
     color-scheme: dark;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     CUSTOM CATEGORY DROPDOWN
-     ═══════════════════════════════════════════════════════════════ */
-
+  /* Custom Category Dropdown */
   .category-dropdown {
     position: relative;
   }
@@ -504,98 +443,7 @@
     background: rgba(108, 92, 231, 0.2) !important;
   }
 
-  /* Add Category Form */
-  .add-category-form {
-    padding: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .add-category-input {
-    padding: 0.625rem 0.875rem;
-    background: rgba(10, 10, 20, 0.8);
-    border: 1px solid rgba(108, 92, 231, 0.2);
-    border-radius: var(--radius-md);
-    color: var(--color-text);
-    font-size: 0.9375rem;
-  }
-
-  .add-category-input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 12px var(--color-primary-glow);
-  }
-
-  .color-picker {
-    display: flex;
-    gap: 0.375rem;
-    flex-wrap: wrap;
-  }
-
-  .color-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: var(--radius-sm);
-    background: var(--btn-color);
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s var(--ease-spring);
-  }
-
-  .color-btn:hover {
-    transform: scale(1.15);
-  }
-
-  .color-btn.selected {
-    border-color: white;
-    box-shadow: 0 0 10px var(--btn-color);
-  }
-
-  .add-category-actions {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .add-confirm-btn, .add-cancel-btn {
-    flex: 1;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--radius-md);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s var(--ease-spring);
-    border: none;
-  }
-
-  .add-confirm-btn {
-    background: var(--color-primary);
-    color: white;
-  }
-
-  .add-confirm-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .add-confirm-btn:not(:disabled):hover {
-    background: var(--color-primary-light);
-    box-shadow: 0 0 15px var(--color-primary-glow);
-  }
-
-  .add-cancel-btn {
-    background: rgba(255, 107, 107, 0.15);
-    color: var(--color-red);
-  }
-
-  .add-cancel-btn:hover {
-    background: rgba(255, 107, 107, 0.25);
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     FORM ACTIONS
-     ═══════════════════════════════════════════════════════════════ */
-
+  /* Form Actions */
   .actions {
     display: flex;
     gap: 0.75rem;

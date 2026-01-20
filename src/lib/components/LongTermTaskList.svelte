@@ -4,7 +4,7 @@
   interface Props {
     title: string;
     tasks: LongTermTaskWithCategory[];
-    variant?: 'overdue' | 'upcoming';
+    variant?: 'overdue' | 'upcoming' | 'completed';
     onTaskClick: (task: LongTermTaskWithCategory) => void;
     onToggle: (id: string) => void;
     onDelete: (id: string) => void;
@@ -19,7 +19,7 @@
 </script>
 
 {#if tasks.length > 0}
-  <div class="task-list" class:overdue={variant === 'overdue'}>
+  <div class="task-list" class:overdue={variant === 'overdue'} class:completed={variant === 'completed'}>
     <h3 class="list-title">{title}</h3>
     <div class="items">
       {#each tasks as task (task.id)}
@@ -79,6 +79,10 @@
     color: var(--color-red);
   }
 
+  .task-list.completed .list-title {
+    color: var(--color-green);
+  }
+
   .items {
     display: flex;
     flex-direction: column;
@@ -103,6 +107,18 @@
     background: linear-gradient(135deg,
       rgba(255, 107, 107, 0.05) 0%,
       rgba(20, 20, 40, 0.9) 100%);
+  }
+
+  .task-list.completed .task-row {
+    border-left: 3px solid var(--color-green);
+    background: linear-gradient(135deg,
+      rgba(38, 222, 129, 0.05) 0%,
+      rgba(20, 20, 40, 0.9) 100%);
+    opacity: 0.7;
+  }
+
+  .task-list.completed .task-row:hover {
+    opacity: 1;
   }
 
   .task-row:hover {
