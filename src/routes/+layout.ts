@@ -21,14 +21,28 @@ if (browser) {
 
 export const load: LayoutLoad = async () => {
   if (browser) {
-    const session = await getSession();
+    try {
+      const session = await getSession();
 
-    // If user is logged in, start sync engine for background writes
-    if (session) {
-      startSyncEngine();
+      // If user is logged in, start sync engine for background writes
+      if (session) {
+        startSyncEngine();
+      }
+
+      return { session };
+    } catch (e) {
+      // If session retrieval fails completely (corrupted auth state),
+      // clear all Supabase auth data and return no session
+      console.error('[Layout] Failed to get session, clearing auth state:', e);
+      try {
+        // Clear all Supabase auth storage
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
+        keys.forEach(k => localStorage.removeItem(k));
+      } catch {
+        // Ignore storage errors
+      }
+      return { session: null };
     }
-
-    return { session };
   }
   return { session: null };
 };

@@ -55,8 +55,28 @@ export async function signOut(): Promise<{ error: string | null }> {
 }
 
 export async function getSession(): Promise<Session | null> {
-  const { data } = await supabase.auth.getSession();
-  return data.session;
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('[Auth] getSession error:', error.message);
+      // If session retrieval fails, it might be corrupted - try to sign out to clear it
+      if (error.message?.includes('hash') || error.message?.includes('undefined')) {
+        console.warn('[Auth] Detected corrupted session, attempting to clear');
+        await supabase.auth.signOut();
+      }
+      return null;
+    }
+    return data.session;
+  } catch (e) {
+    console.error('[Auth] Unexpected error getting session:', e);
+    // Attempt to clear any corrupted state
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Ignore signOut errors
+    }
+    return null;
+  }
 }
 
 export function getUserProfile(user: User | null): UserProfile {
