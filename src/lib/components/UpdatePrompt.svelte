@@ -152,27 +152,7 @@
 
   @media (max-width: 480px) {
     .update-prompt {
-      left: 1rem;
-      right: 1rem;
-      transform: none;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    @keyframes slideUp {
-      from {
-        transform: translateY(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-
-    .update-actions {
-      width: 100%;
-      justify-content: flex-end;
+      max-width: calc(100% - 2rem);
     }
   }
 </style>
