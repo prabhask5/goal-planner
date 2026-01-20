@@ -62,9 +62,16 @@ function calculateListProgress(goals: Goal[]): { totalGoals: number; completedGo
   };
 }
 
-// Get all goal lists from LOCAL DB only
+// Get all goal lists from LOCAL DB, fetch from remote if empty
 export async function getGoalLists(): Promise<GoalListWithProgress[]> {
-  const lists = await db.goalLists.orderBy('created_at').reverse().toArray();
+  let lists = await db.goalLists.orderBy('created_at').reverse().toArray();
+
+  // If local is empty and online, try to hydrate from remote
+  if (lists.length === 0 && typeof navigator !== 'undefined' && navigator.onLine) {
+    await hydrateFromRemote();
+    lists = await db.goalLists.orderBy('created_at').reverse().toArray();
+  }
+
   // Filter out deleted lists
   const activeLists = lists.filter(l => !l.deleted);
 
@@ -77,9 +84,38 @@ export async function getGoalLists(): Promise<GoalListWithProgress[]> {
   return listsWithProgress;
 }
 
-// Get a single goal list from LOCAL DB only
+// Get a single goal list from LOCAL DB, fetch from remote if not found
 export async function getGoalList(id: string): Promise<(GoalList & { goals: Goal[] }) | null> {
-  const list = await db.goalLists.get(id);
+  let list = await db.goalLists.get(id);
+
+  // If not found locally and online, try to fetch from remote
+  if (!list && typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const { data: remoteList, error: listError } = await supabase
+        .from('goal_lists')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!listError && remoteList && !remoteList.deleted) {
+        await db.goalLists.put(remoteList);
+        list = remoteList;
+
+        // Also fetch its goals
+        const { data: remoteGoals, error: goalsError } = await supabase
+          .from('goals')
+          .select('*')
+          .eq('goal_list_id', id);
+
+        if (!goalsError && remoteGoals) {
+          await db.goals.bulkPut(remoteGoals);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch goal list from remote:', e);
+    }
+  }
+
   if (!list || list.deleted) return null;
 
   const goals = await db.goals.where('goal_list_id').equals(id).toArray();
@@ -88,22 +124,55 @@ export async function getGoalList(id: string): Promise<(GoalList & { goals: Goal
   return { ...list, goals: activeGoals };
 }
 
-// Get all daily routine goals from LOCAL DB only
+// Get all daily routine goals from LOCAL DB, fetch from remote if empty
 export async function getDailyRoutineGoals(): Promise<DailyRoutineGoal[]> {
-  const routines = await db.dailyRoutineGoals.orderBy('created_at').reverse().toArray();
+  let routines = await db.dailyRoutineGoals.orderBy('created_at').reverse().toArray();
+
+  // If local is empty and online, try to hydrate from remote
+  if (routines.length === 0 && typeof navigator !== 'undefined' && navigator.onLine) {
+    await hydrateFromRemote();
+    routines = await db.dailyRoutineGoals.orderBy('created_at').reverse().toArray();
+  }
+
   return routines.filter(r => !r.deleted);
 }
 
-// Get a single daily routine goal from LOCAL DB only
+// Get a single daily routine goal from LOCAL DB, fetch from remote if not found
 export async function getDailyRoutineGoal(id: string): Promise<DailyRoutineGoal | null> {
-  const routine = await db.dailyRoutineGoals.get(id);
+  let routine = await db.dailyRoutineGoals.get(id);
+
+  // If not found locally and online, try to fetch from remote
+  if (!routine && typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const { data: remoteRoutine, error } = await supabase
+        .from('daily_routine_goals')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!error && remoteRoutine && !remoteRoutine.deleted) {
+        await db.dailyRoutineGoals.put(remoteRoutine);
+        routine = remoteRoutine;
+      }
+    } catch (e) {
+      console.error('Failed to fetch routine from remote:', e);
+    }
+  }
+
   if (!routine || routine.deleted) return null;
   return routine;
 }
 
-// Get active routines for a specific date from LOCAL DB only
+// Get active routines for a specific date from LOCAL DB, fetch from remote if empty
 export async function getActiveRoutinesForDate(date: string): Promise<DailyRoutineGoal[]> {
-  const allRoutines = await db.dailyRoutineGoals.toArray();
+  let allRoutines = await db.dailyRoutineGoals.toArray();
+
+  // If local is empty and online, try to hydrate from remote
+  if (allRoutines.length === 0 && typeof navigator !== 'undefined' && navigator.onLine) {
+    await hydrateFromRemote();
+    allRoutines = await db.dailyRoutineGoals.toArray();
+  }
+
   return allRoutines.filter((routine) => {
     if (routine.deleted) return false;
     if (routine.start_date > date) return false;
@@ -112,19 +181,59 @@ export async function getActiveRoutinesForDate(date: string): Promise<DailyRouti
   });
 }
 
-// Get daily progress for a specific date from LOCAL DB only
+// Get daily progress for a specific date from LOCAL DB, fetch from remote if not found
 export async function getDailyProgress(date: string): Promise<DailyGoalProgress[]> {
-  return db.dailyGoalProgress.where('date').equals(date).toArray();
+  let progress = await db.dailyGoalProgress.where('date').equals(date).toArray();
+
+  // If no progress locally and online, try to fetch from remote
+  if (progress.length === 0 && typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const { data: remoteProgress, error } = await supabase
+        .from('daily_goal_progress')
+        .select('*')
+        .eq('date', date);
+
+      if (!error && remoteProgress && remoteProgress.length > 0) {
+        await db.dailyGoalProgress.bulkPut(remoteProgress);
+        progress = remoteProgress;
+      }
+    } catch (e) {
+      console.error('Failed to fetch daily progress from remote:', e);
+    }
+  }
+
+  return progress;
 }
 
-// Get month progress from LOCAL DB only
+// Get month progress from LOCAL DB, fetch from remote if not found
 export async function getMonthProgress(year: number, month: number): Promise<DailyGoalProgress[]> {
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
-  return db.dailyGoalProgress
+
+  let progress = await db.dailyGoalProgress
     .where('date')
     .between(startDate, endDate, true, true)
     .toArray();
+
+  // If no progress locally and online, try to fetch from remote
+  if (progress.length === 0 && typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const { data: remoteProgress, error } = await supabase
+        .from('daily_goal_progress')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      if (!error && remoteProgress && remoteProgress.length > 0) {
+        await db.dailyGoalProgress.bulkPut(remoteProgress);
+        progress = remoteProgress;
+      }
+    } catch (e) {
+      console.error('Failed to fetch month progress from remote:', e);
+    }
+  }
+
+  return progress;
 }
 
 // ============================================================
