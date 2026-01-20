@@ -18,11 +18,44 @@ import { calculateGoalProgress } from '$lib/utils/colors';
 
 let syncTimeout: ReturnType<typeof setTimeout> | null = null;
 let syncInterval: ReturnType<typeof setInterval> | null = null;
-let isSyncing = false; // Lock to prevent concurrent syncs
 let hasHydrated = false; // Track if initial hydration has been attempted
 let isTabVisible = true; // Track tab visibility
+let visibilityDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 const SYNC_DEBOUNCE_MS = 2000; // 2 seconds debounce after writes
 const SYNC_INTERVAL_MS = 300000; // 5 minutes periodic sync (reduced frequency)
+const VISIBILITY_SYNC_DEBOUNCE_MS = 1000; // Debounce for visibility change syncs
+
+// Promise-based mutex to prevent concurrent syncs (atomic lock)
+let syncMutex: Promise<void> = Promise.resolve();
+let isSyncLocked = false;
+
+// Store event listener references for cleanup
+let handleOnlineRef: (() => void) | null = null;
+let handleOfflineRef: (() => void) | null = null;
+let handleVisibilityChangeRef: (() => void) | null = null;
+
+async function acquireSyncLock(): Promise<boolean> {
+  // If already locked, return false immediately
+  if (isSyncLocked) return false;
+
+  // Atomically set the lock by chaining onto the mutex
+  let acquired = false;
+  const previousMutex = syncMutex;
+
+  syncMutex = previousMutex.then(() => {
+    if (!isSyncLocked) {
+      isSyncLocked = true;
+      acquired = true;
+    }
+  });
+
+  await syncMutex;
+  return acquired;
+}
+
+function releaseSyncLock(): void {
+  isSyncLocked = false;
+}
 
 // Callbacks for when sync completes (stores can refresh from local)
 const syncCompleteCallbacks: Set<() => void> = new Set();
@@ -199,7 +232,8 @@ export async function getDailyProgress(date: string): Promise<DailyGoalProgress[
       const { data: remoteProgress, error } = await supabase
         .from('daily_goal_progress')
         .select('*')
-        .eq('date', date);
+        .eq('date', date)
+        .or('deleted.is.null,deleted.eq.false');
 
       if (!error && remoteProgress && remoteProgress.length > 0) {
         await db.dailyGoalProgress.bulkPut(remoteProgress);
@@ -210,7 +244,8 @@ export async function getDailyProgress(date: string): Promise<DailyGoalProgress[
     }
   }
 
-  return progress;
+  // Filter out deleted records
+  return progress.filter(p => !p.deleted);
 }
 
 // Get month progress from LOCAL DB, fetch from remote if not found
@@ -230,7 +265,8 @@ export async function getMonthProgress(year: number, month: number): Promise<Dai
         .from('daily_goal_progress')
         .select('*')
         .gte('date', startDate)
-        .lte('date', endDate);
+        .lte('date', endDate)
+        .or('deleted.is.null,deleted.eq.false');
 
       if (!error && remoteProgress && remoteProgress.length > 0) {
         await db.dailyGoalProgress.bulkPut(remoteProgress);
@@ -241,7 +277,8 @@ export async function getMonthProgress(year: number, month: number): Promise<Dai
     }
   }
 
-  return progress;
+  // Filter out deleted records
+  return progress.filter(p => !p.deleted);
 }
 
 // ============================================================
@@ -383,6 +420,12 @@ function setLastSyncCursor(cursor: string, userId: string | null): void {
 // PULL: Fetch changes from remote since last sync
 async function pullRemoteChanges(): Promise<void> {
   const userId = await getCurrentUserId();
+
+  // Abort if no authenticated user (avoids confusing RLS errors)
+  if (!userId) {
+    throw new Error('Not authenticated. Please sign in to sync.');
+  }
+
   const lastSync = getLastSyncCursor(userId);
   const pendingEntityIds = await getPendingEntityIds();
 
@@ -551,23 +594,58 @@ async function pullRemoteChanges(): Promise<void> {
 }
 
 // PUSH: Send pending operations to remote
+// Continues until queue is empty to catch items added during sync
 async function pushPendingOps(): Promise<void> {
-  const pendingItems = await getPendingSync();
-  if (pendingItems.length === 0) return;
+  const maxIterations = 10; // Safety limit to prevent infinite loops
+  let iterations = 0;
 
-  for (const item of pendingItems) {
-    try {
-      await processSyncItem(item);
-      if (item.id) {
-        await removeSyncItem(item.id);
-      }
-    } catch (error) {
-      console.error(`Failed to sync item ${item.id}:`, error);
-      if (item.id) {
-        await incrementRetry(item.id);
+  while (iterations < maxIterations) {
+    const pendingItems = await getPendingSync();
+    if (pendingItems.length === 0) break;
+
+    iterations++;
+    let processedAny = false;
+
+    for (const item of pendingItems) {
+      try {
+        await processSyncItem(item);
+        if (item.id) {
+          await removeSyncItem(item.id);
+          processedAny = true;
+        }
+      } catch (error) {
+        console.error(`Failed to sync item ${item.id}:`, error);
+        if (item.id) {
+          await incrementRetry(item.id);
+        }
       }
     }
+
+    // If we didn't process anything (all items in backoff), stop iterating
+    if (!processedAny) break;
   }
+}
+
+// Check if error is a duplicate key violation (item already exists)
+function isDuplicateKeyError(error: { code?: string; message?: string }): boolean {
+  // PostgreSQL error code for unique violation
+  if (error.code === '23505') return true;
+  // PostgREST error codes
+  if (error.code === 'PGRST409') return true;
+  // Fallback to message check for compatibility
+  const msg = (error.message || '').toLowerCase();
+  return msg.includes('duplicate') || msg.includes('unique') || msg.includes('already exists');
+}
+
+// Check if error is a "not found" error (item doesn't exist)
+function isNotFoundError(error: { code?: string; message?: string }): boolean {
+  // PostgREST error code for no rows affected/found
+  if (error.code === 'PGRST116') return true;
+  // HTTP 404 style code
+  if (error.code === '404') return true;
+  // Fallback to message check
+  const msg = (error.message || '').toLowerCase();
+  return msg.includes('not found') || msg.includes('no rows');
 }
 
 // Process a single sync item
@@ -579,8 +657,8 @@ async function processSyncItem(item: SyncQueueItem): Promise<void> {
       const { error } = await supabase
         .from(table)
         .insert({ id: entityId, ...payload });
-      // Ignore duplicate key errors (item already synced)
-      if (error && !error.message.includes('duplicate')) {
+      // Ignore duplicate key errors (item already synced from another device)
+      if (error && !isDuplicateKeyError(error)) {
         throw error;
       }
       break;
@@ -601,7 +679,7 @@ async function processSyncItem(item: SyncQueueItem): Promise<void> {
         .update({ deleted: true, updated_at: new Date().toISOString() })
         .eq('id', entityId);
       // Ignore "not found" errors - item may already be deleted by another device
-      if (error && !error.message.includes('not found') && !error.code?.includes('PGRST116')) {
+      if (error && !isNotFoundError(error)) {
         throw error;
       }
       break;
@@ -654,9 +732,12 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
     return;
   }
 
-  // Prevent concurrent syncs
-  if (isSyncing) return;
-  isSyncing = true;
+  // Atomically acquire sync lock to prevent concurrent syncs
+  const acquired = await acquireSyncLock();
+  if (!acquired) return;
+
+  let pushSucceeded = false;
+  let pullSucceeded = false;
 
   try {
     // Check if there are pending items
@@ -674,13 +755,34 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
 
     // Push first so local changes are persisted
     await pushPendingOps();
+    pushSucceeded = true;
 
     if (!quiet) {
       syncStatusStore.setSyncMessage('Downloading latest data...');
     }
 
-    // Then pull remote changes
-    await pullRemoteChanges();
+    // Then pull remote changes - retry up to 3 times if push succeeded
+    let pullAttempts = 0;
+    const maxPullAttempts = 3;
+    let lastPullError: unknown = null;
+
+    while (pullAttempts < maxPullAttempts && !pullSucceeded) {
+      try {
+        await pullRemoteChanges();
+        pullSucceeded = true;
+      } catch (pullError) {
+        lastPullError = pullError;
+        pullAttempts++;
+        if (pullAttempts < maxPullAttempts) {
+          // Wait before retry (exponential backoff: 1s, 2s)
+          await new Promise(resolve => setTimeout(resolve, pullAttempts * 1000));
+        }
+      }
+    }
+
+    if (!pullSucceeded && lastPullError) {
+      throw lastPullError;
+    }
 
     // Update status only for non-quiet syncs
     if (!quiet) {
@@ -708,9 +810,13 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
       syncStatusStore.setError(friendlyMessage, rawMessage);
       syncStatusStore.setSyncMessage(friendlyMessage);
     }
-    // For quiet syncs, just log and move on - no UI disruption
+
+    // If push succeeded but pull failed, still notify so UI refreshes with pushed data
+    if (pushSucceeded && !pullSucceeded) {
+      notifySyncComplete();
+    }
   } finally {
-    isSyncing = false;
+    releaseSyncLock();
   }
 }
 
@@ -718,11 +824,18 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
 export async function hydrateFromRemote(): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.onLine) return;
 
-  // Prevent concurrent syncs/hydrations
-  if (isSyncing) return;
+  // Atomically acquire sync lock to prevent concurrent syncs/hydrations
+  const acquired = await acquireSyncLock();
+  if (!acquired) return;
 
   // Get user ID for sync cursor isolation
   const userId = await getCurrentUserId();
+
+  // Abort if no authenticated user (can't hydrate without auth)
+  if (!userId) {
+    releaseSyncLock();
+    return;
+  }
 
   // Mark that we've attempted hydration (even if local has data)
   hasHydrated = true;
@@ -734,64 +847,85 @@ export async function hydrateFromRemote(): Promise<void> {
   const localLongTermTaskCount = await db.longTermTasks.count();
 
   if (localListCount > 0 || localRoutineCount > 0 || localDailyTaskCount > 0 || localLongTermTaskCount > 0) {
-    // Local has data, just do a normal sync
+    // Local has data, release lock and do a normal sync
+    releaseSyncLock();
     await runFullSync();
     return;
   }
 
-  // Local is empty, do a full pull
-  isSyncing = true;
+  // Local is empty, do a full pull (we already hold the lock)
   syncStatusStore.setStatus('syncing');
   syncStatusStore.setSyncMessage('Loading your data...');
 
   try {
-    // Pull all goal_lists (deleted items are actually deleted, not tombstoned)
+    // Pull all non-deleted records from each table
+    // Filter deleted = false OR deleted IS NULL to exclude tombstones
     const { data: lists, error: listsError } = await supabase
       .from('goal_lists')
-      .select('*');
+      .select('*')
+      .or('deleted.is.null,deleted.eq.false');
     if (listsError) throw listsError;
 
-    // Pull all goals
     const { data: goals, error: goalsError } = await supabase
       .from('goals')
-      .select('*');
+      .select('*')
+      .or('deleted.is.null,deleted.eq.false');
     if (goalsError) throw goalsError;
 
-    // Pull all daily_routine_goals
     const { data: routines, error: routinesError } = await supabase
       .from('daily_routine_goals')
-      .select('*');
+      .select('*')
+      .or('deleted.is.null,deleted.eq.false');
     if (routinesError) throw routinesError;
 
-    // Pull all daily_goal_progress
     const { data: progress, error: progressError } = await supabase
       .from('daily_goal_progress')
-      .select('*');
+      .select('*')
+      .or('deleted.is.null,deleted.eq.false');
     if (progressError) throw progressError;
 
-    // Pull all task_categories
     const { data: categories, error: categoriesError } = await supabase
       .from('task_categories')
-      .select('*');
+      .select('*')
+      .or('deleted.is.null,deleted.eq.false');
     if (categoriesError) throw categoriesError;
 
-    // Pull all commitments
     const { data: commitments, error: commitmentsError } = await supabase
       .from('commitments')
-      .select('*');
+      .select('*')
+      .or('deleted.is.null,deleted.eq.false');
     if (commitmentsError) throw commitmentsError;
 
-    // Pull all daily_tasks
     const { data: dailyTasks, error: dailyTasksError } = await supabase
       .from('daily_tasks')
-      .select('*');
+      .select('*')
+      .or('deleted.is.null,deleted.eq.false');
     if (dailyTasksError) throw dailyTasksError;
 
-    // Pull all long_term_tasks
     const { data: longTermTasks, error: longTermTasksError } = await supabase
       .from('long_term_tasks')
-      .select('*');
+      .select('*')
+      .or('deleted.is.null,deleted.eq.false');
     if (longTermTasksError) throw longTermTasksError;
+
+    // Calculate the max updated_at from all pulled data to use as sync cursor
+    // This prevents missing changes that happened during hydration
+    let maxUpdatedAt = '1970-01-01T00:00:00.000Z';
+    const allData = [
+      ...(lists || []),
+      ...(goals || []),
+      ...(routines || []),
+      ...(progress || []),
+      ...(categories || []),
+      ...(commitments || []),
+      ...(dailyTasks || []),
+      ...(longTermTasks || [])
+    ];
+    for (const item of allData) {
+      if (item.updated_at && item.updated_at > maxUpdatedAt) {
+        maxUpdatedAt = item.updated_at;
+      }
+    }
 
     // Store everything locally
     await db.transaction('rw', [db.goalLists, db.goals, db.dailyRoutineGoals, db.dailyGoalProgress, db.taskCategories, db.commitments, db.dailyTasks, db.longTermTasks], async () => {
@@ -821,8 +955,8 @@ export async function hydrateFromRemote(): Promise<void> {
       }
     });
 
-    // Set sync cursor to now (per-user)
-    setLastSyncCursor(new Date().toISOString(), userId);
+    // Set sync cursor to MAX of pulled data timestamps (prevents missing concurrent changes)
+    setLastSyncCursor(maxUpdatedAt, userId);
     syncStatusStore.setStatus('idle');
     syncStatusStore.setLastSyncTime(new Date().toISOString());
     syncStatusStore.setSyncMessage('Everything is synced!');
@@ -837,8 +971,10 @@ export async function hydrateFromRemote(): Promise<void> {
     syncStatusStore.setStatus('error');
     syncStatusStore.setError(friendlyMessage, rawMessage);
     syncStatusStore.setSyncMessage(friendlyMessage);
+    // Reset hasHydrated so next read attempt can retry hydration
+    hasHydrated = false;
   } finally {
-    isSyncing = false;
+    releaseSyncLock();
   }
 }
 
@@ -925,24 +1061,50 @@ async function cleanupOldTombstones(): Promise<void> {
 export function startSyncEngine(): void {
   if (typeof window === 'undefined') return;
 
+  // Clean up any existing listeners first (prevents duplicates if called multiple times)
+  if (handleOnlineRef) {
+    window.removeEventListener('online', handleOnlineRef);
+  }
+  if (handleOfflineRef) {
+    window.removeEventListener('offline', handleOfflineRef);
+  }
+  if (handleVisibilityChangeRef) {
+    document.removeEventListener('visibilitychange', handleVisibilityChangeRef);
+  }
+
   // Handle online event - run sync when connection restored (show indicator)
-  const handleOnline = () => {
+  handleOnlineRef = () => {
     runFullSync(false);
   };
-  window.addEventListener('online', handleOnline);
+  window.addEventListener('online', handleOnlineRef);
 
-  // Track visibility and sync when returning to tab
-  const handleVisibilityChange = () => {
+  // Handle offline event - immediately update status indicator
+  handleOfflineRef = () => {
+    syncStatusStore.setStatus('offline');
+    syncStatusStore.setSyncMessage('You\'re offline. Changes will sync when reconnected.');
+  };
+  window.addEventListener('offline', handleOfflineRef);
+
+  // Track visibility and sync when returning to tab (with debounce to prevent rapid syncs)
+  handleVisibilityChangeRef = () => {
     const wasHidden = !isTabVisible;
     isTabVisible = !document.hidden;
     syncStatusStore.setTabVisible(isTabVisible);
 
-    // If tab just became visible, do a quiet sync to get fresh data
+    // If tab just became visible, do a quiet sync to get fresh data (debounced)
     if (wasHidden && isTabVisible && navigator.onLine) {
-      runFullSync(true); // Quiet - no error shown if it fails
+      // Clear any pending visibility sync
+      if (visibilityDebounceTimeout) {
+        clearTimeout(visibilityDebounceTimeout);
+      }
+      // Debounce to prevent rapid syncs when user quickly switches tabs
+      visibilityDebounceTimeout = setTimeout(() => {
+        visibilityDebounceTimeout = null;
+        runFullSync(true); // Quiet - no error shown if it fails
+      }, VISIBILITY_SYNC_DEBOUNCE_MS);
     }
   };
-  document.addEventListener('visibilitychange', handleVisibilityChange);
+  document.addEventListener('visibilitychange', handleVisibilityChangeRef);
 
   // Set initial visibility state
   isTabVisible = !document.hidden;
@@ -957,7 +1119,17 @@ export function startSyncEngine(): void {
 
     // Cleanup old tombstones and failed sync items periodically
     await cleanupOldTombstones();
-    await cleanupFailedItems();
+    const failedResult = await cleanupFailedItems();
+
+    // Notify user if items permanently failed
+    if (failedResult.count > 0) {
+      syncStatusStore.setStatus('error');
+      syncStatusStore.setError(
+        `${failedResult.count} change(s) could not be synced and were discarded.`,
+        `Affected: ${failedResult.tables.join(', ')}`
+      );
+      syncStatusStore.setSyncMessage(`${failedResult.count} change(s) failed to sync`);
+    }
   }, SYNC_INTERVAL_MS);
 
   // Initial sync: hydrate if empty, otherwise push pending
@@ -967,11 +1139,33 @@ export function startSyncEngine(): void {
 
   // Run initial cleanup
   cleanupOldTombstones();
-  cleanupFailedItems();
+  cleanupFailedItems().then(failedResult => {
+    if (failedResult.count > 0) {
+      syncStatusStore.setStatus('error');
+      syncStatusStore.setError(
+        `${failedResult.count} change(s) could not be synced and were discarded.`,
+        `Affected: ${failedResult.tables.join(', ')}`
+      );
+    }
+  });
 }
 
 export function stopSyncEngine(): void {
   if (typeof window === 'undefined') return;
+
+  // Remove event listeners to prevent memory leaks
+  if (handleOnlineRef) {
+    window.removeEventListener('online', handleOnlineRef);
+    handleOnlineRef = null;
+  }
+  if (handleOfflineRef) {
+    window.removeEventListener('offline', handleOfflineRef);
+    handleOfflineRef = null;
+  }
+  if (handleVisibilityChangeRef) {
+    document.removeEventListener('visibilitychange', handleVisibilityChangeRef);
+    handleVisibilityChangeRef = null;
+  }
 
   if (syncTimeout) {
     clearTimeout(syncTimeout);
@@ -981,7 +1175,11 @@ export function stopSyncEngine(): void {
     clearInterval(syncInterval);
     syncInterval = null;
   }
-  isSyncing = false;
+  if (visibilityDebounceTimeout) {
+    clearTimeout(visibilityDebounceTimeout);
+    visibilityDebounceTimeout = null;
+  }
+  releaseSyncLock();
   hasHydrated = false;
 }
 

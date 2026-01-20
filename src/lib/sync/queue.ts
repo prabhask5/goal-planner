@@ -4,6 +4,20 @@ import type { SyncQueueItem, SyncOperation } from '$lib/types';
 // Max retries before giving up on a sync item
 export const MAX_SYNC_RETRIES = 5;
 
+// Max queue size to prevent memory issues on low-end devices
+export const MAX_QUEUE_SIZE = 1000;
+
+// Check if queue is at capacity
+export async function isQueueFull(): Promise<boolean> {
+  const count = await db.syncQueue.count();
+  return count >= MAX_QUEUE_SIZE;
+}
+
+// Get current queue size
+export async function getQueueSize(): Promise<number> {
+  return db.syncQueue.count();
+}
+
 // Exponential backoff: check if item should be retried based on retry count
 // Returns true if enough time has passed since last attempt
 export function shouldRetryItem(item: SyncQueueItem): boolean {
@@ -23,36 +37,52 @@ export async function queueSync(
   entityId: string,
   payload: Record<string, unknown>
 ): Promise<void> {
-  // For updates, coalesce with existing pending update for same entity
-  // This prevents multiple ops when user rapidly clicks (e.g., increment spam)
-  if (operation === 'update') {
-    const existing = await db.syncQueue
-      .where('entityId')
-      .equals(entityId)
-      .filter(item => item.table === table && item.operation === 'update')
-      .first();
+  // Use transaction for atomic read-modify-write to prevent race conditions
+  // when concurrent updates try to coalesce to the same entity
+  await db.transaction('rw', db.syncQueue, async () => {
+    // For updates, coalesce with existing pending update for same entity
+    // This prevents multiple ops when user rapidly clicks (e.g., increment spam)
+    if (operation === 'update') {
+      const existing = await db.syncQueue
+        .where('entityId')
+        .equals(entityId)
+        .filter(item => item.table === table && item.operation === 'update')
+        .first();
 
-    if (existing && existing.id) {
-      // Merge payloads, newer values overwrite older
-      const mergedPayload = { ...existing.payload, ...payload };
-      await db.syncQueue.update(existing.id, {
-        payload: mergedPayload,
-        timestamp: new Date().toISOString()
-      });
+      if (existing && existing.id) {
+        // Merge payloads, newer values overwrite older, also update internal timestamp
+        const mergedPayload = { ...existing.payload, ...payload };
+        // Ensure updated_at in payload is also updated
+        if ('updated_at' in payload) {
+          mergedPayload.updated_at = payload.updated_at;
+        }
+        await db.syncQueue.update(existing.id, {
+          payload: mergedPayload,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+    }
+
+    // Check queue size before adding (skip if full - operation still saved locally)
+    const queueSize = await db.syncQueue.count();
+    if (queueSize >= MAX_QUEUE_SIZE) {
+      console.warn(`Sync queue at capacity (${MAX_QUEUE_SIZE}). New operations will sync after queue drains.`);
+      // Don't throw - the data is saved locally, just won't sync until queue drains
       return;
     }
-  }
 
-  const item: SyncQueueItem = {
-    table,
-    operation,
-    entityId,
-    payload,
-    timestamp: new Date().toISOString(),
-    retries: 0
-  };
+    const item: SyncQueueItem = {
+      table,
+      operation,
+      entityId,
+      payload,
+      timestamp: new Date().toISOString(),
+      retries: 0
+    };
 
-  await db.syncQueue.add(item);
+    await db.syncQueue.add(item);
+  });
 }
 
 export async function getPendingSync(): Promise<SyncQueueItem[]> {
@@ -66,18 +96,29 @@ export async function getAllPendingSync(): Promise<SyncQueueItem[]> {
   return db.syncQueue.orderBy('timestamp').toArray();
 }
 
-// Remove items that have exceeded max retries
-export async function cleanupFailedItems(): Promise<number> {
+// Remove items that have exceeded max retries and return details for notification
+export async function cleanupFailedItems(): Promise<{ count: number; tables: string[] }> {
   const allItems = await db.syncQueue.toArray();
   const failedItems = allItems.filter(item => item.retries >= MAX_SYNC_RETRIES);
 
+  const affectedTables = new Set<string>();
+
   for (const item of failedItems) {
+    affectedTables.add(item.table);
     if (item.id) {
+      console.warn(`Sync item permanently failed after ${MAX_SYNC_RETRIES} retries:`, {
+        table: item.table,
+        operation: item.operation,
+        entityId: item.entityId
+      });
       await db.syncQueue.delete(item.id);
     }
   }
 
-  return failedItems.length;
+  return {
+    count: failedItems.length,
+    tables: Array.from(affectedTables)
+  };
 }
 
 export async function removeSyncItem(id: number): Promise<void> {
@@ -99,4 +140,33 @@ export async function incrementRetry(id: number): Promise<void> {
 export async function getPendingEntityIds(): Promise<Set<string>> {
   const pending = await db.syncQueue.toArray();
   return new Set(pending.map(item => item.entityId));
+}
+
+// Queue a sync operation directly (for use within transactions)
+// This is a simpler version of queueSync that doesn't do coalescing
+// Use this when you need to queue within a Dexie transaction
+// Note: Queue size check is skipped in transactions for atomicity - the operation
+// is saved locally regardless, and will sync when queue drains
+export async function queueSyncDirect(
+  table: SyncQueueItem['table'],
+  operation: SyncOperation,
+  entityId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  // Note: We intentionally skip MAX_QUEUE_SIZE check here because:
+  // 1. This is called within Dexie transactions for atomicity
+  // 2. The local data is already saved, we must record the sync intent
+  // 3. Failing here would break transaction atomicity
+  // The queue will eventually drain, and MAX_QUEUE_SIZE is a soft limit
+
+  const item: SyncQueueItem = {
+    table,
+    operation,
+    entityId,
+    payload,
+    timestamp: new Date().toISOString(),
+    retries: 0
+  };
+
+  await db.syncQueue.add(item);
 }

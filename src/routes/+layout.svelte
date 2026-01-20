@@ -826,7 +826,22 @@
      RESPONSIVE BREAKPOINTS
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
-  /* Tablet */
+  /* Wide tablet - start hiding user greeting earlier to prevent overlap */
+  @media (max-width: 1100px) {
+    .user-greeting {
+      display: none;
+    }
+
+    .user-menu {
+      padding-right: 0.375rem;
+    }
+
+    .nav-actions {
+      gap: 0.75rem;
+    }
+  }
+
+  /* Tablet - hide link text */
   @media (max-width: 900px) {
     .link-text {
       display: none;
@@ -840,12 +855,8 @@
       gap: 0.25rem;
     }
 
-    .user-greeting {
-      display: none;
-    }
-
-    .user-menu {
-      padding-right: 0.375rem;
+    .nav-actions {
+      gap: 0.5rem;
     }
   }
 

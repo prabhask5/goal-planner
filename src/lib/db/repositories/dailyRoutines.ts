@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { DailyRoutineGoal, GoalType } from '$lib/types';
-import { queueSync } from '$lib/sync/queue';
+import { queueSync, queueSyncDirect } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createDailyRoutineGoal(
@@ -13,7 +13,7 @@ export async function createDailyRoutineGoal(
 ): Promise<DailyRoutineGoal> {
   const timestamp = now();
 
-  // Get the current max order
+  // Get the current max order (outside transaction for read)
   const existingRoutines = await db.dailyRoutineGoals
     .where('user_id')
     .equals(userId)
@@ -35,19 +35,20 @@ export async function createDailyRoutineGoal(
     updated_at: timestamp
   };
 
-  await db.dailyRoutineGoals.add(newRoutine);
-
-  // Queue for sync and schedule debounced push
-  await queueSync('daily_routine_goals', 'create', newRoutine.id, {
-    user_id: userId,
-    name,
-    type,
-    target_value: newRoutine.target_value,
-    start_date: startDate,
-    end_date: endDate,
-    order: nextOrder,
-    created_at: timestamp,
-    updated_at: timestamp
+  // Use transaction to ensure atomicity of local write + queue operation
+  await db.transaction('rw', [db.dailyRoutineGoals, db.syncQueue], async () => {
+    await db.dailyRoutineGoals.add(newRoutine);
+    await queueSyncDirect('daily_routine_goals', 'create', newRoutine.id, {
+      user_id: userId,
+      name,
+      type,
+      target_value: newRoutine.target_value,
+      start_date: startDate,
+      end_date: endDate,
+      order: nextOrder,
+      created_at: timestamp,
+      updated_at: timestamp
+    });
   });
   scheduleSyncPush();
 
@@ -75,15 +76,25 @@ export async function updateDailyRoutineGoal(
 export async function deleteDailyRoutineGoal(id: string): Promise<void> {
   const timestamp = now();
 
-  await db.transaction('rw', [db.dailyRoutineGoals, db.dailyGoalProgress], async () => {
-    // Delete all progress records for this routine (progress can be hard deleted)
-    await db.dailyGoalProgress.where('daily_routine_goal_id').equals(id).delete();
-    // Tombstone delete the routine
+  // Get all progress records for this routine to soft delete them (outside transaction for read)
+  const progressRecords = await db.dailyGoalProgress
+    .where('daily_routine_goal_id')
+    .equals(id)
+    .toArray();
+
+  // Use single transaction for all deletes + queue operations (atomic)
+  await db.transaction('rw', [db.dailyRoutineGoals, db.dailyGoalProgress, db.syncQueue], async () => {
+    // Soft delete all progress records for this routine and queue sync
+    for (const progress of progressRecords) {
+      await db.dailyGoalProgress.update(progress.id, { deleted: true, updated_at: timestamp });
+      await queueSyncDirect('daily_goal_progress', 'delete', progress.id, { updated_at: timestamp });
+    }
+
+    // Tombstone delete the routine and queue sync
     await db.dailyRoutineGoals.update(id, { deleted: true, updated_at: timestamp });
+    await queueSyncDirect('daily_routine_goals', 'delete', id, { updated_at: timestamp });
   });
 
-  // Queue for sync and schedule debounced push
-  await queueSync('daily_routine_goals', 'delete', id, { updated_at: timestamp });
   scheduleSyncPush();
 }
 

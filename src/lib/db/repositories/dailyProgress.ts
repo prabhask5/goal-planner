@@ -1,16 +1,20 @@
 import { db, generateId, now } from '../client';
 import type { DailyGoalProgress } from '$lib/types';
-import { queueSync } from '$lib/sync/queue';
+import { queueSync, queueSyncDirect } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 async function getProgressForRoutineAndDate(
   routineId: string,
   date: string
 ): Promise<DailyGoalProgress | undefined> {
-  return db.dailyGoalProgress
+  // Must filter out deleted records to avoid updating tombstones
+  // instead of creating new progress records
+  const results = await db.dailyGoalProgress
     .where('[daily_routine_goal_id+date]')
     .equals([routineId, date])
-    .first();
+    .toArray();
+
+  return results.find(p => !p.deleted);
 }
 
 export async function upsertDailyProgress(
@@ -54,15 +58,16 @@ export async function upsertDailyProgress(
     updated_at: timestamp
   };
 
-  await db.dailyGoalProgress.add(newProgress);
-
-  // Queue for sync and schedule debounced push
-  await queueSync('daily_goal_progress', 'create', newProgress.id, {
-    daily_routine_goal_id: dailyRoutineGoalId,
-    date,
-    current_value: currentValue,
-    completed,
-    updated_at: timestamp
+  // Use transaction to ensure atomicity of local write + queue operation
+  await db.transaction('rw', [db.dailyGoalProgress, db.syncQueue], async () => {
+    await db.dailyGoalProgress.add(newProgress);
+    await queueSyncDirect('daily_goal_progress', 'create', newProgress.id, {
+      daily_routine_goal_id: dailyRoutineGoalId,
+      date,
+      current_value: currentValue,
+      completed,
+      updated_at: timestamp
+    });
   });
   scheduleSyncPush();
 
@@ -114,15 +119,16 @@ export async function incrementDailyProgress(
     updated_at: timestamp
   };
 
-  await db.dailyGoalProgress.add(newProgress);
-
-  // Queue for sync and schedule debounced push
-  await queueSync('daily_goal_progress', 'create', newProgress.id, {
-    daily_routine_goal_id: dailyRoutineGoalId,
-    date,
-    current_value: newValue,
-    completed,
-    updated_at: timestamp
+  // Use transaction to ensure atomicity of local write + queue operation
+  await db.transaction('rw', [db.dailyGoalProgress, db.syncQueue], async () => {
+    await db.dailyGoalProgress.add(newProgress);
+    await queueSyncDirect('daily_goal_progress', 'create', newProgress.id, {
+      daily_routine_goal_id: dailyRoutineGoalId,
+      date,
+      current_value: newValue,
+      completed,
+      updated_at: timestamp
+    });
   });
   scheduleSyncPush();
 

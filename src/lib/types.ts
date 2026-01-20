@@ -45,6 +45,7 @@ export interface DailyGoalProgress {
   current_value: number;
   completed: boolean;
   updated_at: string;
+  deleted?: boolean; // Tombstone flag
 }
 
 // Sync-related types

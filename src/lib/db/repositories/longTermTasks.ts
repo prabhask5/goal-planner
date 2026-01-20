@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { LongTermTask } from '$lib/types';
-import { queueSync } from '$lib/sync/queue';
+import { queueSync, queueSyncDirect } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createLongTermTask(
@@ -22,16 +22,18 @@ export async function createLongTermTask(
     updated_at: timestamp
   };
 
-  await db.longTermTasks.add(newTask);
-
-  await queueSync('long_term_tasks', 'create', newTask.id, {
-    name,
-    due_date: dueDate,
-    category_id: categoryId,
-    completed: false,
-    user_id: userId,
-    created_at: timestamp,
-    updated_at: timestamp
+  // Use transaction to ensure atomicity of local write + queue operation
+  await db.transaction('rw', [db.longTermTasks, db.syncQueue], async () => {
+    await db.longTermTasks.add(newTask);
+    await queueSyncDirect('long_term_tasks', 'create', newTask.id, {
+      name,
+      due_date: dueDate,
+      category_id: categoryId,
+      completed: false,
+      user_id: userId,
+      created_at: timestamp,
+      updated_at: timestamp
+    });
   });
   scheduleSyncPush();
 
@@ -76,9 +78,11 @@ export async function toggleLongTermTaskComplete(id: string): Promise<LongTermTa
 export async function deleteLongTermTask(id: string): Promise<void> {
   const timestamp = now();
 
-  // Tombstone delete
-  await db.longTermTasks.update(id, { deleted: true, updated_at: timestamp });
-
-  await queueSync('long_term_tasks', 'delete', id, { updated_at: timestamp });
+  // Use transaction to ensure atomicity of delete + queue operation
+  await db.transaction('rw', [db.longTermTasks, db.syncQueue], async () => {
+    // Tombstone delete
+    await db.longTermTasks.update(id, { deleted: true, updated_at: timestamp });
+    await queueSyncDirect('long_term_tasks', 'delete', id, { updated_at: timestamp });
+  });
   scheduleSyncPush();
 }

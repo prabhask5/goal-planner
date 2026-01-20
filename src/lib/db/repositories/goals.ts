@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { Goal, GoalType } from '$lib/types';
-import { queueSync } from '$lib/sync/queue';
+import { queueSync, queueSyncDirect } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createGoal(
@@ -11,7 +11,7 @@ export async function createGoal(
 ): Promise<Goal> {
   const timestamp = now();
 
-  // Get the current max order
+  // Get the current max order (outside transaction for read)
   const existingGoals = await db.goals
     .where('goal_list_id')
     .equals(goalListId)
@@ -33,19 +33,20 @@ export async function createGoal(
     updated_at: timestamp
   };
 
-  await db.goals.add(newGoal);
-
-  // Queue for sync and schedule debounced push
-  await queueSync('goals', 'create', newGoal.id, {
-    goal_list_id: goalListId,
-    name,
-    type,
-    target_value: newGoal.target_value,
-    current_value: 0,
-    completed: false,
-    order: nextOrder,
-    created_at: timestamp,
-    updated_at: timestamp
+  // Use transaction to ensure atomicity of local write + queue operation
+  await db.transaction('rw', [db.goals, db.syncQueue], async () => {
+    await db.goals.add(newGoal);
+    await queueSyncDirect('goals', 'create', newGoal.id, {
+      goal_list_id: goalListId,
+      name,
+      type,
+      target_value: newGoal.target_value,
+      current_value: 0,
+      completed: false,
+      order: nextOrder,
+      created_at: timestamp,
+      updated_at: timestamp
+    });
   });
   scheduleSyncPush();
 
@@ -73,11 +74,13 @@ export async function updateGoal(
 export async function deleteGoal(id: string): Promise<void> {
   const timestamp = now();
 
-  // Tombstone delete: mark as deleted instead of actually deleting
-  await db.goals.update(id, { deleted: true, updated_at: timestamp });
+  // Use transaction to ensure atomicity of delete + queue operation
+  await db.transaction('rw', [db.goals, db.syncQueue], async () => {
+    // Tombstone delete: mark as deleted instead of actually deleting
+    await db.goals.update(id, { deleted: true, updated_at: timestamp });
+    await queueSyncDirect('goals', 'delete', id, { updated_at: timestamp });
+  });
 
-  // Queue for sync and schedule debounced push
-  await queueSync('goals', 'delete', id, { updated_at: timestamp });
   scheduleSyncPush();
 }
 
