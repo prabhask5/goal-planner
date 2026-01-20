@@ -1,6 +1,7 @@
 <script lang="ts">
   import '../app.css';
   import { onMount, onDestroy } from 'svelte';
+  import { fade } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { signOut, getUserProfile, getSession } from '$lib/supabase/auth';
@@ -25,6 +26,9 @@
   // Toast state for auth kicked notification
   let showAuthKickedToast = $state(false);
   let authKickedMessage = $state('');
+
+  // Signing out state - used to hide navbar immediately during sign out
+  let isSigningOut = $state(false);
 
   // Initialize auth state from layout data
   $effect(() => {
@@ -120,7 +124,9 @@
   });
 
   // Check if user is authenticated (either mode)
-  const isAuthenticated = $derived(data.authMode !== 'none');
+  // Also hide navbar during sign out and on login page
+  const isOnLoginPage = $derived($page.url.pathname.startsWith('/login'));
+  const isAuthenticated = $derived(data.authMode !== 'none' && !isSigningOut && !isOnLoginPage);
 
   const navItems = [
     { href: '/tasks', label: 'Tasks', icon: 'tasks', mobileLabel: 'Tasks' },
@@ -129,6 +135,12 @@
   ];
 
   async function handleSignOut() {
+    // Immediately hide navbar for smooth transition
+    isSigningOut = true;
+
+    // Small delay to let the fade animation play
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
     stopSyncEngine();
     await clearLocalCache();
     localStorage.removeItem('lastSyncTimestamp');
@@ -185,7 +197,7 @@
 
   <!-- iPhone Pro Dynamic Island Status Bar (Mobile Only) -->
   {#if isAuthenticated}
-    <header class="island-header">
+    <header class="island-header" transition:fade={{ duration: 150 }}>
       <div class="island-left">
         <span class="island-brand">
           <svg width="18" height="18" viewBox="0 0 100 100" fill="none">
@@ -215,7 +227,7 @@
 
   <!-- Desktop/Tablet Top Navigation -->
   {#if isAuthenticated}
-    <nav class="nav-desktop">
+    <nav class="nav-desktop" transition:fade={{ duration: 150 }}>
       <div class="nav-inner">
         <!-- Brand -->
         <a href="/" class="nav-brand">
@@ -328,7 +340,7 @@
 
   <!-- Mobile Bottom Tab Bar (iOS-style) -->
   {#if isAuthenticated}
-    <nav class="nav-mobile">
+    <nav class="nav-mobile" transition:fade={{ duration: 150 }}>
       <div class="tab-bar">
         {#each navItems as item}
           <a

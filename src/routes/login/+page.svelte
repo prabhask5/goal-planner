@@ -353,6 +353,7 @@
   .login-page {
     position: fixed;
     inset: 0;
+    z-index: 200; /* Above navbar to prevent any flickering */
     display: flex;
     align-items: center;
     justify-content: center;
