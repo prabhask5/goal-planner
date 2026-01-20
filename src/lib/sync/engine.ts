@@ -1,6 +1,6 @@
 import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/db/client';
-import { getPendingSync, removeSyncItem, incrementRetry, getPendingEntityIds } from './queue';
+import { getPendingSync, removeSyncItem, incrementRetry, getPendingEntityIds, cleanupFailedItems } from './queue';
 import type { SyncQueueItem, Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress, TaskCategory, Commitment, DailyTask, LongTermTask, LongTermTaskWithCategory } from '$lib/types';
 import { syncStatusStore } from '$lib/stores/sync';
 import { calculateGoalProgress } from '$lib/utils/colors';
@@ -355,22 +355,35 @@ export function scheduleSyncPush(): void {
   }, SYNC_DEBOUNCE_MS);
 }
 
-// Get last sync cursor from localStorage
-function getLastSyncCursor(): string {
-  if (typeof localStorage === 'undefined') return '1970-01-01T00:00:00.000Z';
-  return localStorage.getItem('lastSyncCursor') || '1970-01-01T00:00:00.000Z';
+// Get current user ID for sync cursor isolation
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id || null;
+  } catch {
+    return null;
+  }
 }
 
-// Set last sync cursor
-function setLastSyncCursor(cursor: string): void {
+// Get last sync cursor from localStorage (per-user to prevent cross-user sync issues)
+function getLastSyncCursor(userId: string | null): string {
+  if (typeof localStorage === 'undefined') return '1970-01-01T00:00:00.000Z';
+  const key = userId ? `lastSyncCursor_${userId}` : 'lastSyncCursor';
+  return localStorage.getItem(key) || '1970-01-01T00:00:00.000Z';
+}
+
+// Set last sync cursor (per-user)
+function setLastSyncCursor(cursor: string, userId: string | null): void {
   if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('lastSyncCursor', cursor);
+    const key = userId ? `lastSyncCursor_${userId}` : 'lastSyncCursor';
+    localStorage.setItem(key, cursor);
   }
 }
 
 // PULL: Fetch changes from remote since last sync
 async function pullRemoteChanges(): Promise<void> {
-  const lastSync = getLastSyncCursor();
+  const userId = await getCurrentUserId();
+  const lastSync = getLastSyncCursor(userId);
   const pendingEntityIds = await getPendingEntityIds();
 
   // Track the newest updated_at we see
@@ -533,8 +546,8 @@ async function pullRemoteChanges(): Promise<void> {
     }
   });
 
-  // Update sync cursor
-  setLastSyncCursor(newestUpdate);
+  // Update sync cursor (per-user)
+  setLastSyncCursor(newestUpdate, userId);
 }
 
 // PUSH: Send pending operations to remote
@@ -581,12 +594,13 @@ async function processSyncItem(item: SyncQueueItem): Promise<void> {
       break;
     }
     case 'delete': {
-      // Actually delete from Supabase (local uses tombstone, remote uses real delete)
+      // Soft delete on Supabase - set deleted=true so other devices can pull the deletion
+      // This replaces the old hard delete which broke multi-device sync
       const { error } = await supabase
         .from(table)
-        .delete()
+        .update({ deleted: true, updated_at: new Date().toISOString() })
         .eq('id', entityId);
-      // Ignore "not found" errors - item may already be deleted
+      // Ignore "not found" errors - item may already be deleted by another device
       if (error && !error.message.includes('not found') && !error.code?.includes('PGRST116')) {
         throw error;
       }
@@ -707,6 +721,9 @@ export async function hydrateFromRemote(): Promise<void> {
   // Prevent concurrent syncs/hydrations
   if (isSyncing) return;
 
+  // Get user ID for sync cursor isolation
+  const userId = await getCurrentUserId();
+
   // Mark that we've attempted hydration (even if local has data)
   hasHydrated = true;
 
@@ -804,8 +821,8 @@ export async function hydrateFromRemote(): Promise<void> {
       }
     });
 
-    // Set sync cursor to now
-    setLastSyncCursor(new Date().toISOString());
+    // Set sync cursor to now (per-user)
+    setLastSyncCursor(new Date().toISOString(), userId);
     syncStatusStore.setStatus('idle');
     syncStatusStore.setLastSyncTime(new Date().toISOString());
     syncStatusStore.setSyncMessage('Everything is synced!');
@@ -823,6 +840,82 @@ export async function hydrateFromRemote(): Promise<void> {
   } finally {
     isSyncing = false;
   }
+}
+
+// ============================================================
+// TOMBSTONE CLEANUP
+// ============================================================
+
+// Clean up old tombstones (deleted records) from local DB AND Supabase
+// This prevents indefinite accumulation of soft-deleted records
+const TOMBSTONE_MAX_AGE_DAYS = 30;
+const CLEANUP_INTERVAL_MS = 86400000; // 24 hours - only run server cleanup once per day
+let lastServerCleanup = 0;
+
+// Clean up old tombstones from LOCAL IndexedDB
+async function cleanupLocalTombstones(): Promise<void> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - TOMBSTONE_MAX_AGE_DAYS);
+  const cutoffStr = cutoffDate.toISOString();
+
+  try {
+    await db.transaction('rw', [db.goalLists, db.goals, db.dailyRoutineGoals, db.dailyGoalProgress, db.taskCategories, db.commitments, db.dailyTasks, db.longTermTasks], async () => {
+      // Delete old tombstones from each table
+      await db.goalLists.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+      await db.goals.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+      await db.dailyRoutineGoals.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+      await db.dailyGoalProgress.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+      await db.taskCategories.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+      await db.commitments.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+      await db.dailyTasks.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+      await db.longTermTasks.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+    });
+  } catch (error) {
+    console.error('Failed to cleanup local tombstones:', error);
+  }
+}
+
+// Clean up old tombstones from SUPABASE (runs once per day max)
+async function cleanupServerTombstones(): Promise<void> {
+  // Only run once per day to avoid unnecessary requests
+  const now = Date.now();
+  if (now - lastServerCleanup < CLEANUP_INTERVAL_MS) return;
+
+  if (typeof navigator === 'undefined' || !navigator.onLine) return;
+
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - TOMBSTONE_MAX_AGE_DAYS);
+  const cutoffStr = cutoffDate.toISOString();
+
+  const tables = [
+    'goal_lists',
+    'goals',
+    'daily_routine_goals',
+    'daily_goal_progress',
+    'task_categories',
+    'commitments',
+    'daily_tasks',
+    'long_term_tasks'
+  ];
+
+  try {
+    for (const table of tables) {
+      await supabase
+        .from(table)
+        .delete()
+        .eq('deleted', true)
+        .lt('updated_at', cutoffStr);
+    }
+    lastServerCleanup = now;
+  } catch (error) {
+    console.error('Failed to cleanup server tombstones:', error);
+  }
+}
+
+// Combined cleanup function
+async function cleanupOldTombstones(): Promise<void> {
+  await cleanupLocalTombstones();
+  await cleanupServerTombstones();
 }
 
 // ============================================================
@@ -856,17 +949,25 @@ export function startSyncEngine(): void {
   syncStatusStore.setTabVisible(isTabVisible);
 
   // Start periodic sync (quiet mode - don't show indicator unless needed)
-  syncInterval = setInterval(() => {
+  syncInterval = setInterval(async () => {
     // Only run periodic sync if tab is visible and online
     if (navigator.onLine && isTabVisible) {
       runFullSync(true); // Quiet background sync
     }
+
+    // Cleanup old tombstones and failed sync items periodically
+    await cleanupOldTombstones();
+    await cleanupFailedItems();
   }, SYNC_INTERVAL_MS);
 
   // Initial sync: hydrate if empty, otherwise push pending
   if (navigator.onLine) {
     hydrateFromRemote();
   }
+
+  // Run initial cleanup
+  cleanupOldTombstones();
+  cleanupFailedItems();
 }
 
 export function stopSyncEngine(): void {
@@ -886,6 +987,9 @@ export function stopSyncEngine(): void {
 
 // Clear local cache (for logout)
 export async function clearLocalCache(): Promise<void> {
+  // Get user ID before clearing to remove their sync cursor
+  const userId = await getCurrentUserId();
+
   await db.transaction('rw', [db.goalLists, db.goals, db.dailyRoutineGoals, db.dailyGoalProgress, db.syncQueue, db.taskCategories, db.commitments, db.dailyTasks, db.longTermTasks], async () => {
     await db.goalLists.clear();
     await db.goals.clear();
@@ -897,8 +1001,13 @@ export async function clearLocalCache(): Promise<void> {
     await db.longTermTasks.clear();
     await db.syncQueue.clear();
   });
-  // Reset sync cursor and hydration flag
+  // Reset sync cursor (user-specific) and hydration flag
   if (typeof localStorage !== 'undefined') {
+    // Remove user-specific cursor if we have userId
+    if (userId) {
+      localStorage.removeItem(`lastSyncCursor_${userId}`);
+    }
+    // Also remove legacy cursor for cleanup
     localStorage.removeItem('lastSyncCursor');
   }
   hasHydrated = false;

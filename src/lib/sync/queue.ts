@@ -1,6 +1,22 @@
 import { db } from '$lib/db/client';
 import type { SyncQueueItem, SyncOperation } from '$lib/types';
 
+// Max retries before giving up on a sync item
+export const MAX_SYNC_RETRIES = 5;
+
+// Exponential backoff: check if item should be retried based on retry count
+// Returns true if enough time has passed since last attempt
+export function shouldRetryItem(item: SyncQueueItem): boolean {
+  if (item.retries >= MAX_SYNC_RETRIES) return false;
+
+  // Exponential backoff: 2^retries seconds (1s, 2s, 4s, 8s, 16s)
+  const backoffMs = Math.pow(2, item.retries) * 1000;
+  const lastAttempt = new Date(item.timestamp).getTime();
+  const now = Date.now();
+
+  return (now - lastAttempt) >= backoffMs;
+}
+
 export async function queueSync(
   table: SyncQueueItem['table'],
   operation: SyncOperation,
@@ -40,7 +56,28 @@ export async function queueSync(
 }
 
 export async function getPendingSync(): Promise<SyncQueueItem[]> {
+  const allItems = await db.syncQueue.orderBy('timestamp').toArray();
+  // Filter to only items that should be retried (haven't exceeded max retries and backoff has passed)
+  return allItems.filter(item => shouldRetryItem(item));
+}
+
+// Get all pending items including those waiting for backoff
+export async function getAllPendingSync(): Promise<SyncQueueItem[]> {
   return db.syncQueue.orderBy('timestamp').toArray();
+}
+
+// Remove items that have exceeded max retries
+export async function cleanupFailedItems(): Promise<number> {
+  const allItems = await db.syncQueue.toArray();
+  const failedItems = allItems.filter(item => item.retries >= MAX_SYNC_RETRIES);
+
+  for (const item of failedItems) {
+    if (item.id) {
+      await db.syncQueue.delete(item.id);
+    }
+  }
+
+  return failedItems.length;
 }
 
 export async function removeSyncItem(id: number): Promise<void> {
@@ -50,7 +87,11 @@ export async function removeSyncItem(id: number): Promise<void> {
 export async function incrementRetry(id: number): Promise<void> {
   const item = await db.syncQueue.get(id);
   if (item) {
-    await db.syncQueue.update(id, { retries: item.retries + 1 });
+    // Update retry count and timestamp for exponential backoff calculation
+    await db.syncQueue.update(id, {
+      retries: item.retries + 1,
+      timestamp: new Date().toISOString()
+    });
   }
 }
 

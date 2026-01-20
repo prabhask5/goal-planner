@@ -425,3 +425,32 @@ create trigger update_daily_tasks_updated_at
 create trigger update_long_term_tasks_updated_at
   before update on long_term_tasks
   for each row execute function update_updated_at_column();
+
+-- ============================================================
+-- MIGRATION: Add soft delete support for multi-device sync
+-- Run this to enable proper delete propagation across devices
+-- ============================================================
+
+-- Add deleted column to all tables (soft delete / tombstone pattern)
+alter table goal_lists add column if not exists deleted boolean default false not null;
+alter table goals add column if not exists deleted boolean default false not null;
+alter table daily_routine_goals add column if not exists deleted boolean default false not null;
+alter table daily_goal_progress add column if not exists deleted boolean default false not null;
+alter table task_categories add column if not exists deleted boolean default false not null;
+alter table commitments add column if not exists deleted boolean default false not null;
+alter table daily_tasks add column if not exists deleted boolean default false not null;
+alter table long_term_tasks add column if not exists deleted boolean default false not null;
+
+-- Add indexes for efficient filtering of non-deleted records
+create index if not exists idx_goal_lists_deleted on goal_lists(deleted) where deleted = false;
+create index if not exists idx_goals_deleted on goals(deleted) where deleted = false;
+create index if not exists idx_daily_routine_goals_deleted on daily_routine_goals(deleted) where deleted = false;
+create index if not exists idx_daily_goal_progress_deleted on daily_goal_progress(deleted) where deleted = false;
+create index if not exists idx_task_categories_deleted on task_categories(deleted) where deleted = false;
+create index if not exists idx_commitments_deleted on commitments(deleted) where deleted = false;
+create index if not exists idx_daily_tasks_deleted on daily_tasks(deleted) where deleted = false;
+create index if not exists idx_long_term_tasks_deleted on long_term_tasks(deleted) where deleted = false;
+
+-- Note: Server-side tombstone cleanup is handled automatically by the app
+-- during sync. Old tombstones (deleted=true, older than 30 days) are
+-- permanently deleted from both local storage and Supabase.
