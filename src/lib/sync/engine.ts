@@ -20,6 +20,7 @@ let syncTimeout: ReturnType<typeof setTimeout> | null = null;
 let syncInterval: ReturnType<typeof setInterval> | null = null;
 let isSyncing = false; // Lock to prevent concurrent syncs
 let hasHydrated = false; // Track if initial hydration has been attempted
+let isTabVisible = true; // Track tab visibility
 const SYNC_DEBOUNCE_MS = 2000; // 2 seconds debounce after writes
 const SYNC_INTERVAL_MS = 300000; // 5 minutes periodic sync (reduced frequency)
 
@@ -594,12 +595,47 @@ async function processSyncItem(item: SyncQueueItem): Promise<void> {
   }
 }
 
+// Parse error into user-friendly message
+function parseErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+
+    // Network errors
+    if (msg.includes('fetch') || msg.includes('network') || msg.includes('failed to fetch')) {
+      return 'Network connection lost. Changes saved locally.';
+    }
+    if (msg.includes('timeout') || msg.includes('timed out')) {
+      return 'Server took too long to respond. Will retry.';
+    }
+
+    // Auth errors
+    if (msg.includes('jwt') || msg.includes('token') || msg.includes('unauthorized') || msg.includes('401')) {
+      return 'Session expired. Please sign in again.';
+    }
+
+    // Rate limiting
+    if (msg.includes('rate') || msg.includes('limit') || msg.includes('429')) {
+      return 'Too many requests. Will retry shortly.';
+    }
+
+    // Server errors
+    if (msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('504')) {
+      return 'Server is temporarily unavailable.';
+    }
+
+    // Return clean error message
+    return error.message.length > 100 ? error.message.substring(0, 100) + '...' : error.message;
+  }
+  return 'An unexpected error occurred';
+}
+
 // Full sync: push first (so our changes are persisted), then pull
 // quiet: if true, don't update UI status at all (for background periodic syncs)
 export async function runFullSync(quiet: boolean = false): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.onLine) {
     if (!quiet) {
       syncStatusStore.setStatus('offline');
+      syncStatusStore.setSyncMessage('You\'re offline. Changes will sync when reconnected.');
     }
     return;
   }
@@ -611,15 +647,23 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
   try {
     // Check if there are pending items
     const pendingItems = await getPendingSync();
-    const hasPendingWork = pendingItems.length > 0;
 
     // Only show "syncing" indicator for non-quiet syncs
     if (!quiet) {
       syncStatusStore.setStatus('syncing');
+      if (pendingItems.length > 0) {
+        syncStatusStore.setSyncMessage(`Uploading ${pendingItems.length} change${pendingItems.length === 1 ? '' : 's'}...`);
+      } else {
+        syncStatusStore.setSyncMessage('Checking for updates...');
+      }
     }
 
     // Push first so local changes are persisted
     await pushPendingOps();
+
+    if (!quiet) {
+      syncStatusStore.setSyncMessage('Downloading latest data...');
+    }
 
     // Then pull remote changes
     await pullRemoteChanges();
@@ -630,16 +674,27 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
       syncStatusStore.setPendingCount(remaining.length);
       syncStatusStore.setStatus(remaining.length > 0 ? 'error' : 'idle');
       syncStatusStore.setLastSyncTime(new Date().toISOString());
+      syncStatusStore.setSyncMessage(remaining.length > 0
+        ? `${remaining.length} change${remaining.length === 1 ? '' : 's'} failed to sync`
+        : 'Everything is synced!');
+      syncStatusStore.setError(null);
     }
 
     // Notify stores that sync is complete so they can refresh from local
     notifySyncComplete();
   } catch (error) {
     console.error('Sync failed:', error);
+
+    // Only show errors for user-initiated syncs (non-quiet)
+    // Background syncs fail silently - they'll retry automatically
     if (!quiet) {
+      const friendlyMessage = parseErrorMessage(error);
+      const rawMessage = error instanceof Error ? error.message : String(error);
       syncStatusStore.setStatus('error');
-      syncStatusStore.setError(error instanceof Error ? error.message : 'Sync failed');
+      syncStatusStore.setError(friendlyMessage, rawMessage);
+      syncStatusStore.setSyncMessage(friendlyMessage);
     }
+    // For quiet syncs, just log and move on - no UI disruption
   } finally {
     isSyncing = false;
   }
@@ -670,6 +725,7 @@ export async function hydrateFromRemote(): Promise<void> {
   // Local is empty, do a full pull
   isSyncing = true;
   syncStatusStore.setStatus('syncing');
+  syncStatusStore.setSyncMessage('Loading your data...');
 
   try {
     // Pull all goal_lists (deleted items are actually deleted, not tombstoned)
@@ -752,12 +808,18 @@ export async function hydrateFromRemote(): Promise<void> {
     setLastSyncCursor(new Date().toISOString());
     syncStatusStore.setStatus('idle');
     syncStatusStore.setLastSyncTime(new Date().toISOString());
+    syncStatusStore.setSyncMessage('Everything is synced!');
+    syncStatusStore.setError(null);
 
     // Notify stores
     notifySyncComplete();
   } catch (error) {
     console.error('Hydration failed:', error);
+    const friendlyMessage = parseErrorMessage(error);
+    const rawMessage = error instanceof Error ? error.message : String(error);
     syncStatusStore.setStatus('error');
+    syncStatusStore.setError(friendlyMessage, rawMessage);
+    syncStatusStore.setSyncMessage(friendlyMessage);
   } finally {
     isSyncing = false;
   }
@@ -776,9 +838,27 @@ export function startSyncEngine(): void {
   };
   window.addEventListener('online', handleOnline);
 
+  // Track visibility and sync when returning to tab
+  const handleVisibilityChange = () => {
+    const wasHidden = !isTabVisible;
+    isTabVisible = !document.hidden;
+    syncStatusStore.setTabVisible(isTabVisible);
+
+    // If tab just became visible, do a quiet sync to get fresh data
+    if (wasHidden && isTabVisible && navigator.onLine) {
+      runFullSync(true); // Quiet - no error shown if it fails
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  // Set initial visibility state
+  isTabVisible = !document.hidden;
+  syncStatusStore.setTabVisible(isTabVisible);
+
   // Start periodic sync (quiet mode - don't show indicator unless needed)
   syncInterval = setInterval(() => {
-    if (navigator.onLine) {
+    // Only run periodic sync if tab is visible and online
+    if (navigator.onLine && isTabVisible) {
       runFullSync(true); // Quiet background sync
     }
   }, SYNC_INTERVAL_MS);

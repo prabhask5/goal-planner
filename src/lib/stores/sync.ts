@@ -4,8 +4,11 @@ import type { SyncStatus } from '$lib/types';
 interface SyncState {
   status: SyncStatus;
   pendingCount: number;
-  lastError: string | null;
+  lastError: string | null; // Friendly error message
+  lastErrorDetails: string | null; // Raw technical error
   lastSyncTime: string | null;
+  syncMessage: string | null; // Human-readable status message
+  isTabVisible: boolean; // Track if tab is visible
 }
 
 // Minimum time to show 'syncing' state to prevent flickering (ms)
@@ -16,7 +19,10 @@ function createSyncStatusStore() {
     status: 'idle',
     pendingCount: 0,
     lastError: null,
-    lastSyncTime: null
+    lastErrorDetails: null,
+    lastSyncTime: null,
+    syncMessage: null,
+    isTabVisible: true
   });
 
   let currentStatus: SyncStatus = 'idle';
@@ -69,15 +75,22 @@ function createSyncStatusStore() {
       }
     },
     setPendingCount: (count: number) => update(state => ({ ...state, pendingCount: count })),
-    setError: (error: string | null) => update(state => ({ ...state, lastError: error })),
+    setError: (friendly: string | null, raw?: string | null) => update(state => ({
+      ...state,
+      lastError: friendly,
+      lastErrorDetails: raw ?? null
+    })),
     setLastSyncTime: (time: string) => update(state => ({ ...state, lastSyncTime: time })),
+    setSyncMessage: (message: string | null) => update(state => ({ ...state, syncMessage: message })),
+    setTabVisible: (visible: boolean) => update(state => ({ ...state, isTabVisible: visible })),
     reset: () => {
       if (pendingStatusChange) {
         clearTimeout(pendingStatusChange.timeout);
         pendingStatusChange = null;
       }
       syncingStartTime = null;
-      set({ status: 'idle', pendingCount: 0, lastError: null, lastSyncTime: null });
+      currentStatus = 'idle';
+      set({ status: 'idle', pendingCount: 0, lastError: null, lastErrorDetails: null, lastSyncTime: null, syncMessage: null, isTabVisible: true });
     }
   };
 }
