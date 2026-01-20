@@ -59,11 +59,6 @@ export async function getSession(): Promise<Session | null> {
   return data.session;
 }
 
-export async function getUser(): Promise<User | null> {
-  const { data } = await supabase.auth.getUser();
-  return data.user;
-}
-
 export function getUserProfile(user: User | null): UserProfile {
   return {
     firstName: user?.user_metadata?.first_name || '',
@@ -71,13 +66,3 @@ export function getUserProfile(user: User | null): UserProfile {
   };
 }
 
-export async function updateProfile(firstName: string, lastName: string): Promise<{ error: string | null }> {
-  const { error } = await supabase.auth.updateUser({
-    data: {
-      first_name: firstName,
-      last_name: lastName
-    }
-  });
-
-  return { error: error?.message || null };
-}

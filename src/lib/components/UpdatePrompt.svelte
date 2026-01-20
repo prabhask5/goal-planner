@@ -73,19 +73,36 @@
 <style>
   .update-prompt {
     position: fixed;
-    bottom: 1rem;
+    bottom: 1.5rem;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    background-color: var(--color-bg-secondary);
-    border: 1px solid var(--color-primary);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    gap: 1.25rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(145deg,
+      rgba(26, 26, 46, 0.95) 0%,
+      rgba(26, 26, 46, 0.85) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(108, 92, 231, 0.4);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                0 0 40px rgba(108, 92, 231, 0.2);
     z-index: 1000;
-    animation: slideUp 0.3s ease-out;
+    animation: slideUp 0.4s var(--ease-bounce);
+  }
+
+  .update-prompt::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent,
+      rgba(108, 92, 231, 0.5),
+      transparent);
   }
 
   @keyframes slideUp {
@@ -102,13 +119,14 @@
   .update-content {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
   .update-icon {
     color: var(--color-primary);
     display: flex;
     animation: spin 2s linear infinite;
+    filter: drop-shadow(0 0 8px var(--color-primary));
   }
 
   @keyframes spin {
@@ -117,42 +135,62 @@
   }
 
   .update-text {
-    font-size: 0.875rem;
+    font-size: 0.9rem;
+    font-weight: 500;
     color: var(--color-text);
   }
 
   .update-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.625rem;
   }
 
   .update-btn {
-    padding: 0.375rem 0.75rem;
+    padding: 0.5rem 1rem;
     border: none;
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
-    font-weight: 500;
+    border-radius: var(--radius-lg);
+    font-size: 0.8rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: all 0.3s var(--ease-smooth);
   }
 
   .update-btn:hover {
-    opacity: 0.9;
+    transform: translateY(-2px);
   }
 
   .update-btn.dismiss {
-    background-color: var(--color-bg-tertiary);
+    background: rgba(37, 37, 61, 0.8);
     color: var(--color-text-muted);
+    border: 1px solid rgba(108, 92, 231, 0.2);
+  }
+
+  .update-btn.dismiss:hover {
+    background: rgba(37, 37, 61, 1);
+    border-color: rgba(108, 92, 231, 0.4);
   }
 
   .update-btn.refresh {
-    background-color: var(--color-primary);
+    background: var(--gradient-primary);
     color: white;
+    box-shadow: 0 4px 15px var(--color-primary-glow);
+  }
+
+  .update-btn.refresh:hover {
+    box-shadow: 0 6px 25px var(--color-primary-glow);
   }
 
   @media (max-width: 480px) {
     .update-prompt {
       max-width: calc(100% - 2rem);
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    .update-actions {
+      width: 100%;
+      justify-content: center;
     }
   }
 </style>

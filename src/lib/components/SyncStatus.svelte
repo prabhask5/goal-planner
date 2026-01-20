@@ -80,27 +80,50 @@
   .sync-status {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
+    gap: 0.625rem;
+    font-size: 0.8125rem;
     color: var(--color-text-muted);
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--radius-sm);
-    background-color: var(--color-bg-tertiary);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg,
+      rgba(20, 20, 40, 0.9) 0%,
+      rgba(15, 15, 32, 0.95) 100%);
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    transition: all 0.3s var(--ease-smooth);
+    backdrop-filter: blur(10px);
   }
 
   .sync-status.offline {
     color: var(--color-yellow);
-    background-color: rgba(241, 196, 15, 0.1);
+    background: linear-gradient(135deg,
+      rgba(255, 217, 61, 0.15) 0%,
+      rgba(255, 217, 61, 0.05) 100%);
+    border-color: rgba(255, 217, 61, 0.4);
+    box-shadow: 0 0 20px rgba(255, 217, 61, 0.15);
   }
 
   .sync-status.syncing {
-    color: var(--color-primary);
-    background-color: rgba(108, 92, 231, 0.1);
+    color: var(--color-primary-light);
+    background: linear-gradient(135deg,
+      rgba(108, 92, 231, 0.2) 0%,
+      rgba(108, 92, 231, 0.08) 100%);
+    border-color: rgba(108, 92, 231, 0.4);
+    box-shadow: 0 0 25px var(--color-primary-glow);
+    animation: syncPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes syncPulse {
+    0%, 100% { box-shadow: 0 0 20px var(--color-primary-glow); }
+    50% { box-shadow: 0 0 35px var(--color-primary-glow); }
   }
 
   .sync-status.error {
     color: var(--color-red);
-    background-color: rgba(255, 107, 107, 0.1);
+    background: linear-gradient(135deg,
+      rgba(255, 107, 107, 0.18) 0%,
+      rgba(255, 107, 107, 0.06) 100%);
+    border-color: rgba(255, 107, 107, 0.4);
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.2);
   }
 
   .status-icon {
@@ -115,40 +138,45 @@
 
   .status-icon.synced {
     color: var(--color-green);
+    filter: drop-shadow(0 0 8px var(--color-green-glow));
+    animation: syncedPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes syncedPulse {
+    0%, 100% { filter: drop-shadow(0 0 8px var(--color-green-glow)); }
+    50% { filter: drop-shadow(0 0 15px var(--color-green-glow)); }
   }
 
   @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   .status-text {
     white-space: nowrap;
+    font-weight: 600;
+    letter-spacing: 0.02em;
   }
 
   .sync-btn {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.625rem;
     padding: 0;
     background: none;
     border: none;
     color: inherit;
     font-size: inherit;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: all 0.25s var(--ease-spring);
   }
 
   .sync-btn:hover {
-    opacity: 0.8;
+    transform: scale(1.08);
   }
 
   .sync-btn.pending {
-    color: var(--color-primary);
+    color: var(--color-primary-light);
   }
 
   .sync-btn.error {

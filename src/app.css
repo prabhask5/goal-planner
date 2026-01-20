@@ -1,31 +1,164 @@
+/*
+ * ════════════════════════════════════════════════════════════════════════════════
+ * GOAL PLANNER — "Stellar Progress" Design System
+ * ════════════════════════════════════════════════════════════════════════════════
+ *
+ * CONCEPT: You are at the center of your own universe.
+ *
+ * Goal lists are planets orbiting around you.
+ * Individual goals are stars that ignite as you complete them.
+ * Progress transforms dim embers into brilliant supernovas.
+ * The calendar is your star chart—a map of your journey through time.
+ *
+ * The purple orbital ring represents potential and the path forward.
+ * The green checkmark marks stellar achievement.
+ *
+ * ════════════════════════════════════════════════════════════════════════════════
+ */
+
 :root {
-  --color-bg: #0f0f1a;
-  --color-bg-secondary: #1a1a2e;
-  --color-bg-tertiary: #25253d;
-  --color-text: #e8e8f0;
-  --color-text-muted: #9999aa;
-  --color-border: #3a3a5c;
+  /* ═══════════════════════════════════════════════════════════════════════════════
+     THE COSMOS — Deep Space Color Palette
+     ═══════════════════════════════════════════════════════════════════════════════ */
+
+  /* Deep Space - The void between stars */
+  --color-void: #050510;
+  --color-bg: #0a0a14;
+  --color-bg-secondary: #0f0f1a;
+  --color-bg-tertiary: #1a1a2e;
+  --color-bg-elevated: #222240;
+
+  /* Starlight - Text that shines */
+  --color-text: #f0f0ff;
+  --color-text-secondary: #c8c8e0;
+  --color-text-muted: #7878a0;
+
+  /* The Orbital Ring — Primary Purple (from icon) */
   --color-primary: #6c5ce7;
+  --color-primary-light: #8b7cf0;
+  --color-primary-dark: #5849c4;
   --color-primary-hover: #7d6ff0;
+  --color-primary-glow: rgba(108, 92, 231, 0.6);
+  --color-primary-subtle: rgba(108, 92, 231, 0.15);
 
+  /* Borders - Nebula edges */
+  --color-border: rgba(108, 92, 231, 0.25);
+  --color-border-strong: rgba(108, 92, 231, 0.5);
+
+  /* Star Ignition Spectrum — From cold to hot */
   --color-red: #ff6b6b;
+  --color-red-glow: rgba(255, 107, 107, 0.5);
   --color-orange: #ffa502;
+  --color-orange-glow: rgba(255, 165, 2, 0.5);
   --color-yellow: #ffd93d;
+  --color-yellow-glow: rgba(255, 217, 61, 0.5);
   --color-lime: #c4e538;
+  --color-lime-glow: rgba(196, 229, 56, 0.5);
   --color-green: #26de81;
+  --color-green-glow: rgba(38, 222, 129, 0.5);
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* Stellar Achievement — Success Green (from icon checkmark) */
+  --color-success: #26de81;
+  --color-success-light: #4aea9a;
+  --color-success-dark: #1fb86a;
+  --color-success-glow: rgba(38, 222, 129, 0.6);
+  --color-success-subtle: rgba(38, 222, 129, 0.15);
 
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  /* Nebula Accent — Cosmic pink highlights */
+  --color-accent: #ff79c6;
+  --color-accent-glow: rgba(255, 121, 198, 0.4);
+
+  /* Cyan Accent — For special highlights */
+  --color-cyan: #00d4ff;
+  --color-cyan-glow: rgba(0, 212, 255, 0.4);
+
+  /* ═══════════════════════════════════════════════════════════════════════════════
+     ORBITAL GEOMETRY — Celestial shapes
+     ═══════════════════════════════════════════════════════════════════════════════ */
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+
+  /* ═══════════════════════════════════════════════════════════════════════════════
+     COSMIC DEPTH — Layers of space
+     ═══════════════════════════════════════════════════════════════════════════════ */
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 16px 64px rgba(0, 0, 0, 0.6);
+  --shadow-inset: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  /* Stellar Glows */
+  --glow-primary: 0 0 30px var(--color-primary-glow);
+  --glow-primary-strong: 0 0 50px var(--color-primary-glow), 0 0 100px rgba(108, 92, 231, 0.3);
+  --glow-success: 0 0 30px var(--color-success-glow);
+  --glow-success-strong: 0 0 50px var(--color-success-glow), 0 0 100px rgba(38, 222, 129, 0.3);
+  --shadow-glow: 0 0 40px var(--color-primary-glow), 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  /* Cosmic Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  --gradient-success: linear-gradient(135deg, var(--color-success) 0%, var(--color-cyan) 100%);
+  --gradient-nebula: linear-gradient(135deg, rgba(108, 92, 231, 0.2) 0%, rgba(255, 121, 198, 0.1) 50%, rgba(38, 222, 129, 0.1) 100%);
+  --gradient-dark: linear-gradient(180deg, var(--color-bg-secondary) 0%, var(--color-bg) 100%);
+  --gradient-glow: radial-gradient(ellipse at center, var(--color-primary-glow) 0%, transparent 70%);
+  --gradient-star: radial-gradient(circle, #fff 0%, var(--color-primary) 30%, transparent 70%);
+
+  /* ═══════════════════════════════════════════════════════════════════════════════
+     ORBITAL MOTION — Physics of the cosmos
+     ═══════════════════════════════════════════════════════════════════════════════ */
+
+  --duration-instant: 100ms;
+  --duration-fast: 200ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+  --duration-orbital: 800ms;
+  --duration-stellar: 1200ms;
+
+  --ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-orbital: cubic-bezier(0.4, 0, 0, 1);
+  --ease-gravity: cubic-bezier(0.55, 0, 0.1, 1);
+
+  /* ═══════════════════════════════════════════════════════════════════════════════
+     TYPOGRAPHY — Carved from starlight
+     ═══════════════════════════════════════════════════════════════════════════════ */
+
+  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+
+  --tracking-tight: -0.03em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.05em;
+  --tracking-wider: 0.1em;
 }
 
-* {
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   FOUNDATIONS — The fabric of space-time
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+html {
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 html, body {
@@ -33,15 +166,181 @@ html, body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background-color: var(--color-bg);
+  min-height: 100%;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
   color: var(--color-text);
-  line-height: 1.5;
+  background: var(--color-void);
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   THE COSMOS — Animated starfield background
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    /* Distant star clusters */
+    radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 70%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 20%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 60% 80%, rgba(108, 92, 231, 0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 40%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 80% 60%, rgba(38, 222, 129, 0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 20%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 10% 80%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 30% 50%, rgba(255, 121, 198, 0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 90%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+    /* Nebula clouds */
+    radial-gradient(ellipse 80% 60% at 70% 100%, rgba(108, 92, 231, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 20% 0%, rgba(255, 121, 198, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 50% at 90% 50%, rgba(38, 222, 129, 0.06) 0%, transparent 40%);
+  pointer-events: none;
+  z-index: 0;
+  animation: starTwinkle 8s ease-in-out infinite;
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+/* Orbital ring that slowly rotates */
+body::after {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 200vmax;
+  height: 200vmax;
+  transform: translate(-50%, -50%);
+  background:
+    conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg,
+      rgba(108, 92, 231, 0.03) 60deg,
+      transparent 120deg,
+      rgba(38, 222, 129, 0.02) 180deg,
+      transparent 240deg,
+      rgba(255, 121, 198, 0.02) 300deg,
+      transparent 360deg
+    );
+  border-radius: 50%;
+  animation: cosmicRotation 120s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes cosmicRotation {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   SELECTION & SCROLLBARS
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+::selection {
+  background: var(--color-primary);
+  color: white;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-primary-subtle) 0%, rgba(108, 92, 231, 0.3) 100%);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-bg);
+  transition: background 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--color-primary-glow) 0%, var(--color-primary) 100%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY — Words written in starlight
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary-light) 50%, var(--color-text) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textShimmer 8s linear infinite;
+}
+
+@keyframes textShimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
 }
 
 a {
   color: inherit;
   text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-smooth);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   FORM ELEMENTS — Control panels
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--color-text);
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0.875rem 1.125rem;
+  backdrop-filter: blur(10px);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+input:hover, textarea:hover, select:hover {
+  border-color: var(--color-border-strong);
+  background: rgba(26, 26, 46, 0.8);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: rgba(34, 34, 64, 0.9);
+  box-shadow:
+    var(--glow-primary),
+    inset 0 0 20px rgba(108, 92, 231, 0.1);
+  transform: translateY(-1px);
+}
+
+input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.7;
 }
 
 button {
@@ -52,79 +351,598 @@ button {
   color: inherit;
 }
 
-input, textarea, select {
-  font-family: inherit;
-  font-size: inherit;
-  color: inherit;
-  background-color: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 0.5rem 0.75rem;
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   BUTTONS — Launch controls
+   ═══════════════════════════════════════════════════════════════════════════════════ */
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  transition: all 0.2s ease;
+  gap: 0.625rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  line-height: 1.4;
+  border-radius: var(--radius-lg);
+  transition: all var(--duration-normal) var(--ease-out);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.btn:hover::before {
+  opacity: 1;
 }
 
 .btn-primary {
-  background-color: var(--color-primary);
+  background: var(--gradient-primary);
   color: white;
+  box-shadow:
+    var(--shadow-md),
+    0 0 0 1px rgba(255,255,255,0.1) inset,
+    0 0 30px var(--color-primary-glow);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .btn-primary:hover {
-  background-color: var(--color-primary-hover);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 1px rgba(255,255,255,0.2) inset,
+    var(--glow-primary-strong);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--shadow-sm), 0 0 20px var(--color-primary-glow);
 }
 
 .btn-secondary {
-  background-color: var(--color-bg-tertiary);
+  background: rgba(34, 34, 64, 0.8);
+  color: var(--color-text);
   border: 1px solid var(--color-border);
+  backdrop-filter: blur(10px);
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-border);
+  background: rgba(34, 34, 64, 1);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md), 0 0 20px rgba(108, 92, 231, 0.2);
+  transform: translateY(-1px);
 }
 
 .btn-danger {
-  background-color: var(--color-red);
+  background: linear-gradient(135deg, var(--color-red) 0%, #ff8787 100%);
   color: white;
+  box-shadow: var(--shadow-md), 0 0 20px var(--color-red-glow);
 }
 
 .btn-danger:hover {
-  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), 0 0 40px var(--color-red-glow);
 }
 
 .btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-md);
 }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: 0.5rem 0.75rem;
+}
+
+.btn-ghost:hover {
+  color: var(--color-text);
+  background: rgba(108, 92, 231, 0.1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   CARDS — Space stations and satellites
+   ═══════════════════════════════════════════════════════════════════════════════════ */
 
 .card {
-  background-color: var(--color-bg-secondary);
+  background: linear-gradient(145deg,
+    rgba(15, 15, 26, 0.9) 0%,
+    rgba(26, 26, 46, 0.8) 100%);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1rem;
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  position: relative;
+  backdrop-filter: blur(20px);
+  transition:
+    transform var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
 }
 
+/* Subtle top highlight */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(108, 92, 231, 0.5),
+    rgba(255, 255, 255, 0.3),
+    rgba(108, 92, 231, 0.5),
+    transparent);
+  border-radius: var(--radius-full);
+}
+
+/* Corner accents */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(108, 92, 231, 0.3) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(38, 222, 129, 0.2) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-border-strong);
+  box-shadow:
+    var(--shadow-xl),
+    0 0 60px rgba(108, 92, 231, 0.15),
+    0 0 100px rgba(108, 92, 231, 0.05);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   CONTAINER — The viewport into space
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
 .container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 2.5rem;
+  }
 }
 
 @media (max-width: 768px) {
   .container {
-    padding: 0.5rem;
+    padding: 1.25rem;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   ANIMATIONS — Cosmic motion
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+@keyframes stellarPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--color-primary-glow);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--color-primary-glow), 0 0 60px rgba(108, 92, 231, 0.3);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+
+@keyframes gentleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--color-primary-glow);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 50px var(--color-primary-glow), 0 0 80px var(--color-accent-glow);
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(20px) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(20px) rotate(-360deg); }
+}
+
+@keyframes supernova {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--color-success-glow);
+  }
+  50% {
+    transform: scale(1.2);
+    box-shadow: 0 0 40px var(--color-success-glow), 0 0 80px rgba(38, 222, 129, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px var(--color-success-glow);
+  }
+}
+
+@keyframes warp {
+  0% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scaleX(1.5);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes starIgnite {
+  0% {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+  50% {
+    filter: brightness(1.5);
+    transform: scale(1.1);
+  }
+  100% {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+}
+
+@keyframes ringPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--color-primary-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+@keyframes nebulaShift {
+  0%, 100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(15deg);
+  }
+}
+
+/* Progress filling animation */
+@keyframes progressFill {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  to {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   ANIMATION UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+.animate-fade-in { animation: fadeIn 0.6s var(--ease-smooth) forwards; }
+.animate-fade-in-up { animation: fadeInUp 0.6s var(--ease-out) forwards; }
+.animate-fade-in-down { animation: fadeInDown 0.6s var(--ease-out) forwards; }
+.animate-scale-in { animation: scaleIn 0.5s var(--ease-spring) forwards; }
+.animate-slide-in-left { animation: slideInLeft 0.6s var(--ease-out) forwards; }
+.animate-slide-in-right { animation: slideInRight 0.6s var(--ease-out) forwards; }
+.animate-pulse { animation: pulse 2s var(--ease-smooth) infinite; }
+.animate-stellar-pulse { animation: stellarPulse 3s var(--ease-smooth) infinite; }
+.animate-float { animation: float 4s var(--ease-smooth) infinite; }
+.animate-gentle-float { animation: gentleFloat 3s var(--ease-smooth) infinite; }
+.animate-glow { animation: glow 3s var(--ease-smooth) infinite; }
+.animate-bounce { animation: bounce 1.5s var(--ease-smooth) infinite; }
+.animate-spin { animation: spin 1s linear infinite; }
+.animate-spin-slow { animation: spinSlow 8s linear infinite; }
+.animate-orbit { animation: orbit 10s linear infinite; }
+.animate-supernova { animation: supernova 0.6s var(--ease-spring) forwards; }
+.animate-warp { animation: warp 0.5s var(--ease-out); }
+.animate-star-ignite { animation: starIgnite 0.4s var(--ease-out); }
+
+/* Staggered delays for list animations */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   UTILITY CLASSES — Cosmic tools
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+.gradient-text, .text-gradient {
+  background: linear-gradient(135deg,
+    var(--color-primary-light) 0%,
+    var(--color-text) 30%,
+    var(--color-success) 70%,
+    var(--color-primary-light) 100%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textShimmer 10s linear infinite;
+}
+
+.glass {
+  background: rgba(15, 15, 26, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border);
+}
+
+.glass-strong {
+  background: rgba(15, 15, 26, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-border-strong);
+}
+
+.loading-shimmer, .skeleton {
+  background: linear-gradient(90deg,
+    var(--color-bg-tertiary) 0%,
+    var(--color-bg-elevated) 50%,
+    var(--color-bg-tertiary) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  border-radius: var(--radius-md);
+}
+
+.hover-lift {
+  transition: transform var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.hover-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-xl);
+}
+
+.hover-glow {
+  transition: box-shadow var(--duration-normal) var(--ease-smooth);
+}
+
+.hover-glow:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+.hover-scale {
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Decorative elements */
+.decorative-star {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--color-primary-glow);
+  animation: stellarPulse 2s ease-in-out infinite;
+}
+
+.decorative-orbit {
+  position: absolute;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  animation: spin 30s linear infinite;
+}
+
+.decorative-nebula {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--gradient-nebula);
+  filter: blur(60px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.counter {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   RESPONSIVE TYPOGRAPHY
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 15px;
+  }
+
+  h1 { font-size: 1.75rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   SPECIAL EFFECTS
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* Glowing border effect */
+.glow-border {
+  position: relative;
+}
+
+.glow-border::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: var(--gradient-primary);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  filter: blur(8px);
+  transition: opacity var(--duration-normal);
+}
+
+.glow-border:hover::after {
+  opacity: 0.6;
+}
+
+/* Star trail effect on hover */
+.star-trail {
+  position: relative;
+  overflow: hidden;
+}
+
+.star-trail::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -100%;
+  width: 200%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-primary-light), transparent);
+  transform: translateY(-50%);
+  transition: left 0.6s var(--ease-out);
+}
+
+.star-trail:hover::after {
+  left: 100%;
 }

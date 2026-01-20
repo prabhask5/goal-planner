@@ -135,84 +135,186 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    background-color: var(--color-bg-secondary);
-    border: 1px solid var(--color-border);
+    gap: 1.25rem;
+    padding: 1.125rem 1.5rem;
+    background: linear-gradient(135deg,
+      rgba(15, 15, 30, 0.95) 0%,
+      rgba(20, 20, 40, 0.9) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(108, 92, 231, 0.15);
     border-left-width: 4px;
-    border-radius: var(--radius-md);
-    transition: border-left-color 0.3s ease;
+    border-radius: var(--radius-xl);
+    transition: all 0.35s var(--ease-out);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Top shine line */
+  .goal-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(108, 92, 231, 0.3) 30%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(108, 92, 231, 0.3) 70%,
+      transparent 100%);
+  }
+
+  /* Subtle nebula glow */
+  .goal-item::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 100px;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(108, 92, 231, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    transition: opacity 0.3s;
+    opacity: 0;
+  }
+
+  .goal-item:hover {
+    transform: translateX(6px) translateY(-2px);
+    border-color: rgba(108, 92, 231, 0.35);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 60px rgba(108, 92, 231, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .goal-item:hover::after {
+    opacity: 1;
   }
 
   .goal-main {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1.125rem;
     flex: 1;
     min-width: 0;
   }
 
   .checkbox {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     border: 2px solid;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all 0.3s var(--ease-spring);
     flex-shrink: 0;
+    position: relative;
+    cursor: pointer;
+  }
+
+  /* Glow behind checkbox */
+  .checkbox::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: var(--radius-lg);
+    background: currentColor;
+    opacity: 0;
+    filter: blur(12px);
+    transition: opacity 0.3s;
   }
 
   .checkbox:hover {
-    transform: scale(1.1);
+    transform: scale(1.15) rotate(5deg);
+  }
+
+  .checkbox:hover::before {
+    opacity: 0.35;
+  }
+
+  .checkbox.checked {
+    animation: starComplete 0.5s var(--ease-spring);
+  }
+
+  @keyframes starComplete {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); box-shadow: 0 0 30px currentColor; }
+    100% { transform: scale(1); }
   }
 
   .checkmark {
     color: white;
-    font-size: 0.875rem;
+    font-size: 1.125rem;
     font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    animation: checkAppear 0.3s var(--ease-spring);
+  }
+
+  @keyframes checkAppear {
+    from { transform: scale(0) rotate(-90deg); opacity: 0; }
+    to { transform: scale(1) rotate(0); opacity: 1; }
   }
 
   .increment-controls {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.625rem;
     flex-shrink: 0;
   }
 
   .increment-btn {
-    width: 28px;
-    height: 28px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background-color: var(--color-bg-tertiary);
-    font-size: 1.25rem;
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(108, 92, 231, 0.25);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(145deg,
+      rgba(30, 30, 55, 0.9) 0%,
+      rgba(20, 20, 40, 0.95) 100%);
+    font-size: 1.375rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all 0.25s var(--ease-spring);
+    color: var(--color-text-muted);
   }
 
   .increment-btn:hover {
-    background-color: var(--color-border);
+    background: var(--gradient-primary);
+    border-color: transparent;
+    color: white;
+    transform: scale(1.15);
+    box-shadow: 0 0 25px var(--color-primary-glow);
+  }
+
+  .increment-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 15px var(--color-primary-glow);
   }
 
   .current-value {
-    font-weight: 600;
-    font-size: 0.875rem;
-    min-width: 3.5rem;
+    font-weight: 800;
+    font-size: 1rem;
+    min-width: 4.5rem;
     text-align: center;
     background: none;
     border: none;
-    padding: 0.25rem;
-    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.25s var(--ease-out);
+    text-shadow: 0 0 20px currentColor;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
   }
 
   .current-value:hover:not(:disabled) {
-    background-color: var(--color-bg-tertiary);
+    background: rgba(108, 92, 231, 0.2);
+    transform: scale(1.08);
+    text-shadow: 0 0 30px currentColor;
   }
 
   .current-value:disabled {
@@ -220,15 +322,19 @@
   }
 
   .value-input {
-    width: 3.5rem;
+    width: 4.5rem;
     text-align: center;
-    font-weight: 600;
-    font-size: 0.875rem;
-    padding: 0.25rem;
-    border: 1px solid var(--color-primary);
-    border-radius: var(--radius-sm);
-    background-color: var(--color-bg-primary);
+    font-weight: 800;
+    font-size: 1rem;
+    padding: 0.5rem 0.625rem;
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-lg);
+    background: rgba(108, 92, 231, 0.15);
     color: var(--color-text);
+    box-shadow:
+      0 0 30px var(--color-primary-glow),
+      inset 0 0 20px rgba(108, 92, 231, 0.1);
+    font-family: var(--font-mono);
   }
 
   .value-input::-webkit-inner-spin-button,
@@ -247,66 +353,96 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: all 0.3s;
+    letter-spacing: -0.01em;
   }
 
   .goal-name.completed {
     text-decoration: line-through;
-    opacity: 0.6;
+    opacity: 0.5;
+    font-style: italic;
+    filter: blur(0.5px);
   }
 
   .goal-actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     flex-shrink: 0;
   }
 
   .mini-progress {
-    width: 60px;
-    height: 6px;
-    border-radius: 999px;
+    width: 80px;
+    height: 10px;
+    border-radius: var(--radius-full);
     overflow: hidden;
+    background: rgba(20, 20, 40, 0.9);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    position: relative;
+    border: 1px solid rgba(108, 92, 231, 0.15);
   }
 
   .mini-progress-fill {
     height: 100%;
-    border-radius: 999px;
-    transition: width 0.3s ease;
+    border-radius: var(--radius-full);
+    transition: width 0.5s var(--ease-out);
+    box-shadow: 0 0 15px currentColor;
+    position: relative;
+  }
+
+  .mini-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+    border-radius: var(--radius-full);
   }
 
   .action-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-sm);
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
-    opacity: 0.6;
-    transition: all 0.2s ease;
+    font-size: 1.125rem;
+    opacity: 0.4;
+    transition: all 0.3s var(--ease-spring);
+    border: 1px solid transparent;
   }
 
   .action-btn:hover {
     opacity: 1;
-    background-color: var(--color-bg-tertiary);
+    background: rgba(108, 92, 231, 0.2);
+    border-color: rgba(108, 92, 231, 0.35);
+    transform: scale(1.15);
+    box-shadow: 0 0 20px rgba(108, 92, 231, 0.2);
   }
 
   .action-btn.delete:hover {
-    background-color: var(--color-red);
-    color: white;
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.3) 0%, rgba(255, 107, 107, 0.1) 100%);
+    border-color: rgba(255, 107, 107, 0.5);
+    color: var(--color-red);
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
   }
 
   @media (max-width: 480px) {
     .goal-item {
       flex-wrap: wrap;
+      padding: 1rem 1.125rem;
     }
 
     .goal-actions {
       width: 100%;
       justify-content: flex-end;
-      margin-top: 0.5rem;
-      padding-top: 0.5rem;
-      border-top: 1px solid var(--color-border);
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(108, 92, 231, 0.12);
     }
   }
 </style>

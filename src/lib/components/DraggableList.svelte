@@ -113,58 +113,91 @@
   .draggable-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
   }
 
   .draggable-item-wrapper {
     position: relative;
-    transition: transform 0.15s ease, opacity 0.15s ease;
+    transition: all 0.25s var(--ease-out);
+    animation: fadeInUp 0.4s var(--ease-out) backwards;
   }
 
+  .draggable-item-wrapper:nth-child(1) { animation-delay: 0s; }
+  .draggable-item-wrapper:nth-child(2) { animation-delay: 0.06s; }
+  .draggable-item-wrapper:nth-child(3) { animation-delay: 0.12s; }
+  .draggable-item-wrapper:nth-child(4) { animation-delay: 0.18s; }
+  .draggable-item-wrapper:nth-child(5) { animation-delay: 0.24s; }
+  .draggable-item-wrapper:nth-child(6) { animation-delay: 0.3s; }
+
   .draggable-item-wrapper.dragging {
-    opacity: 0.5;
+    opacity: 0.7;
     z-index: 100;
+    transform: scale(1.03) rotate(0.5deg);
+    filter: brightness(1.15);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 60px var(--color-primary-glow);
   }
 
   .draggable-item-wrapper.drop-above::before {
     content: '';
     position: absolute;
-    top: -6px;
+    top: -9px;
     left: 0;
     right: 0;
-    height: 3px;
-    background-color: var(--color-primary);
-    border-radius: 999px;
+    height: 4px;
+    background: var(--gradient-primary);
+    border-radius: var(--radius-full);
+    box-shadow: 0 0 25px var(--color-primary-glow), 0 0 50px rgba(108, 92, 231, 0.3);
+    animation: dropIndicatorPulse 1s var(--ease-smooth) infinite;
   }
 
   .draggable-item-wrapper.drop-below::after {
     content: '';
     position: absolute;
-    bottom: -6px;
+    bottom: -9px;
     left: 0;
     right: 0;
-    height: 3px;
-    background-color: var(--color-primary);
-    border-radius: 999px;
+    height: 4px;
+    background: var(--gradient-primary);
+    border-radius: var(--radius-full);
+    box-shadow: 0 0 25px var(--color-primary-glow), 0 0 50px rgba(108, 92, 231, 0.3);
+    animation: dropIndicatorPulse 1s var(--ease-smooth) infinite;
+  }
+
+  @keyframes dropIndicatorPulse {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 25px var(--color-primary-glow), 0 0 50px rgba(108, 92, 231, 0.3);
+    }
+    50% {
+      opacity: 0.8;
+      box-shadow: 0 0 35px var(--color-primary-glow), 0 0 70px rgba(108, 92, 231, 0.4);
+    }
   }
 
   :global(.drag-handle) {
     cursor: grab;
     touch-action: none;
-    padding: 0.5rem;
+    padding: 0.75rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.5;
-    transition: opacity 0.2s;
+    opacity: 0.35;
+    transition: all 0.3s var(--ease-spring);
     user-select: none;
+    border-right: 1px solid rgba(108, 92, 231, 0.1);
+    font-weight: bold;
   }
 
   :global(.drag-handle:hover) {
     opacity: 1;
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.15) 0%, rgba(108, 92, 231, 0.05) 100%);
+    color: var(--color-primary-light);
+    box-shadow: inset 0 0 20px rgba(108, 92, 231, 0.1);
   }
 
   :global(.drag-handle:active) {
     cursor: grabbing;
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.25) 0%, rgba(108, 92, 231, 0.1) 100%);
+    box-shadow: inset 0 0 30px rgba(108, 92, 231, 0.2);
   }
 </style>

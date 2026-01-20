@@ -37,12 +37,6 @@ export function isPastDay(date: Date): boolean {
   return isBefore(checkDate, today);
 }
 
-export function isFutureDay(date: Date): boolean {
-  const today = startOfDay(new Date());
-  const checkDate = startOfDay(date);
-  return isAfter(checkDate, today);
-}
-
 export function isTodayDate(date: Date): boolean {
   return isToday(date);
 }

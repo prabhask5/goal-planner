@@ -100,24 +100,26 @@
   .goal-form {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
   }
 
   .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
   .form-group label {
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
   }
 
   .type-toggle {
     display: flex;
-    gap: 0.5rem;
+    gap: 1rem;
   }
 
   .type-btn {
@@ -125,31 +127,89 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.75rem;
-    background-color: var(--color-bg-tertiary);
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
-    transition: all 0.2s ease;
+    gap: 0.75rem;
+    padding: 1.25rem 1rem;
+    background: linear-gradient(145deg,
+      rgba(20, 20, 40, 0.9) 0%,
+      rgba(15, 15, 32, 0.95) 100%);
+    border: 2px solid rgba(108, 92, 231, 0.2);
+    border-radius: var(--radius-xl);
+    transition: all 0.35s var(--ease-out);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .type-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(108, 92, 231, 0.3) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
   }
 
   .type-btn:hover {
-    border-color: var(--color-primary);
+    border-color: rgba(108, 92, 231, 0.5);
+    transform: translateY(-3px);
+    box-shadow:
+      0 12px 30px rgba(0, 0, 0, 0.4),
+      0 0 40px rgba(108, 92, 231, 0.15);
+  }
+
+  .type-btn:hover::before {
+    opacity: 0.5;
   }
 
   .type-btn.active {
     border-color: var(--color-primary);
-    background-color: rgba(108, 92, 231, 0.1);
+    background: linear-gradient(145deg,
+      rgba(108, 92, 231, 0.2) 0%,
+      rgba(15, 15, 32, 0.95) 100%);
+    box-shadow:
+      0 0 40px var(--color-primary-glow),
+      inset 0 0 40px rgba(108, 92, 231, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .type-btn.active::before {
+    opacity: 0.3;
   }
 
   .type-icon {
-    font-size: 1.25rem;
+    font-size: 2rem;
+    position: relative;
+    z-index: 1;
+    transition: all 0.35s var(--ease-spring);
+  }
+
+  .type-btn:hover .type-icon {
+    transform: scale(1.25) rotate(5deg);
+  }
+
+  .type-btn.active .type-icon {
+    filter: drop-shadow(0 0 15px var(--color-primary));
+    animation: iconGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes iconGlow {
+    0%, 100% { filter: drop-shadow(0 0 15px var(--color-primary-glow)); }
+    50% { filter: drop-shadow(0 0 25px var(--color-primary-glow)); }
+  }
+
+  .type-btn span:last-child {
+    position: relative;
+    z-index: 1;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
   }
 
   .form-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(108, 92, 231, 0.15);
   }
 </style>
