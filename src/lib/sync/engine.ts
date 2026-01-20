@@ -463,25 +463,22 @@ export async function hydrateFromRemote(): Promise<void> {
   syncStatusStore.setStatus('syncing');
 
   try {
-    // Pull all goal_lists
+    // Pull all goal_lists (deleted items are actually deleted, not tombstoned)
     const { data: lists, error: listsError } = await supabase
       .from('goal_lists')
-      .select('*')
-      .is('deleted', null);
+      .select('*');
     if (listsError) throw listsError;
 
     // Pull all goals
     const { data: goals, error: goalsError } = await supabase
       .from('goals')
-      .select('*')
-      .is('deleted', null);
+      .select('*');
     if (goalsError) throw goalsError;
 
     // Pull all daily_routine_goals
     const { data: routines, error: routinesError } = await supabase
       .from('daily_routine_goals')
-      .select('*')
-      .is('deleted', null);
+      .select('*');
     if (routinesError) throw routinesError;
 
     // Pull all daily_goal_progress

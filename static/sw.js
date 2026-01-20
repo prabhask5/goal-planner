@@ -1,5 +1,5 @@
 // Version is updated automatically on each build by vite.config.ts
-const APP_VERSION = 'mklw3wet';
+const APP_VERSION = 'mklwcoxt';
 const CACHE_NAME = `goal-planner-${APP_VERSION}`;
 
 // Assets to cache on install (app shell)
