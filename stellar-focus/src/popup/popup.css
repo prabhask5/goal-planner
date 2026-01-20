@@ -793,10 +793,26 @@ body {
   background: rgba(15, 15, 26, 0.6);
   border: 1px solid rgba(108, 92, 231, 0.15);
   border-radius: var(--radius-xl);
-  transition: all 0.4s var(--ease-smooth);
+  transition: all 0.4s var(--ease-smooth), border-color 0.5s ease, box-shadow 0.5s ease;
   animation: cardSlideIn 0.5s var(--ease-spring);
   animation-delay: 0.1s;
   animation-fill-mode: both;
+}
+
+/* Card glow based on state */
+.focus-status-card:has(.status-indicator.focus) {
+  border-color: rgba(108, 92, 231, 0.3);
+  box-shadow: 0 0 30px rgba(108, 92, 231, 0.15);
+}
+
+.focus-status-card:has(.status-indicator.break) {
+  border-color: rgba(38, 222, 129, 0.3);
+  box-shadow: 0 0 30px rgba(38, 222, 129, 0.1);
+}
+
+.focus-status-card:has(.status-indicator.paused) {
+  border-color: rgba(255, 121, 198, 0.3);
+  box-shadow: 0 0 30px rgba(255, 121, 198, 0.1);
 }
 
 @keyframes cardSlideIn {
@@ -809,6 +825,17 @@ body {
   width: 56px;
   height: 56px;
   flex-shrink: 0;
+}
+
+/* Transition pulse effect when state changes */
+.status-indicator.transitioning {
+  animation: statusPulse 0.5s var(--ease-spring);
+}
+
+@keyframes statusPulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 
 .status-glow {
@@ -833,20 +860,72 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted);
-  transition: color 0.4s ease;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MORPHING ICON SYSTEM FOR TIMER STATES
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .status-icon svg {
-  display: none;
-  transition: transform 0.4s var(--ease-spring);
+  position: absolute;
+  opacity: 0;
+  transform: scale(0.6) rotate(-45deg);
+  transition:
+    opacity 0.4s var(--ease-spring),
+    transform 0.5s var(--ease-spring),
+    color 0.4s ease;
+  color: var(--color-text-muted);
 }
 
-/* Show correct icon based on state */
-.status-indicator.idle .icon-idle { display: block; }
-.status-indicator.focus .icon-focus { display: block; }
-.status-indicator.break .icon-break { display: block; }
-.status-indicator.paused .icon-paused { display: block; }
+.status-icon svg.active {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+/* Morph-in animation - icon appearing */
+.status-icon svg.morph-in {
+  animation: iconMorphIn 0.5s var(--ease-spring) forwards;
+}
+
+@keyframes iconMorphIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-90deg);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.15) rotate(10deg);
+  }
+  70% {
+    transform: scale(0.95) rotate(-5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Morph-out animation - icon disappearing */
+.status-icon svg.morph-out {
+  animation: iconMorphOut 0.3s var(--ease-smooth) forwards;
+}
+
+@keyframes iconMorphOut {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5) rotate(45deg);
+  }
+}
+
+/* Show correct icon based on state (fallback for initial load) */
+.status-indicator.idle .icon-idle { opacity: 1; transform: scale(1) rotate(0deg); }
+.status-indicator.focus .icon-focus { opacity: 1; transform: scale(1) rotate(0deg); }
+.status-indicator.break .icon-break { opacity: 1; transform: scale(1) rotate(0deg); }
+.status-indicator.paused .icon-paused { opacity: 1; transform: scale(1) rotate(0deg); }
 
 /* Idle state */
 .status-indicator.idle .status-ring {
@@ -926,9 +1005,27 @@ body {
   font-size: 16px;
   font-weight: 700;
   color: var(--color-text);
-  transition: color 0.3s ease;
+  transition: color 0.4s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 
+.status-label.updating {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.status-desc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.status-desc.updating {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* State-specific label colors */
 .status-indicator.focus ~ .status-content .status-label {
   color: var(--color-primary-light);
 }
@@ -941,10 +1038,24 @@ body {
   color: var(--color-accent);
 }
 
-.status-desc {
-  font-size: 12px;
+/* State-specific icon colors */
+.status-indicator.idle .icon-idle {
   color: var(--color-text-muted);
-  line-height: 1.4;
+}
+
+.status-indicator.focus .icon-focus {
+  color: var(--color-primary-light);
+  filter: drop-shadow(0 0 8px var(--color-primary-glow));
+}
+
+.status-indicator.break .icon-break {
+  color: var(--color-green);
+  filter: drop-shadow(0 0 8px rgba(38, 222, 129, 0.4));
+}
+
+.status-indicator.paused .icon-paused {
+  color: var(--color-accent);
+  filter: drop-shadow(0 0 8px rgba(255, 121, 198, 0.4));
 }
 
 /* Block Lists */

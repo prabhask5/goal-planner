@@ -260,28 +260,86 @@ async function loadBlockLists() {
   renderBlockLists(data || []);
 }
 
+// Track previous timer state for transitions
+type TimerState = 'idle' | 'focus' | 'break' | 'paused';
+let prevTimerState: TimerState = 'idle';
+
 function updateStatusDisplay(session: FocusSession | null) {
-  statusIndicator?.classList.remove('focus', 'break', 'paused', 'idle');
+  let newState: TimerState = 'idle';
+  let label = 'Ready to Focus';
+  let desc = 'Start a session in Stellar';
 
-  if (!session) {
-    statusIndicator?.classList.add('idle');
-    if (statusLabel) statusLabel.textContent = 'Ready to Focus';
-    if (statusDesc) statusDesc.textContent = 'Start a session in Stellar';
-    return;
+  if (session) {
+    if (session.status === 'running') {
+      newState = session.phase; // 'focus' or 'break'
+      label = session.phase === 'focus' ? 'Focus Time' : 'Break Time';
+      desc = session.phase === 'focus'
+        ? 'Stay focused — distractions blocked'
+        : 'Take a breather, you earned it';
+    } else if (session.status === 'paused') {
+      newState = 'paused';
+      label = 'Session Paused';
+      desc = 'Resume when you\'re ready';
+    }
   }
 
-  if (session.status === 'running') {
-    const phase = session.phase;
-    statusIndicator?.classList.add(phase);
-    if (statusLabel) statusLabel.textContent = phase === 'focus' ? 'Focus Time' : 'Break Time';
-    if (statusDesc) statusDesc.textContent = phase === 'focus'
-      ? 'Stay focused — distractions blocked'
-      : 'Take a breather, you earned it';
-  } else if (session.status === 'paused') {
-    statusIndicator?.classList.add('paused');
-    if (statusLabel) statusLabel.textContent = 'Session Paused';
-    if (statusDesc) statusDesc.textContent = 'Resume when you\'re ready';
+  // Only update if state actually changed
+  if (newState === prevTimerState) return;
+
+  const isTransitioning = prevTimerState !== 'idle' || newState !== 'idle';
+
+  // Remove old state classes
+  statusIndicator?.classList.remove('focus', 'break', 'paused', 'idle', 'transitioning');
+
+  // Remove active class from all icons
+  const icons = statusIndicator?.querySelectorAll('.status-icon svg');
+  icons?.forEach(icon => icon.classList.remove('active', 'morph-in', 'morph-out'));
+
+  // Add morph-out to previous icon
+  if (isTransitioning) {
+    const prevIcon = statusIndicator?.querySelector(`.icon-${prevTimerState}`);
+    prevIcon?.classList.add('morph-out');
   }
+
+  // Add new state class
+  statusIndicator?.classList.add(newState);
+  if (isTransitioning) {
+    statusIndicator?.classList.add('transitioning');
+  }
+
+  // Add active and morph-in to new icon
+  const newIcon = statusIndicator?.querySelector(`.icon-${newState}`);
+  if (newIcon) {
+    newIcon.classList.add('active');
+    if (isTransitioning) {
+      newIcon.classList.add('morph-in');
+    }
+  }
+
+  // Update text with fade transition
+  if (statusLabel) {
+    statusLabel.classList.add('updating');
+    setTimeout(() => {
+      statusLabel.textContent = label;
+      statusLabel.classList.remove('updating');
+    }, 150);
+  }
+
+  if (statusDesc) {
+    statusDesc.classList.add('updating');
+    setTimeout(() => {
+      statusDesc.textContent = desc;
+      statusDesc.classList.remove('updating');
+    }, 150);
+  }
+
+  // Remove transitioning class after animation
+  setTimeout(() => {
+    statusIndicator?.classList.remove('transitioning');
+    icons?.forEach(icon => icon.classList.remove('morph-out'));
+  }, 500);
+
+  prevTimerState = newState;
 }
 
 function renderBlockLists(lists: BlockList[]) {
@@ -311,12 +369,15 @@ function renderBlockLists(lists: BlockList[]) {
   `).join('');
 }
 
-// Real-time subscription
+// Real-time subscription - instant updates
 function subscribeToRealtime() {
   if (!currentUserId || focusSubscription) return;
 
+  // Use unique channel name with user ID for better isolation
+  const channelName = `focus-sessions-${currentUserId}-${Date.now()}`;
+
   focusSubscription = supabase
-    .channel('focus-sessions')
+    .channel(channelName)
     .on(
       'postgres_changes',
       {
@@ -326,18 +387,33 @@ function subscribeToRealtime() {
         filter: `user_id=eq.${currentUserId}`
       },
       (payload) => {
-        console.log('[Stellar Focus] Real-time update:', payload.eventType);
-        setSyncStatus('syncing');
+        console.log('[Stellar Focus] Real-time update:', payload.eventType, payload.new);
 
-        // Small delay to ensure data consistency
-        setTimeout(async () => {
-          await loadFocusStatus();
-          setSyncStatus('synced');
-        }, 100);
+        // Handle the update directly from payload for instant response
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const session = payload.new as FocusSession & { ended_at?: string };
+
+          // Check if this is an active session (not ended)
+          if (!session.ended_at) {
+            updateStatusDisplay(session);
+          } else {
+            // Session ended - show idle
+            updateStatusDisplay(null);
+          }
+        } else if (payload.eventType === 'DELETE') {
+          updateStatusDisplay(null);
+        }
+
+        // Show sync indicator with enough time to see the animation
+        setSyncStatus('syncing');
+        setTimeout(() => setSyncStatus('synced'), 800);
       }
     )
-    .subscribe((status) => {
-      console.log('[Stellar Focus] Subscription status:', status);
+    .subscribe((status, err) => {
+      console.log('[Stellar Focus] Subscription status:', status, err || '');
+      if (status === 'SUBSCRIBED') {
+        console.log('[Stellar Focus] Real-time connected!');
+      }
     });
 
   // Also poll periodically as backup (every 30s)
