@@ -84,9 +84,15 @@
       .sort((a, b) => a.due_date.localeCompare(b.due_date))
   );
 
+  const dueTodayTasks = $derived(
+    longTermTasks
+      .filter(t => t.due_date === today && !t.completed)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  );
+
   const upcomingTasks = $derived(
     longTermTasks
-      .filter(t => t.due_date >= today && !t.completed)
+      .filter(t => t.due_date > today && !t.completed)
       .sort((a, b) => a.due_date.localeCompare(b.due_date))
   );
 
@@ -322,6 +328,15 @@
           title="Overdue"
           tasks={overdueTasks}
           variant="overdue"
+          onTaskClick={handleTaskClick}
+          onToggle={handleToggleLongTermTask}
+          onDelete={handleDeleteLongTermTask}
+        />
+
+        <LongTermTaskList
+          title="Due Today"
+          tasks={dueTodayTasks}
+          variant="due-today"
           onTaskClick={handleTaskClick}
           onToggle={handleToggleLongTermTask}
           onDelete={handleDeleteLongTermTask}

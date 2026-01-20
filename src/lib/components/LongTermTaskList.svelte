@@ -4,7 +4,7 @@
   interface Props {
     title: string;
     tasks: LongTermTaskWithCategory[];
-    variant?: 'overdue' | 'upcoming' | 'completed';
+    variant?: 'overdue' | 'due-today' | 'upcoming' | 'completed';
     onTaskClick: (task: LongTermTaskWithCategory) => void;
     onToggle: (id: string) => void;
     onDelete: (id: string) => void;
@@ -19,7 +19,7 @@
 </script>
 
 {#if tasks.length > 0}
-  <div class="task-list" class:overdue={variant === 'overdue'} class:completed={variant === 'completed'}>
+  <div class="task-list" class:overdue={variant === 'overdue'} class:due-today={variant === 'due-today'} class:completed={variant === 'completed'}>
     <h3 class="list-title">{title}</h3>
     <div class="items">
       {#each tasks as task (task.id)}
@@ -79,6 +79,10 @@
     color: var(--color-red);
   }
 
+  .task-list.due-today .list-title {
+    color: var(--color-yellow);
+  }
+
   .task-list.completed .list-title {
     color: var(--color-green);
   }
@@ -106,6 +110,13 @@
     border-left: 3px solid var(--color-red);
     background: linear-gradient(135deg,
       rgba(255, 107, 107, 0.05) 0%,
+      rgba(20, 20, 40, 0.9) 100%);
+  }
+
+  .task-list.due-today .task-row {
+    border-left: 3px solid var(--color-yellow);
+    background: linear-gradient(135deg,
+      rgba(255, 217, 61, 0.08) 0%,
       rgba(20, 20, 40, 0.9) 100%);
   }
 
@@ -194,6 +205,10 @@
 
   .task-list.overdue .due-date {
     color: var(--color-red);
+  }
+
+  .task-list.due-today .due-date {
+    color: var(--color-yellow);
   }
 
   .category-tag {

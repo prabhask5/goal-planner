@@ -63,7 +63,16 @@
     if (!task) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return new Date(task.due_date) < today && !task.completed;
+    const dueDate = new Date(task.due_date + 'T00:00:00');
+    return dueDate < today && !task.completed;
+  }
+
+  function isDueToday(): boolean {
+    if (!task) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(task.due_date + 'T00:00:00');
+    return dueDate.getTime() === today.getTime() && !task.completed;
   }
 
   function formatDisplayDate(dateStr: string): string {
@@ -103,6 +112,8 @@
         />
         {#if isOverdue()}
           <span class="overdue-badge">Overdue</span>
+        {:else if isDueToday()}
+          <span class="due-today-badge">Due Today</span>
         {/if}
       </div>
 
@@ -232,6 +243,21 @@
     border: 1px solid rgba(255, 107, 107, 0.4);
     border-radius: var(--radius-md);
     color: var(--color-red);
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+    width: fit-content;
+  }
+
+  .due-today-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(255, 217, 61, 0.2);
+    border: 1px solid rgba(255, 217, 61, 0.4);
+    border-radius: var(--radius-md);
+    color: var(--color-yellow);
     font-size: 0.75rem;
     font-weight: 600;
     margin-top: 0.25rem;

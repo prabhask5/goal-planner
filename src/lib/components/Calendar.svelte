@@ -106,7 +106,7 @@
       {@const isToday = isTodayDate(day)}
       {@const hasGoals = progress && progress.totalGoals > 0}
       {@const percentage = progress?.completionPercentage ?? 0}
-      {@const bgColor = isPast && hasGoals ? getProgressColor(percentage) : 'transparent'}
+      {@const bgColor = (isPast || isToday) && hasGoals ? getProgressColor(percentage) : 'transparent'}
 
       <button
         class="day-cell"
@@ -118,7 +118,7 @@
         aria-label="{dateStr}{hasGoals ? `, ${percentage}% complete` : ''}"
       >
         <span class="day-number">{day.getDate()}</span>
-        {#if isPast && hasGoals}
+        {#if (isPast || isToday) && hasGoals}
           <span class="day-progress">{percentage}%</span>
         {/if}
       </button>
@@ -449,8 +449,9 @@
     opacity: 0.1;
   }
 
-  /* Past days with goals - ignited stars */
-  .day-cell.past.has-goals {
+  /* Past days and today with goals - ignited stars */
+  .day-cell.past.has-goals,
+  .day-cell.today.has-goals {
     background: linear-gradient(145deg,
       color-mix(in srgb, var(--day-bg) 90%, white) 0%,
       var(--day-bg) 50%,
@@ -459,7 +460,8 @@
     box-shadow: 0 0 20px color-mix(in srgb, var(--day-bg) 40%, transparent);
   }
 
-  .day-cell.past.has-goals::before {
+  .day-cell.past.has-goals::before,
+  .day-cell.today.has-goals::before {
     background: linear-gradient(180deg,
       rgba(255, 255, 255, 0.2) 0%,
       rgba(255, 255, 255, 0.05) 30%,
@@ -467,7 +469,8 @@
     opacity: 1;
   }
 
-  .day-cell.past.has-goals .day-number {
+  .day-cell.past.has-goals .day-number,
+  .day-cell.today.has-goals .day-number {
     color: white;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     font-weight: 800;
