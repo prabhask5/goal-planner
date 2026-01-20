@@ -157,7 +157,7 @@
         </svg>
       </div>
       <h1 class="brand-title">Stellar</h1>
-      <p class="brand-tagline">Your universe of goals awaits</p>
+      <p class="brand-tagline">Your universe of productivity awaits</p>
     </div>
 
     <!-- No Internet Message (offline with no cached credentials) -->

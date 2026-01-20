@@ -16,6 +16,10 @@
   let tooltipTimeout: ReturnType<typeof setTimeout> | null = null;
   let isMouseOver = $state(false);
 
+  // Track previous state for transitions
+  let prevDisplayState = $state<string>('idle');
+  let isTransitioning = $state(false);
+
   // Subscribe to stores
   $effect(() => {
     const unsubSync = syncStatusStore.subscribe((value) => {
@@ -73,6 +77,21 @@
     return 'synced';
   });
 
+  // Track state changes for transitions
+  $effect(() => {
+    const current = displayState();
+    if (current !== prevDisplayState) {
+      // Trigger transition animation when changing from syncing to another state
+      if (prevDisplayState === 'syncing' && (current === 'synced' || current === 'error')) {
+        isTransitioning = true;
+        setTimeout(() => {
+          isTransitioning = false;
+        }, 600);
+      }
+      prevDisplayState = current;
+    }
+  });
+
   // Format last sync time to relative time
   const formattedLastSync = $derived(() => {
     if (!lastSyncTime) return null;
@@ -126,6 +145,7 @@
 <!-- Sync indicator with tooltip -->
 <div
   class="sync-wrapper"
+  role="status"
   onmouseenter={handleMouseEnter}
   onmouseleave={handleMouseLeave}
 >
@@ -136,43 +156,76 @@
     class:error={displayState() === 'error'}
     class:pending={displayState() === 'pending'}
     class:synced={displayState() === 'synced'}
+    class:transitioning={isTransitioning}
     onclick={handleSyncClick}
     disabled={!online || status === 'syncing'}
     aria-label={statusLabel()}
   >
     <span class="indicator-ring"></span>
+
+    <!-- Morphing Icon Container -->
     <span class="indicator-core">
-      {#if displayState() === 'offline'}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="1" y1="1" x2="23" y2="23"/>
-          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
-          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
-          <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
-          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
-          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-          <line x1="12" y1="20" x2="12.01" y2="20"/>
-        </svg>
-      {:else if displayState() === 'syncing'}
-        <svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-        </svg>
-      {:else if displayState() === 'error'}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-      {:else if displayState() === 'pending'}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-        </svg>
-        <span class="pending-badge">{pendingCount}</span>
-      {:else}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-      {/if}
+      <!-- Offline Icon -->
+      <svg
+        class="icon icon-offline"
+        class:active={displayState() === 'offline'}
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+      >
+        <line x1="1" y1="1" x2="23" y2="23"/>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+        <line x1="12" y1="20" x2="12.01" y2="20"/>
+      </svg>
+
+      <!-- Syncing Spinner -->
+      <svg
+        class="icon icon-syncing"
+        class:active={displayState() === 'syncing'}
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+      >
+        <circle class="spinner-track" cx="12" cy="12" r="9" stroke-opacity="0.2"/>
+        <path class="spinner-arc" d="M21 12a9 9 0 1 1-6.219-8.56"/>
+      </svg>
+
+      <!-- Success Checkmark -->
+      <svg
+        class="icon icon-synced"
+        class:active={displayState() === 'synced'}
+        class:morph-in={isTransitioning && displayState() === 'synced'}
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+      >
+        <circle class="check-circle" cx="12" cy="12" r="9"/>
+        <polyline class="check-mark" points="8 12 11 15 16 9"/>
+      </svg>
+
+      <!-- Error Icon -->
+      <svg
+        class="icon icon-error"
+        class:active={displayState() === 'error'}
+        class:morph-in={isTransitioning && displayState() === 'error'}
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+      >
+        <circle class="error-circle" cx="12" cy="12" r="9"/>
+        <line class="error-line" x1="12" y1="8" x2="12" y2="12"/>
+        <line class="error-dot" x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+
+      <!-- Pending Icon -->
+      <svg
+        class="icon icon-pending"
+        class:active={displayState() === 'pending'}
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+      >
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+      </svg>
     </span>
+
+    {#if displayState() === 'pending'}
+      <span class="pending-badge">{pendingCount}</span>
+    {/if}
   </button>
 
   <!-- Beautiful Tooltip -->
@@ -271,6 +324,17 @@
     transform: scale(0.95);
   }
 
+  /* Transition pulse effect */
+  .sync-indicator.transitioning {
+    animation: transitionPulse 0.6s var(--ease-spring);
+  }
+
+  @keyframes transitionPulse {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
   /* The animated ring around the indicator */
   .indicator-ring {
     position: absolute;
@@ -280,22 +344,123 @@
     transition: all 0.4s var(--ease-smooth);
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════════════════
+     MORPHING ICON SYSTEM
+     ═══════════════════════════════════════════════════════════════════════════════════ */
+
   .indicator-core {
     position: relative;
+    width: 16px;
+    height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-text-muted);
-    transition: all 0.3s var(--ease-smooth);
   }
 
-  /* Synced state - green glow */
+  /* Base icon styles - all icons are absolutely positioned and transition */
+  .icon {
+    position: absolute;
+    opacity: 0;
+    transform: scale(0.5) rotate(-90deg);
+    transition:
+      opacity 0.35s var(--ease-spring),
+      transform 0.45s var(--ease-spring);
+    color: var(--color-text-muted);
+  }
+
+  .icon.active {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════════════
+     SYNCING STATE - Spinning animation
+     ═══════════════════════════════════════════════════════════════════════════════════ */
+
+  .sync-indicator.syncing {
+    border-color: rgba(108, 92, 231, 0.5);
+    box-shadow: 0 0 20px var(--color-primary-glow);
+  }
+
+  .icon-syncing {
+    color: var(--color-primary-light);
+  }
+
+  .icon-syncing.active {
+    animation: spinnerRotate 1s linear infinite;
+  }
+
+  .spinner-arc {
+    stroke-dasharray: 45;
+    stroke-dashoffset: 0;
+  }
+
+  @keyframes spinnerRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .sync-indicator.syncing .indicator-ring {
+    border-color: var(--color-primary);
+    border-top-color: transparent;
+    animation: ringSpinPurple 1s linear infinite;
+  }
+
+  @keyframes ringSpinPurple {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════════════
+     SYNCED STATE - Checkmark with draw animation
+     ═══════════════════════════════════════════════════════════════════════════════════ */
+
   .sync-indicator.synced {
     border-color: rgba(38, 222, 129, 0.3);
   }
 
-  .sync-indicator.synced .indicator-core {
+  .icon-synced {
     color: var(--color-green);
+  }
+
+  .icon-synced .check-circle {
+    stroke-dasharray: 60;
+    stroke-dashoffset: 60;
+    transition: stroke-dashoffset 0.4s var(--ease-out) 0.1s;
+  }
+
+  .icon-synced .check-mark {
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    transition: stroke-dashoffset 0.3s var(--ease-out) 0.35s;
+  }
+
+  .icon-synced.active .check-circle {
+    stroke-dashoffset: 0;
+  }
+
+  .icon-synced.active .check-mark {
+    stroke-dashoffset: 0;
+  }
+
+  /* Morph-in animation from spinner */
+  .icon-synced.morph-in {
+    animation: morphInSuccess 0.5s var(--ease-spring);
+  }
+
+  @keyframes morphInSuccess {
+    0% {
+      transform: scale(0.8) rotate(-180deg);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.1) rotate(10deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
   }
 
   .sync-indicator.synced .indicator-ring {
@@ -316,42 +481,98 @@
     }
   }
 
-  /* Syncing state - purple spinning */
-  .sync-indicator.syncing {
-    border-color: rgba(108, 92, 231, 0.5);
-    box-shadow: 0 0 20px var(--color-primary-glow);
+  /* ═══════════════════════════════════════════════════════════════════════════════════
+     ERROR STATE - With shake and draw animation
+     ═══════════════════════════════════════════════════════════════════════════════════ */
+
+  .sync-indicator.error {
+    border-color: rgba(255, 107, 107, 0.5);
   }
 
-  .sync-indicator.syncing .indicator-core {
-    color: var(--color-primary-light);
+  .icon-error {
+    color: var(--color-red);
   }
 
-  .sync-indicator.syncing .indicator-ring {
-    border-color: var(--color-primary);
-    border-top-color: transparent;
-    animation: ringSpinPurple 1s linear infinite;
+  .icon-error .error-circle {
+    stroke-dasharray: 60;
+    stroke-dashoffset: 60;
+    transition: stroke-dashoffset 0.4s var(--ease-out) 0.1s;
   }
 
-  @keyframes ringSpinPurple {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  .icon-error .error-line {
+    stroke-dasharray: 10;
+    stroke-dashoffset: 10;
+    transition: stroke-dashoffset 0.2s var(--ease-out) 0.35s;
   }
 
-  .spin {
-    animation: iconSpin 1s linear infinite;
+  .icon-error .error-dot {
+    opacity: 0;
+    transition: opacity 0.2s var(--ease-out) 0.5s;
   }
 
-  @keyframes iconSpin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  .icon-error.active .error-circle {
+    stroke-dashoffset: 0;
   }
 
-  /* Pending state - needs attention */
+  .icon-error.active .error-line {
+    stroke-dashoffset: 0;
+  }
+
+  .icon-error.active .error-dot {
+    opacity: 1;
+  }
+
+  /* Morph-in animation from spinner */
+  .icon-error.morph-in {
+    animation: morphInError 0.5s var(--ease-spring);
+  }
+
+  @keyframes morphInError {
+    0% {
+      transform: scale(0.8) rotate(180deg);
+      opacity: 0;
+    }
+    40% {
+      transform: scale(1.15) rotate(-10deg);
+      opacity: 1;
+    }
+    60% {
+      transform: scale(1) rotate(5deg);
+    }
+    80% {
+      transform: scale(1.05) rotate(-3deg);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  .sync-indicator.error .indicator-ring {
+    border-color: rgba(255, 107, 107, 0.3);
+    animation: ringPulseRed 1.5s ease-in-out infinite;
+  }
+
+  @keyframes ringPulseRed {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 0;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════════════
+     PENDING STATE
+     ═══════════════════════════════════════════════════════════════════════════════════ */
+
   .sync-indicator.pending {
     border-color: rgba(108, 92, 231, 0.4);
   }
 
-  .sync-indicator.pending .indicator-core {
+  .icon-pending {
     color: var(--color-primary-light);
   }
 
@@ -375,46 +596,24 @@
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 8px var(--color-primary-glow);
+    animation: badgePop 0.3s var(--ease-spring);
   }
 
-  /* Error state - red alert */
-  .sync-indicator.error {
-    border-color: rgba(255, 107, 107, 0.5);
-    animation: errorShake 0.5s ease-in-out;
+  @keyframes badgePop {
+    0% { transform: scale(0); }
+    70% { transform: scale(1.2); }
+    100% { transform: scale(1); }
   }
 
-  .sync-indicator.error .indicator-core {
-    color: var(--color-red);
-  }
+  /* ═══════════════════════════════════════════════════════════════════════════════════
+     OFFLINE STATE
+     ═══════════════════════════════════════════════════════════════════════════════════ */
 
-  .sync-indicator.error .indicator-ring {
-    border-color: rgba(255, 107, 107, 0.3);
-    animation: ringPulseRed 1.5s ease-in-out infinite;
-  }
-
-  @keyframes ringPulseRed {
-    0%, 100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-    50% {
-      transform: scale(1.2);
-      opacity: 0;
-    }
-  }
-
-  @keyframes errorShake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-3px); }
-    40%, 80% { transform: translateX(3px); }
-  }
-
-  /* Offline state - yellow warning */
   .sync-indicator.offline {
     border-color: rgba(255, 217, 61, 0.4);
   }
 
-  .sync-indicator.offline .indicator-core {
+  .icon-offline {
     color: var(--color-yellow);
   }
 
@@ -501,6 +700,7 @@
     border-radius: 50%;
     background: var(--color-text-muted);
     flex-shrink: 0;
+    transition: all 0.3s var(--ease-spring);
   }
 
   .status-dot.synced {
@@ -688,12 +888,26 @@
       animation: none;
     }
 
-    .spin {
+    .icon-syncing.active {
       animation: none;
     }
 
-    .sync-indicator.error {
+    .icon-synced.morph-in,
+    .icon-error.morph-in {
       animation: none;
+    }
+
+    .sync-indicator.transitioning {
+      animation: none;
+    }
+
+    .icon {
+      transition: opacity 0.2s ease;
+      transform: scale(1) rotate(0deg);
+    }
+
+    .icon.active {
+      transform: scale(1) rotate(0deg);
     }
   }
 </style>
