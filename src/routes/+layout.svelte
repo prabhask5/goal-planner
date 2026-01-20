@@ -408,7 +408,7 @@
     height: 64px;
     max-width: 1400px;
     margin: 0 auto;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 
   /* Brand */
@@ -417,7 +417,8 @@
     align-items: center;
     gap: 0.75rem;
     text-decoration: none;
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 0;
   }
 
   .brand-icon {
@@ -593,8 +594,10 @@
   .nav-actions {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 1rem;
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 0;
   }
 
   .user-menu {
