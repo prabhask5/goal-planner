@@ -60,10 +60,13 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     display: flex;
-    align-items: center;
+    /* Align to start so modal doesn't get hidden behind navbar on short viewports */
+    align-items: flex-start;
     justify-content: center;
-    padding: 1.5rem;
+    /* Account for navbar height (64px) + gap */
+    padding: calc(64px + 1.5rem) 1.5rem 1.5rem 1.5rem;
     z-index: 1000;
+    overflow-y: auto;
   }
 
   .modal {
@@ -77,7 +80,8 @@
     border-radius: var(--radius-2xl);
     width: 100%;
     max-width: 500px;
-    max-height: 90vh;
+    /* Calculate max-height accounting for navbar and padding */
+    max-height: calc(100vh - 64px - 3rem);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -88,6 +92,10 @@
       0 0 200px rgba(108, 92, 231, 0.1);
     position: relative;
     animation: modalAppear 0.4s var(--ease-spring);
+    /* Add margin bottom so the modal doesn't touch the bottom edge */
+    margin-bottom: 1.5rem;
+    /* Prevent modal from shrinking on short viewports - let it scroll instead */
+    flex-shrink: 0;
   }
 
   @keyframes modalAppear {
@@ -207,11 +215,33 @@
     z-index: 1;
   }
 
+  /* Tablet breakpoint - navbar is visible */
+  @media (min-width: 641px) and (max-width: 900px) {
+    .modal-backdrop {
+      /* Slightly less padding on tablets */
+      padding: calc(64px + 1rem) 1rem 1rem 1rem;
+    }
+
+    .modal {
+      max-height: calc(100vh - 64px - 2rem);
+    }
+  }
+
+  /* Mobile - no top navbar, different layout */
   @media (max-width: 640px) {
+    .modal-backdrop {
+      /* No navbar on mobile, use safe area + reasonable padding */
+      padding: calc(env(safe-area-inset-top, 20px) + 1rem) 1rem calc(80px + env(safe-area-inset-bottom, 0) + 1rem) 1rem;
+      /* Center on mobile since there's no navbar */
+      align-items: center;
+    }
+
     .modal {
       max-width: 100%;
-      max-height: 85vh;
+      /* Account for bottom nav and safe areas */
+      max-height: calc(100vh - env(safe-area-inset-top, 20px) - 80px - env(safe-area-inset-bottom, 0) - 2rem);
       border-radius: var(--radius-xl);
+      margin-bottom: 0;
     }
 
     .modal-header {
@@ -220,6 +250,26 @@
 
     .modal-content {
       padding: 1.5rem;
+    }
+  }
+
+  /* Very short viewports (landscape tablets, etc.) */
+  @media (max-height: 600px) and (min-width: 641px) {
+    .modal-backdrop {
+      padding-top: calc(64px + 0.75rem);
+      padding-bottom: 0.75rem;
+    }
+
+    .modal {
+      max-height: calc(100vh - 64px - 1.5rem);
+    }
+
+    .modal-header {
+      padding: 1rem 1.5rem;
+    }
+
+    .modal-content {
+      padding: 1.25rem 1.5rem;
     }
   }
 </style>
