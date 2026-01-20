@@ -3,12 +3,23 @@
  * Handles authentication, block list display, and focus status
  */
 
+import browser from 'webextension-polyfill';
 import { getSupabase, signIn, signOut, getSession, getUser, type Session, type User } from '../auth/supabase';
 import { cacheOfflineCredentials, getOfflineCredentials, verifyOfflinePassword, clearOfflineCredentials } from '../auth/offlineCredentials';
 import { createOfflineSession, getValidOfflineSession, clearOfflineSession } from '../auth/offlineSession';
 import { blockListsCache, focusSessionCacheStore, type CachedBlockList } from '../lib/storage';
 import { getNetworkStatus, onNetworkChange } from '../lib/network';
 import { config } from '../config';
+
+// Simple user type for offline mode (doesn't need all Supabase User fields)
+interface OfflineUser {
+  id: string;
+  email: string;
+  user_metadata?: {
+    first_name?: string;
+    last_name?: string;
+  };
+}
 
 // DOM Elements
 const authSection = document.getElementById('authSection') as HTMLElement;
@@ -32,7 +43,7 @@ const userName = document.getElementById('userName') as HTMLElement;
 const openStellarBtn = document.getElementById('openStellarBtn') as HTMLAnchorElement;
 
 // State
-let currentUser: User | null = null;
+let currentUser: User | OfflineUser | null = null;
 let isOnline = getNetworkStatus();
 
 // Initialize popup
@@ -100,7 +111,7 @@ async function checkAuth() {
             first_name: credentials.firstName,
             last_name: credentials.lastName
           }
-        } as User;
+        } as OfflineUser;
         showMainSection();
         return;
       }
@@ -171,7 +182,7 @@ async function handleLogin(e: Event) {
           first_name: credentials.firstName,
           last_name: credentials.lastName
         }
-      } as User;
+      } as OfflineUser;
       showMainSection();
     }
   } catch (error) {

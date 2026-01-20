@@ -40,7 +40,7 @@ export async function hashPassword(password: string, saltBase64: string): Promis
   const derivedBits = await crypto.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt: salt,
+      salt: salt.buffer as ArrayBuffer,
       iterations: ITERATIONS,
       hash: 'SHA-256'
     },

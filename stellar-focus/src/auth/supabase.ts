@@ -3,6 +3,7 @@
  * Uses the same project as the main Stellar app
  */
 
+import browser from 'webextension-polyfill';
 import { createClient, type SupabaseClient, type Session, type User } from '@supabase/supabase-js';
 import { config } from '../config';
 

@@ -4,6 +4,7 @@
  * CRITICAL: Only blocks websites when ONLINE
  */
 
+import browser from 'webextension-polyfill';
 import { getSupabase, getSession, getUser } from '../auth/supabase';
 import { getValidOfflineSession } from '../auth/offlineSession';
 import { blockListsCache, blockedWebsitesCache, focusSessionCacheStore, type FocusSessionCache } from '../lib/storage';
@@ -37,7 +38,7 @@ function setupAlarm() {
 }
 
 // Handle alarm
-browser.alarms.onAlarm.addListener((alarm) => {
+browser.alarms.onAlarm.addListener((alarm: browser.Alarms.Alarm) => {
   if (alarm.name === pollAlarmName) {
     pollFocusSession();
   }
@@ -50,15 +51,12 @@ if (typeof navigator !== 'undefined') {
 }
 
 // Listen for messages from popup
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message: { type: string }, _sender: browser.Runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
   if (message.type === 'CHECK_UPDATE') {
-    // Check if there's an update available
-    browser.runtime.requestUpdateCheck().then(([status]) => {
-      sendResponse({ updateAvailable: status === 'update_available' });
-    }).catch(() => {
-      sendResponse({ updateAvailable: false });
-    });
-    return true; // Keep channel open for async response
+    // Firefox handles updates automatically through AMO
+    // Just return false - no manual update check available
+    sendResponse({ updateAvailable: false });
+    return;
   }
 
   if (message.type === 'BLOCK_LIST_UPDATED') {
@@ -77,7 +75,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Web navigation blocking
-browser.webNavigation.onBeforeNavigate.addListener(async (details) => {
+browser.webNavigation.onBeforeNavigate.addListener(async (details: browser.WebNavigation.OnBeforeNavigateDetailsType) => {
   // Only block main frame navigations
   if (details.frameId !== 0) return;
 
