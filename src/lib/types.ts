@@ -47,7 +47,7 @@ export interface DailyGoalProgress {
 }
 
 // Sync-related types
-export type SyncOperation = 'create' | 'update' | 'delete' | 'increment';
+export type SyncOperation = 'create' | 'update' | 'delete';
 
 export interface SyncQueueItem {
   id?: number;

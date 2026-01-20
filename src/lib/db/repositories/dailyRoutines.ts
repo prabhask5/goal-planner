@@ -3,25 +3,6 @@ import type { DailyRoutineGoal, GoalType } from '$lib/types';
 import { queueSync } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
-export async function getDailyRoutineGoals(): Promise<DailyRoutineGoal[]> {
-  return db.dailyRoutineGoals.orderBy('created_at').reverse().toArray();
-}
-
-export async function getDailyRoutineGoal(id: string): Promise<DailyRoutineGoal | undefined> {
-  return db.dailyRoutineGoals.get(id);
-}
-
-export async function getActiveRoutinesForDate(date: string): Promise<DailyRoutineGoal[]> {
-  // Get routines where start_date <= date AND (end_date is null OR end_date >= date)
-  const allRoutines = await db.dailyRoutineGoals.toArray();
-
-  return allRoutines.filter((routine) => {
-    if (routine.start_date > date) return false;
-    if (routine.end_date && routine.end_date < date) return false;
-    return true;
-  });
-}
-
 export async function createDailyRoutineGoal(
   name: string,
   type: GoalType,

@@ -23,18 +23,6 @@ export function getProgressColor(percentage: number): string {
 }
 
 /**
- * Returns a CSS class name for completion status (for simpler styling)
- */
-export function getCompletionClass(percentage: number): string {
-  if (percentage === 0) return 'completion-none';
-  if (percentage < 25) return 'completion-low';
-  if (percentage < 50) return 'completion-medium-low';
-  if (percentage < 75) return 'completion-medium-high';
-  if (percentage < 100) return 'completion-high';
-  return 'completion-full';
-}
-
-/**
  * Calculate completion percentage for a goal
  */
 export function calculateGoalProgress(

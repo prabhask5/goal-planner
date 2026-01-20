@@ -103,11 +103,3 @@ export async function incrementGoal(id: string, amount: number = 1): Promise<Goa
   return db.goals.get(id);
 }
 
-export async function getGoalsByListId(goalListId: string): Promise<Goal[]> {
-  const goals = await db.goals
-    .where('goal_list_id')
-    .equals(goalListId)
-    .toArray();
-
-  return goals.sort((a, b) => a.order - b.order);
-}

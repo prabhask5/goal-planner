@@ -3,21 +3,7 @@ import type { DailyGoalProgress } from '$lib/types';
 import { queueSync } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
-export async function getDailyProgress(date: string): Promise<DailyGoalProgress[]> {
-  return db.dailyGoalProgress.where('date').equals(date).toArray();
-}
-
-export async function getMonthProgress(year: number, month: number): Promise<DailyGoalProgress[]> {
-  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-  const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
-
-  return db.dailyGoalProgress
-    .where('date')
-    .between(startDate, endDate, true, true)
-    .toArray();
-}
-
-export async function getProgressForRoutineAndDate(
+async function getProgressForRoutineAndDate(
   routineId: string,
   date: string
 ): Promise<DailyGoalProgress | undefined> {

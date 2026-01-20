@@ -361,8 +361,6 @@ async function pushPendingOps(): Promise<void> {
   const pendingItems = await getPendingSync();
   if (pendingItems.length === 0) return;
 
-  syncStatusStore.setPendingCount(pendingItems.length);
-
   for (const item of pendingItems) {
     try {
       await processSyncItem(item);
@@ -376,9 +374,6 @@ async function pushPendingOps(): Promise<void> {
       }
     }
   }
-
-  const remaining = await getPendingSync();
-  syncStatusStore.setPendingCount(remaining.length);
 }
 
 // Process a single sync item
@@ -405,38 +400,15 @@ async function processSyncItem(item: SyncQueueItem): Promise<void> {
       break;
     }
     case 'delete': {
-      // For deletes, we mark as deleted in Supabase (tombstone)
+      // Actually delete from Supabase (local uses tombstone, remote uses real delete)
       const { error } = await supabase
         .from(table)
-        .update({ deleted: true, updated_at: payload.updated_at })
+        .delete()
         .eq('id', entityId);
-      if (error) throw error;
-      break;
-    }
-    case 'increment': {
-      // Increment operations use Supabase RPC for atomicity
-      // The payload contains: { field: 'current_value', amount: 1, ... }
-      const { field, amount, ...otherUpdates } = payload as { field: string; amount: number; [key: string]: unknown };
-
-      // First, try to do an atomic increment using raw SQL or update
-      // Since Supabase doesn't have native increment, we fetch, add, update
-      const { data: current, error: fetchError } = await supabase
-        .from(table)
-        .select(field)
-        .eq('id', entityId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      const currentValue = (current as Record<string, number>)[field] || 0;
-      const newValue = currentValue + (amount as number);
-
-      const { error: updateError } = await supabase
-        .from(table)
-        .update({ [field]: newValue, ...otherUpdates })
-        .eq('id', entityId);
-
-      if (updateError) throw updateError;
+      // Ignore "not found" errors - item may already be deleted
+      if (error && !error.message.includes('not found') && !error.code?.includes('PGRST116')) {
+        throw error;
+      }
       break;
     }
   }
@@ -458,7 +430,9 @@ export async function runFullSync(): Promise<void> {
     // Then pull remote changes
     await pullRemoteChanges();
 
+    // Update pending count and status at the end
     const remaining = await getPendingSync();
+    syncStatusStore.setPendingCount(remaining.length);
     syncStatusStore.setStatus(remaining.length > 0 ? 'error' : 'idle');
     syncStatusStore.setLastSyncTime(new Date().toISOString());
 

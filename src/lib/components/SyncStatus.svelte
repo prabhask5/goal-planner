@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { syncStatusStore, hasPendingChanges } from '$lib/stores/sync';
+  import { syncStatusStore } from '$lib/stores/sync';
   import { isOnline } from '$lib/stores/network';
   import { performSync } from '$lib/sync/engine';
   import type { SyncStatus } from '$lib/types';
