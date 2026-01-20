@@ -44,6 +44,9 @@
   // Saved task form state (for when switching to category creation)
   let savedTaskFormState = $state<{ name: string; dueDate: string; categoryId: string | null } | null>(null);
 
+  // Keep backdrop visible during modal transitions
+  let modalTransitioning = $state(false);
+
   // Calendar state
   let currentDate = $state(new Date());
 
@@ -90,7 +93,7 @@
   const completedTasks = $derived(
     longTermTasks
       .filter(t => t.completed)
-      .sort((a, b) => b.due_date.localeCompare(a.due_date)) // Most recent first
+      .sort((a, b) => a.due_date.localeCompare(b.due_date)) // Earliest to latest
   );
 
   // Helper to get user ID
@@ -151,18 +154,22 @@
   // Modal swapping for category creation
   function handleRequestCreateCategory(formState: { name: string; dueDate: string; categoryId: string | null }) {
     savedTaskFormState = formState;
+    modalTransitioning = true;
     showTaskForm = false;
     // Small delay for smooth transition
     setTimeout(() => {
       showCategoryCreate = true;
+      modalTransitioning = false;
     }, 150);
   }
 
   function handleCategoryCreateClose() {
+    modalTransitioning = true;
     showCategoryCreate = false;
     // Return to task form with saved state
     setTimeout(() => {
       showTaskForm = true;
+      modalTransitioning = false;
     }, 150);
   }
 
@@ -355,7 +362,20 @@
   onDelete={handleDeleteLongTermTask}
 />
 
+<!-- Transition backdrop - stays visible during modal swaps -->
+{#if modalTransitioning}
+  <div class="transition-backdrop"></div>
+{/if}
+
 <style>
+  .transition-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 5, 15, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 90;
+  }
   .section {
     margin-bottom: 3rem;
   }
