@@ -23,21 +23,21 @@
   }
 
   const compliments = [
-    "You're going to do great things.",
-    "The universe is on your side.",
-    "Your potential is limitless.",
-    "You're capable of amazing things.",
-    "Keep reaching for the stars.",
-    "Your dedication is inspiring.",
-    "Greatness is within your reach.",
-    "You make the impossible possible.",
-    "You're stronger than you know.",
-    "Every step you take matters.",
-    "Your journey is extraordinary.",
-    "You're exactly where you need to be.",
-    "The best is yet to come.",
-    "You've got this.",
-    "Your hard work will pay off."
+    "you're going to do great things.",
+    "the universe is on your side.",
+    "your potential is limitless.",
+    "you're capable of amazing things.",
+    "keep reaching for the stars.",
+    "your dedication is inspiring.",
+    "greatness is within your reach.",
+    "you make the impossible possible.",
+    "you're stronger than you know.",
+    "every step you take matters.",
+    "your journey is extraordinary.",
+    "you're exactly where you need to be.",
+    "the best is yet to come.",
+    "you've got this.",
+    "your hard work will pay off."
   ];
 
   function getRandomCompliment(): string {
@@ -103,7 +103,7 @@
         </h1>
       </div>
 
-      <p class="compliment">{selectedCompliment}</p>
+      <p class="compliment">Remember, {selectedCompliment}</p>
 
       <!-- Decorative constellation -->
       <div class="constellation">
