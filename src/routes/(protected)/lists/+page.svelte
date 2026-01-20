@@ -91,7 +91,19 @@
   {/if}
 
   {#if loading}
-    <div class="loading">Loading...</div>
+    <div class="lists-grid">
+      {#each Array(3) as _, i}
+        <div class="skeleton-card" style="--delay: {i * 0.15}s">
+          <div class="skeleton-header">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-btn"></div>
+          </div>
+          <div class="skeleton-stats"></div>
+          <div class="skeleton-progress"></div>
+          <div class="skeleton-shimmer"></div>
+        </div>
+      {/each}
+    </div>
   {:else if lists.length === 0}
     <EmptyState
       icon="📝"
@@ -206,12 +218,101 @@
     transform: scale(1.05);
   }
 
-  .loading {
-    text-align: center;
-    padding: 5rem;
-    color: var(--color-text-muted);
-    font-size: 1.25rem;
-    font-weight: 500;
+  /* Skeleton Loading Cards */
+  .skeleton-card {
+    background: linear-gradient(165deg,
+      rgba(15, 15, 30, 0.95) 0%,
+      rgba(20, 20, 40, 0.9) 100%);
+    border: 1px solid rgba(108, 92, 231, 0.15);
+    border-radius: var(--radius-2xl);
+    padding: 1.75rem;
+    position: relative;
+    overflow: hidden;
+    animation: skeletonPulse 2s ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+
+  .skeleton-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 15%;
+    right: 15%;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent,
+      rgba(108, 92, 231, 0.2),
+      rgba(255, 255, 255, 0.1),
+      rgba(108, 92, 231, 0.2),
+      transparent);
+  }
+
+  @keyframes skeletonPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .skeleton-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .skeleton-title {
+    height: 1.375rem;
+    width: 65%;
+    background: linear-gradient(90deg,
+      rgba(108, 92, 231, 0.15) 0%,
+      rgba(108, 92, 231, 0.25) 50%,
+      rgba(108, 92, 231, 0.15) 100%);
+    border-radius: var(--radius-md);
+  }
+
+  .skeleton-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(108, 92, 231, 0.1);
+    border-radius: var(--radius-lg);
+  }
+
+  .skeleton-stats {
+    height: 0.9375rem;
+    width: 40%;
+    background: rgba(108, 92, 231, 0.1);
+    border-radius: var(--radius-sm);
+    margin-bottom: 1.25rem;
+  }
+
+  .skeleton-progress {
+    height: 8px;
+    width: 100%;
+    background: rgba(108, 92, 231, 0.1);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+  }
+
+  .skeleton-shimmer {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(108, 92, 231, 0.08) 20%,
+      rgba(255, 255, 255, 0.05) 40%,
+      rgba(108, 92, 231, 0.08) 60%,
+      transparent 100%
+    );
+    animation: shimmer 2s ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+
+  @keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 200%; }
   }
 
   .lists-grid {
@@ -411,8 +512,13 @@
       opacity: 0.5;
     }
 
-    .loading {
-      padding: 3rem;
+    .skeleton-card {
+      padding: 1.25rem;
+      border-radius: var(--radius-xl);
+    }
+
+    .skeleton-title {
+      height: 1.125rem;
     }
 
     .error-banner {
