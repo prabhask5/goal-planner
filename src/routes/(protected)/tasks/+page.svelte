@@ -154,23 +154,33 @@
   // Modal swapping for category creation
   function handleRequestCreateCategory(formState: { name: string; dueDate: string; categoryId: string | null }) {
     savedTaskFormState = formState;
+    // Show transition backdrop FIRST, wait for it to fade in
     modalTransitioning = true;
-    showTaskForm = false;
-    // Small delay for smooth transition
     setTimeout(() => {
-      showCategoryCreate = true;
-      modalTransitioning = false;
-    }, 150);
+      // Close task form (hidden behind backdrop)
+      showTaskForm = false;
+      // Open category modal immediately
+      setTimeout(() => {
+        showCategoryCreate = true;
+        // Start fading out backdrop as modal fades in (cross-fade)
+        modalTransitioning = false;
+      }, 50);
+    }, 150); // Wait for backdrop to fully appear
   }
 
   function handleCategoryCreateClose() {
+    // Show transition backdrop FIRST, wait for it to fade in
     modalTransitioning = true;
-    showCategoryCreate = false;
-    // Return to task form with saved state
     setTimeout(() => {
-      showTaskForm = true;
-      modalTransitioning = false;
-    }, 150);
+      // Close category modal (hidden behind backdrop)
+      showCategoryCreate = false;
+      // Open task form immediately
+      setTimeout(() => {
+        showTaskForm = true;
+        // Start fading out backdrop as modal fades in (cross-fade)
+        modalTransitioning = false;
+      }, 50);
+    }, 150); // Wait for backdrop to fully appear
   }
 
   async function handleCategoryCreateSubmit(name: string, color: string) {
@@ -307,7 +317,7 @@
           onDelete={handleDeleteLongTermTask}
         />
 
-        {#if longTermTasks.filter(t => !t.completed).length === 0}
+        {#if longTermTasks.length === 0}
           <EmptyState
             icon="📅"
             title="No long-term tasks"
@@ -363,18 +373,24 @@
 />
 
 <!-- Transition backdrop - stays visible during modal swaps -->
-{#if modalTransitioning}
-  <div class="transition-backdrop"></div>
-{/if}
+<div class="transition-backdrop" class:visible={modalTransitioning}></div>
 
 <style>
   .transition-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(5, 5, 15, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 90;
+    background: rgba(5, 5, 15, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 1001;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-out;
+  }
+
+  .transition-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
   }
   .section {
     margin-bottom: 3rem;
