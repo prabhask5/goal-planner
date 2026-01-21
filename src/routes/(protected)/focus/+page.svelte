@@ -59,6 +59,25 @@
     return () => unsubs.forEach(u => u());
   });
 
+  // Focus time tick interval for live updates
+  let focusTimeTickInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Start/stop focus time tick based on session state
+  $effect(() => {
+    const isRunningFocusPhase = session?.status === 'running' && session?.phase === 'focus';
+
+    if (isRunningFocusPhase && !focusTimeTickInterval) {
+      // Start ticking every 30 seconds
+      focusTimeTickInterval = setInterval(() => {
+        loadTodayFocusTime();
+      }, 30000);
+    } else if (!isRunningFocusPhase && focusTimeTickInterval) {
+      // Stop ticking
+      clearInterval(focusTimeTickInterval);
+      focusTimeTickInterval = null;
+    }
+  });
+
   // Load data on mount
   onMount(async () => {
     const userId = getUserId();
@@ -71,6 +90,10 @@
   // Cleanup on destroy
   onDestroy(() => {
     focusStore.destroy();
+    if (focusTimeTickInterval) {
+      clearInterval(focusTimeTickInterval);
+      focusTimeTickInterval = null;
+    }
   });
 
   async function loadTodayFocusTime() {

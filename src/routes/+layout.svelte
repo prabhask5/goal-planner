@@ -113,12 +113,27 @@
 
   // Get user's first name from appropriate source
   const greeting = $derived(() => {
+    // Try firstName from auth state
     if ($userDisplayInfo?.firstName) {
       return $userDisplayInfo.firstName;
     }
+    // Try firstName from session profile
     if (data.session?.user) {
       const profile = getUserProfile(data.session.user);
-      return profile.firstName || 'there';
+      if (profile.firstName) {
+        return profile.firstName;
+      }
+      // Fallback to email username (before @)
+      if (data.session.user.email) {
+        return data.session.user.email.split('@')[0];
+      }
+    }
+    // Fallback to offline profile
+    if (data.offlineProfile?.firstName) {
+      return data.offlineProfile.firstName;
+    }
+    if (data.offlineProfile?.email) {
+      return data.offlineProfile.email.split('@')[0];
     }
     return 'there';
   });
