@@ -92,7 +92,7 @@ let hasActiveRunningSession = false;
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  // Set links
+  // Set links (for right-click open in new tab)
   if (openStellarBtn) openStellarBtn.href = config.appUrl;
   if (signupLink) signupLink.href = config.appUrl + '/auth/signup';
 
@@ -106,6 +106,12 @@ async function init() {
   // Event listeners
   loginForm?.addEventListener('submit', handleLogin);
   logoutBtn?.addEventListener('click', handleLogout);
+
+  // Open Stellar button - reuse existing tab if available
+  openStellarBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await navigateToApp(config.appUrl);
+  });
 
   // Check auth if online
   if (isOnline) {
@@ -523,9 +529,15 @@ function renderBlockLists(lists: BlockList[]) {
     blockListsContainer.innerHTML = `
       <div class="empty-message">
         <p>No block lists yet</p>
-        <a href="${config.appUrl}/focus" target="_blank" rel="noopener" class="create-link">Create one in Stellar</a>
+        <a href="${config.appUrl}/focus" class="create-link" data-nav-url="${config.appUrl}/focus">Create one in Stellar</a>
       </div>
     `;
+    // Add click handler for create link
+    const createLink = blockListsContainer.querySelector('.create-link');
+    createLink?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await navigateToApp(`${config.appUrl}/focus`);
+    });
     return;
   }
 
@@ -540,11 +552,12 @@ function renderBlockLists(lists: BlockList[]) {
 
   blockListsContainer.innerHTML = sortedLists.map(list => {
     const isActive = isBlockListActiveToday(list);
+    const editUrl = `${config.appUrl}/focus/block-lists/${list.id}`;
     return `
       <div class="block-list-item">
         <span class="list-status ${isActive ? 'enabled' : 'disabled'}"></span>
         <span class="block-list-name">${escapeHtml(list.name)}</span>
-        <a href="${config.appUrl}/focus/block-lists/${list.id}" target="_blank" rel="noopener" class="edit-link" title="Edit in Stellar">
+        <a href="${editUrl}" class="edit-link" data-nav-url="${editUrl}" title="Edit in Stellar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -553,6 +566,16 @@ function renderBlockLists(lists: BlockList[]) {
       </div>
     `;
   }).join('');
+
+  // Add click handlers for edit links
+  const editLinks = blockListsContainer.querySelectorAll('.edit-link');
+  editLinks.forEach(link => {
+    link.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const url = (link as HTMLElement).dataset.navUrl;
+      if (url) await navigateToApp(url);
+    });
+  });
 }
 
 // Real-time subscription - instant updates
@@ -790,4 +813,33 @@ function escapeHtml(str: string): string {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+/**
+ * Navigate to a URL in the main app, reusing an existing tab if one is open
+ */
+async function navigateToApp(url: string) {
+  try {
+    // Query for existing tabs matching the app URL in the current window
+    const tabs = await browser.tabs.query({
+      currentWindow: true,
+      url: `${config.appUrl}/*`
+    });
+
+    if (tabs.length > 0 && tabs[0].id !== undefined) {
+      // Found an existing app tab - update it and focus
+      await browser.tabs.update(tabs[0].id, { url, active: true });
+    } else {
+      // No existing tab - create a new one
+      await browser.tabs.create({ url });
+    }
+
+    // Close the popup
+    window.close();
+  } catch (error) {
+    console.error('[Stellar Focus] Navigation error:', error);
+    // Fallback: open in new tab
+    await browser.tabs.create({ url });
+    window.close();
+  }
 }
