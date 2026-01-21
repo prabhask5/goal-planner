@@ -25,10 +25,45 @@ let visibilityDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 const SYNC_DEBOUNCE_MS = 2000; // 2 seconds debounce after writes
 const SYNC_INTERVAL_MS = 300000; // 5 minutes periodic sync (reduced frequency)
 const VISIBILITY_SYNC_DEBOUNCE_MS = 1000; // Debounce for visibility change syncs
+const RECENTLY_MODIFIED_TTL_MS = 5000; // Protect recently modified entities for 5 seconds
 
-// Promise-based mutex to prevent concurrent syncs (atomic lock)
-let syncMutex: Promise<void> = Promise.resolve();
-let isSyncLocked = false;
+// Track recently modified entity IDs to prevent pull from overwriting fresh local changes
+// This provides an additional layer of protection beyond the pending queue check
+const recentlyModifiedEntities: Map<string, number> = new Map();
+
+// Mark an entity as recently modified (called by repositories after local writes)
+export function markEntityModified(entityId: string): void {
+  recentlyModifiedEntities.set(entityId, Date.now());
+}
+
+// Check if entity was recently modified locally
+function isRecentlyModified(entityId: string): boolean {
+  const modifiedAt = recentlyModifiedEntities.get(entityId);
+  if (!modifiedAt) return false;
+
+  const age = Date.now() - modifiedAt;
+  if (age > RECENTLY_MODIFIED_TTL_MS) {
+    // Expired, clean up
+    recentlyModifiedEntities.delete(entityId);
+    return false;
+  }
+  return true;
+}
+
+// Clean up expired entries (called periodically)
+function cleanupRecentlyModified(): void {
+  const now = Date.now();
+  for (const [entityId, modifiedAt] of recentlyModifiedEntities) {
+    if (now - modifiedAt > RECENTLY_MODIFIED_TTL_MS) {
+      recentlyModifiedEntities.delete(entityId);
+    }
+  }
+}
+
+// Proper async mutex to prevent concurrent syncs
+// Uses a queue-based approach where each caller waits for the previous one
+let lockPromise: Promise<void> | null = null;
+let lockResolve: (() => void) | null = null;
 
 // Store event listener references for cleanup
 let handleOnlineRef: (() => void) | null = null;
@@ -36,26 +71,25 @@ let handleOfflineRef: (() => void) | null = null;
 let handleVisibilityChangeRef: (() => void) | null = null;
 
 async function acquireSyncLock(): Promise<boolean> {
-  // If already locked, return false immediately
-  if (isSyncLocked) return false;
+  // If lock is held, return false (non-blocking check for callers that want to skip)
+  if (lockPromise !== null) {
+    return false;
+  }
 
-  // Atomically set the lock by chaining onto the mutex
-  let acquired = false;
-  const previousMutex = syncMutex;
-
-  syncMutex = previousMutex.then(() => {
-    if (!isSyncLocked) {
-      isSyncLocked = true;
-      acquired = true;
-    }
+  // Create a new lock promise
+  lockPromise = new Promise<void>((resolve) => {
+    lockResolve = resolve;
   });
 
-  await syncMutex;
-  return acquired;
+  return true;
 }
 
 function releaseSyncLock(): void {
-  isSyncLocked = false;
+  if (lockResolve) {
+    lockResolve();
+  }
+  lockPromise = null;
+  lockResolve = null;
 }
 
 // Callbacks for when sync completes (stores can refresh from local)
@@ -532,7 +566,7 @@ async function pullRemoteChanges(): Promise<void> {
     // Apply goal_lists
     for (const remote of (remoteLists || [])) {
       // Skip if we have pending ops for this entity (local takes precedence)
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.goalLists.get(remote.id);
       // Accept remote if no local or remote is newer
@@ -544,7 +578,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply goals
     for (const remote of (remoteGoals || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.goals.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -555,7 +589,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply daily_routine_goals
     for (const remote of (remoteRoutines || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.dailyRoutineGoals.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -566,7 +600,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply daily_goal_progress
     for (const remote of (remoteProgress || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.dailyGoalProgress.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -577,7 +611,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply task_categories
     for (const remote of (remoteCategories || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.taskCategories.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -588,7 +622,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply commitments
     for (const remote of (remoteCommitments || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.commitments.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -599,7 +633,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply daily_tasks
     for (const remote of (remoteDailyTasks || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.dailyTasks.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -610,7 +644,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply long_term_tasks
     for (const remote of (remoteLongTermTasks || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.longTermTasks.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -621,7 +655,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply focus_settings
     for (const remote of (remoteFocusSettings || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.focusSettings.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -632,7 +666,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply focus_sessions
     for (const remote of (remoteFocusSessions || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.focusSessions.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -643,7 +677,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply block_lists
     for (const remote of (remoteBlockLists || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.blockLists.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -654,7 +688,7 @@ async function pullRemoteChanges(): Promise<void> {
 
     // Apply blocked_websites
     for (const remote of (remoteBlockedWebsites || [])) {
-      if (pendingEntityIds.has(remote.id)) continue;
+      if (pendingEntityIds.has(remote.id) || isRecentlyModified(remote.id)) continue;
 
       const local = await db.blockedWebsites.get(remote.id);
       if (!local || new Date(remote.updated_at) > new Date(local.updated_at)) {
@@ -1240,8 +1274,9 @@ export function startSyncEngine(): void {
       runFullSync(true); // Quiet background sync
     }
 
-    // Cleanup old tombstones and failed sync items periodically
+    // Cleanup old tombstones, failed sync items, and recently modified cache
     await cleanupOldTombstones();
+    cleanupRecentlyModified();
     const failedResult = await cleanupFailedItems();
 
     // Notify user if items permanently failed

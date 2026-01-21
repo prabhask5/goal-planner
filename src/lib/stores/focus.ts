@@ -36,6 +36,7 @@ function createFocusStore() {
   let tickInterval: ReturnType<typeof setInterval> | null = null;
   let currentUserId: string | null = null;
   let unsubscribe: (() => void) | null = null;
+  let isHandlingPhaseComplete = false; // Prevent concurrent phase completions
 
   // Function to trigger focus time refresh
   function notifyFocusTimeUpdated() {
@@ -51,9 +52,12 @@ function createFocusStore() {
 
       const remaining = calculateRemainingMs(state.session);
 
-      // Check if phase completed
-      if (remaining <= 0) {
-        handlePhaseComplete();
+      // Check if phase completed (prevent concurrent calls)
+      if (remaining <= 0 && !isHandlingPhaseComplete) {
+        isHandlingPhaseComplete = true;
+        handlePhaseComplete().finally(() => {
+          isHandlingPhaseComplete = false;
+        });
         return state; // State will be updated by handlePhaseComplete
       }
 

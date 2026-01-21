@@ -1,5 +1,5 @@
 // Version is updated automatically on each build by vite.config.ts
-const APP_VERSION = 'mknn3f4e';
+const APP_VERSION = 'mknnje6m';
 const CACHE_NAME = `stellar-${APP_VERSION}`;
 
 // Core app shell assets to precache on install

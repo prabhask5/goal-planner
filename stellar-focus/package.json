@@ -8,7 +8,8 @@
     "build:firefox": "node build.js firefox",
     "build:chrome": "node build.js chrome",
     "clean": "rm -rf dist-firefox dist-chrome",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "package": "npm run build && cd dist-firefox && zip -r ../stellar-focus-firefox.zip . && cd ../dist-chrome && zip -r ../stellar-focus-chrome.zip . && cd .."
   },
   "devDependencies": {
     "@types/webextension-polyfill": "^0.10.7",
