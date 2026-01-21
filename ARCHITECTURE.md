@@ -220,6 +220,10 @@ The sync queue implements the transactional outbox pattern, ensuring reliable de
 }
 ```
 
+### Queue Coalescing
+
+Before pushing, the sync engine coalesces pending operations to reduce network requests. Multiple updates to the same entity are merged into a single operation, keeping only the latest payload. This optimization is transparent and maintains data integrity.
+
 ### Exponential Backoff
 
 | Retry | Wait Time |

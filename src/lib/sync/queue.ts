@@ -7,6 +7,70 @@ const MAX_SYNC_RETRIES = 5;
 // Max queue size to prevent memory issues on low-end devices
 const MAX_QUEUE_SIZE = 1000;
 
+// Coalesce multiple updates to the same entity into a single update
+// This dramatically reduces the number of server requests when user rapidly
+// increments a goal (e.g., 50 rapid clicks = 1 request instead of 50)
+export async function coalescePendingOps(): Promise<number> {
+  const allItems = await db.syncQueue.toArray();
+  if (allItems.length <= 1) return 0;
+
+  // Group by table + entityId
+  const grouped = new Map<string, SyncQueueItem[]>();
+  for (const item of allItems) {
+    const key = `${item.table}:${item.entityId}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(item);
+  }
+
+  let coalesced = 0;
+
+  // For each group with multiple items of the same operation type, merge them
+  for (const [, items] of grouped) {
+    if (items.length <= 1) continue;
+
+    // Separate by operation type - we can only merge same-type operations
+    const updateItems = items.filter(i => i.operation === 'update');
+
+    // Coalesce multiple updates to the same entity
+    if (updateItems.length > 1) {
+      // Sort by timestamp (oldest first)
+      updateItems.sort((a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      // Merge all payloads into the latest item (later values override earlier)
+      let mergedPayload: Record<string, unknown> = {};
+      for (const item of updateItems) {
+        mergedPayload = { ...mergedPayload, ...item.payload };
+      }
+
+      // Keep the latest item, update its payload with merged data
+      const latestItem = updateItems[updateItems.length - 1];
+      const itemsToDelete = updateItems.slice(0, -1);
+
+      // Update the latest item with merged payload
+      if (latestItem.id) {
+        await db.syncQueue.update(latestItem.id, {
+          payload: mergedPayload,
+          // Reset retries since this is effectively a new merged operation
+          retries: 0,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Delete older items
+      for (const item of itemsToDelete) {
+        if (item.id) {
+          await db.syncQueue.delete(item.id);
+          coalesced++;
+        }
+      }
+    }
+  }
+
+  return coalesced;
+}
+
 // Exponential backoff: check if item should be retried based on retry count
 // Returns true if enough time has passed since last attempt
 function shouldRetryItem(item: SyncQueueItem): boolean {

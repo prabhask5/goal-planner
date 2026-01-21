@@ -1,6 +1,6 @@
 import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/db/client';
-import { getPendingSync, removeSyncItem, incrementRetry, getPendingEntityIds, cleanupFailedItems } from './queue';
+import { getPendingSync, removeSyncItem, incrementRetry, getPendingEntityIds, cleanupFailedItems, coalescePendingOps } from './queue';
 import type { SyncQueueItem, Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress, TaskCategory, Commitment, DailyTask, LongTermTask, LongTermTaskWithCategory, FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
 import { syncStatusStore } from '$lib/stores/sync';
 import { calculateGoalProgress } from '$lib/utils/colors';
@@ -708,6 +708,13 @@ async function pushPendingOps(): Promise<void> {
   const maxIterations = 10; // Safety limit to prevent infinite loops
   let iterations = 0;
 
+  // Coalesce multiple updates to the same entity before pushing
+  // This merges e.g. 50 rapid increments into 1 update request
+  const coalescedCount = await coalescePendingOps();
+  if (coalescedCount > 0) {
+    console.log(`Coalesced ${coalescedCount} redundant sync operations`);
+  }
+
   while (iterations < maxIterations) {
     const pendingItems = await getPendingSync();
     if (pendingItems.length === 0) break;
@@ -849,20 +856,15 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
   let pullSucceeded = false;
 
   try {
-    // Check if there are pending items
-    const pendingItems = await getPendingSync();
-
     // Only show "syncing" indicator for non-quiet syncs
     if (!quiet) {
       syncStatusStore.setStatus('syncing');
-      if (pendingItems.length > 0) {
-        syncStatusStore.setSyncMessage(`Uploading ${pendingItems.length} change${pendingItems.length === 1 ? '' : 's'}...`);
-      } else {
-        syncStatusStore.setSyncMessage('Checking for updates...');
-      }
+      syncStatusStore.setSyncMessage('Preparing changes...');
     }
 
     // Push first so local changes are persisted
+    // Note: pushPendingOps now coalesces before pushing, so the actual
+    // number of requests will be much lower than raw pending items
     await pushPendingOps();
     pushSucceeded = true;
 

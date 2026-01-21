@@ -20,6 +20,7 @@
   import LongTermTaskModal from '$lib/components/LongTermTaskModal.svelte';
   import LongTermTaskForm from '$lib/components/LongTermTaskForm.svelte';
   import CategoryCreateModal from '$lib/components/CategoryCreateModal.svelte';
+  import TaskTagsModal from '$lib/components/TaskTagsModal.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
 
   // State
@@ -38,6 +39,7 @@
   let showTaskForm = $state(false);
   let showTaskModal = $state(false);
   let showCategoryCreate = $state(false);
+  let showTagsModal = $state(false);
   let selectedTask = $state<LongTermTaskWithCategory | null>(null);
   let defaultTaskDate = $state<string | undefined>(undefined);
 
@@ -278,6 +280,10 @@
     <header class="section-header">
       <h2 class="section-title">Long-term Tasks</h2>
       <div class="section-actions">
+        <button class="btn btn-secondary btn-sm btn-tags" onclick={() => showTagsModal = true}>
+          <span class="btn-tags-full">View Tags</span>
+          <span class="btn-tags-short">Tags</span>
+        </button>
         <button class="btn btn-primary btn-sm" onclick={() => { defaultTaskDate = undefined; showTaskForm = true; }}>
           + New Task
         </button>
@@ -413,6 +419,17 @@
   onUpdate={handleUpdateLongTermTask}
   onToggle={handleToggleLongTermTask}
   onDelete={handleDeleteLongTermTask}
+/>
+
+<TaskTagsModal
+  open={showTagsModal}
+  {categories}
+  tasks={longTermTasks}
+  onClose={() => showTagsModal = false}
+  onTaskClick={(task) => { showTagsModal = false; selectedTask = task; showTaskModal = true; }}
+  onToggle={handleToggleLongTermTask}
+  onDelete={handleDeleteLongTermTask}
+  onDeleteCategory={handleDeleteCategory}
 />
 
 <!-- Transition backdrop - stays visible during modal swaps -->
@@ -711,6 +728,20 @@
   :global(.btn-secondary:hover) {
     background: rgba(108, 92, 231, 0.25);
     border-color: rgba(108, 92, 231, 0.5);
+  }
+
+  /* Tags button responsive text */
+  .btn-tags-short {
+    display: none;
+  }
+
+  @media (max-width: 400px) {
+    .btn-tags-full {
+      display: none;
+    }
+    .btn-tags-short {
+      display: inline;
+    }
   }
 
   /* Mobile responsive */

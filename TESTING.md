@@ -489,6 +489,24 @@ Comprehensive test plan covering features, edge cases, offline behavior, synchro
 |-----------|-------|-----------------|
 | Delete task | Delete long-term task | Removed from list and calendar |
 
+### 10.5 Task Tags Modal
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Open modal | Click "View Tags" button | Modal opens showing all categories |
+| Categories displayed | Open modal with tasks | Each category shows as a section |
+| Tasks grouped by category | View modal content | Tasks appear under their category |
+| Tasks sorted by date | View tasks in category | Soonest due date first |
+| Incomplete tasks only | View modal | Only incomplete tasks shown |
+| Toggle task complete | Check checkbox in modal | Task marked complete, disappears from modal |
+| Delete task | Click delete on task | Task removed |
+| Click to edit | Click task text | Opens edit form for that task |
+| Delete category | Click delete on category header | Category and tasks removed |
+| Empty category | Delete all tasks in category | Category section disappears |
+| Responsive button text | View on small screen | Button shows "Tags" instead of "View Tags" |
+| Modal scroll | Many categories/tasks | Modal content scrolls, header fixed |
+| Close modal | Click outside or X | Modal closes |
+
 ---
 
 ## 11. Focus Timer Tests

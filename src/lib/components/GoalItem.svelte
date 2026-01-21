@@ -494,12 +494,6 @@
 
   .mini-progress.celebrating {
     border-color: color-mix(in srgb, var(--glow-color) 50%, transparent);
-    animation: barExpand calc(1s - var(--celebration-intensity, 0) * 0.4s) ease-in-out infinite;
-  }
-
-  @keyframes barExpand {
-    0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(calc(1 + var(--celebration-intensity, 0) * 0.4)); }
   }
 
   .mini-progress-fill {

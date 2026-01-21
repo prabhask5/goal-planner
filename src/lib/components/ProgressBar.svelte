@@ -275,12 +275,12 @@
     border-radius: var(--radius-full) var(--radius-full) 0 0;
   }
 
-  /* Animated shimmer */
+  /* Animated shimmer - starts within the bar and sweeps ahead */
   .progress-fill::after {
     content: '';
     position: absolute;
     top: 0;
-    left: -100%;
+    left: 0%;
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg,
@@ -291,7 +291,7 @@
   }
 
   .progress-fill.celebrating::after {
-    animation: supernovaShimmer var(--shimmer-duration, 2s) ease-in-out infinite;
+    animation: shimmerCelebrate var(--shimmer-duration, 2s) ease-in-out infinite;
     background: linear-gradient(90deg,
       transparent 0%,
       rgba(255, 255, 255, 0.5) 40%,
@@ -301,8 +301,17 @@
   }
 
   @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 100%; }
+    0% { left: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+  }
+
+  @keyframes shimmerCelebrate {
+    0% { left: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
   }
 
   .progress-glow {
