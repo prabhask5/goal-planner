@@ -128,17 +128,71 @@
   <div class="goal-actions">
     {#if goal.type === 'incremental'}
       <div
-        class="mini-progress"
+        class="mini-progress-wrapper"
         class:celebrating={isCelebrating}
-        style="background-color: var(--color-bg-tertiary); --glow-color: {progressColor}; --celebration-intensity: {celebrationIntensity}"
+        style="--glow-color: {progressColor}; --celebration-intensity: {celebrationIntensity}"
       >
+        <!-- Pulse rings for celebration -->
+        {#if celebrationIntensity > 0.3}
+          <div class="pulse-ring pulse-ring-1"></div>
+          {#if celebrationIntensity > 0.6}
+            <div class="pulse-ring pulse-ring-2"></div>
+          {/if}
+        {/if}
+
         <div
-          class="mini-progress-fill"
+          class="mini-progress"
           class:celebrating={isCelebrating}
-          style="width: {Math.min(100, progress)}%; background-color: {progressColor}"
-        ></div>
+        >
+          <div
+            class="mini-progress-fill"
+            class:celebrating={isCelebrating}
+            style="width: {Math.min(100, progress)}%; background-color: {progressColor}"
+          ></div>
+
+          <!-- Shimmer overlay -->
+          {#if isCelebrating}
+            <div class="shimmer-overlay"></div>
+          {/if}
+        </div>
+
+        <!-- Starburst particles -->
+        {#if celebrationIntensity > 0.1}
+          <div class="particle-burst">
+            {#each Array(Math.floor(celebrationIntensity * 8)) as _, i}
+              <div
+                class="particle"
+                style="--angle: {i * 45}deg; --delay: {i * 0.15}s; --distance: {20 + (i % 3) * 10}px"
+              ></div>
+            {/each}
+          </div>
+        {/if}
+
+        <!-- Orbiting sparks -->
+        {#if celebrationIntensity > 0.5}
+          <div class="orbit-spark orbit-1"></div>
+          {#if celebrationIntensity > 0.75}
+            <div class="orbit-spark orbit-2"></div>
+          {/if}
+        {/if}
+
+        <!-- Overflow stars -->
         {#if isCelebrating}
-          <span class="overflow-star" style="color: {progressColor}">✦</span>
+          <span class="overflow-star star-1">✦</span>
+          {#if celebrationIntensity > 0.4}
+            <span class="overflow-star star-2">✦</span>
+          {/if}
+          {#if celebrationIntensity > 0.7}
+            <span class="overflow-star star-3">✧</span>
+          {/if}
+        {/if}
+
+        <!-- Energy crackle at high intensity -->
+        {#if celebrationIntensity > 0.6}
+          <div class="energy-arc arc-1"></div>
+          {#if celebrationIntensity > 0.85}
+            <div class="energy-arc arc-2"></div>
+          {/if}
         {/if}
       </div>
     {/if}
@@ -407,15 +461,45 @@
     flex-shrink: 0;
   }
 
-  .mini-progress {
+  /* Mini progress wrapper - contains all effects */
+  .mini-progress-wrapper {
+    position: relative;
     width: 80px;
     height: 10px;
+    /* Extra space for effects */
+    margin: 15px 25px 15px 10px;
+  }
+
+  .mini-progress-wrapper.celebrating {
+    /* Pulsing glow aura */
+    filter: drop-shadow(0 0 calc(4px + var(--celebration-intensity, 0) * 12px) var(--glow-color));
+    animation: wrapperPulse calc(1.5s - var(--celebration-intensity, 0) * 0.5s) ease-in-out infinite;
+  }
+
+  @keyframes wrapperPulse {
+    0%, 100% { filter: drop-shadow(0 0 calc(4px + var(--celebration-intensity, 0) * 12px) var(--glow-color)); }
+    50% { filter: drop-shadow(0 0 calc(8px + var(--celebration-intensity, 0) * 20px) var(--glow-color)); }
+  }
+
+  .mini-progress {
+    width: 100%;
+    height: 100%;
     border-radius: var(--radius-full);
     overflow: hidden;
     background: rgba(20, 20, 40, 0.9);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
     position: relative;
     border: 1px solid rgba(108, 92, 231, 0.15);
+  }
+
+  .mini-progress.celebrating {
+    border-color: color-mix(in srgb, var(--glow-color) 50%, transparent);
+    animation: barExpand calc(1s - var(--celebration-intensity, 0) * 0.4s) ease-in-out infinite;
+  }
+
+  @keyframes barExpand {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(calc(1 + var(--celebration-intensity, 0) * 0.4)); }
   }
 
   .mini-progress-fill {
@@ -437,36 +521,249 @@
     border-radius: var(--radius-full);
   }
 
-  /* Celebration effects for mini-progress */
-  .mini-progress.celebrating {
-    box-shadow:
-      inset 0 2px 4px rgba(0, 0, 0, 0.4),
-      0 0 calc(8px + var(--celebration-intensity, 0) * 12px) color-mix(in srgb, var(--glow-color) calc(var(--celebration-intensity, 0) * 60%), transparent);
-    border-color: color-mix(in srgb, var(--glow-color) 30%, rgba(108, 92, 231, 0.15));
-  }
-
   .mini-progress-fill.celebrating {
-    animation: miniProgressPulse calc(2s - var(--celebration-intensity, 0) * 1s) ease-in-out infinite;
+    animation: fillPulse calc(0.8s - var(--celebration-intensity, 0) * 0.3s) ease-in-out infinite;
   }
 
-  @keyframes miniProgressPulse {
-    0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.15); }
+  @keyframes fillPulse {
+    0%, 100% {
+      filter: brightness(1);
+      box-shadow: 0 0 15px currentColor;
+    }
+    50% {
+      filter: brightness(1.3);
+      box-shadow: 0 0 25px currentColor, 0 0 40px currentColor;
+    }
   }
 
+  /* Shimmer overlay */
+  .shimmer-overlay {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.5) 40%,
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0.5) 60%,
+      transparent 100%);
+    animation: shimmerSweep calc(1.5s - var(--celebration-intensity, 0) * 0.7s) ease-in-out infinite;
+  }
+
+  @keyframes shimmerSweep {
+    0% { left: -100%; }
+    100% { left: 200%; }
+  }
+
+  /* Pulse rings */
+  .pulse-ring {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--glow-color);
+    border-radius: 50%;
+    transform: translate(50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pulse-ring-1 {
+    animation: pulseExpand calc(2s - var(--celebration-intensity, 0) * 0.8s) ease-out infinite;
+  }
+
+  .pulse-ring-2 {
+    animation: pulseExpand calc(2s - var(--celebration-intensity, 0) * 0.8s) ease-out infinite;
+    animation-delay: calc(1s - var(--celebration-intensity, 0) * 0.4s);
+  }
+
+  @keyframes pulseExpand {
+    0% {
+      width: 10px;
+      height: 10px;
+      opacity: 0.9;
+      border-width: 3px;
+    }
+    100% {
+      width: 60px;
+      height: 60px;
+      opacity: 0;
+      border-width: 1px;
+    }
+  }
+
+  /* Particle burst */
+  .particle-burst {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: var(--glow-color);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--glow-color), 0 0 10px var(--glow-color);
+    animation: particleShoot calc(1.5s - var(--celebration-intensity, 0) * 0.5s) ease-out infinite;
+    animation-delay: var(--delay);
+  }
+
+  @keyframes particleShoot {
+    0% {
+      transform: rotate(var(--angle)) translateX(5px);
+      opacity: 1;
+    }
+    100% {
+      transform: rotate(var(--angle)) translateX(var(--distance));
+      opacity: 0;
+    }
+  }
+
+  /* Orbiting sparks */
+  .orbit-spark {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 4px;
+    height: 4px;
+    background: var(--glow-color);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--glow-color), 0 0 15px var(--glow-color);
+    pointer-events: none;
+  }
+
+  .orbit-1 {
+    animation: orbit calc(2s - var(--celebration-intensity, 0) * 0.8s) linear infinite;
+    --orbit-radius: 18px;
+  }
+
+  .orbit-2 {
+    animation: orbit calc(2.5s - var(--celebration-intensity, 0) * 1s) linear infinite reverse;
+    animation-delay: -0.5s;
+    --orbit-radius: 25px;
+  }
+
+  @keyframes orbit {
+    from {
+      transform: rotate(0deg) translateX(var(--orbit-radius)) rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg) translateX(var(--orbit-radius)) rotate(-360deg);
+    }
+  }
+
+  /* Multiple overflow stars */
   .overflow-star {
     position: absolute;
-    right: -8px;
     top: 50%;
-    transform: translateY(-50%);
     font-size: 12px;
-    text-shadow: 0 0 8px currentColor;
-    animation: starTwinkle calc(1.5s - var(--celebration-intensity, 0) * 0.5s) ease-in-out infinite;
+    color: var(--glow-color);
+    text-shadow: 0 0 8px var(--glow-color), 0 0 15px var(--glow-color);
+    pointer-events: none;
   }
 
-  @keyframes starTwinkle {
-    0%, 100% { opacity: 0.7; transform: translateY(-50%) scale(1); }
-    50% { opacity: 1; transform: translateY(-50%) scale(1.2); }
+  .star-1 {
+    right: -14px;
+    transform: translateY(-50%);
+    animation: starPulse calc(1s - var(--celebration-intensity, 0) * 0.3s) ease-in-out infinite;
+  }
+
+  .star-2 {
+    right: -8px;
+    top: -8px;
+    font-size: 8px;
+    animation: starPulse calc(1.2s - var(--celebration-intensity, 0) * 0.4s) ease-in-out infinite;
+    animation-delay: -0.3s;
+  }
+
+  .star-3 {
+    right: -6px;
+    top: auto;
+    bottom: -6px;
+    font-size: 10px;
+    animation: starPulse calc(0.9s - var(--celebration-intensity, 0) * 0.3s) ease-in-out infinite;
+    animation-delay: -0.6s;
+  }
+
+  @keyframes starPulse {
+    0%, 100% {
+      opacity: 0.6;
+      transform: translateY(-50%) scale(1);
+      filter: brightness(1);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-50%) scale(1.4);
+      filter: brightness(1.5);
+    }
+  }
+
+  .star-2, .star-3 {
+    transform: none;
+  }
+
+  @keyframes starPulseAlt {
+    0%, 100% {
+      opacity: 0.6;
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.5);
+      filter: brightness(1.5);
+    }
+  }
+
+  .star-2 {
+    animation-name: starPulseAlt;
+  }
+
+  .star-3 {
+    animation-name: starPulseAlt;
+  }
+
+  /* Energy arcs */
+  .energy-arc {
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    width: 2px;
+    height: 12px;
+    background: var(--glow-color);
+    border-radius: 2px;
+    transform-origin: bottom center;
+    pointer-events: none;
+    filter: blur(0.5px);
+    box-shadow: 0 0 4px var(--glow-color);
+  }
+
+  .arc-1 {
+    animation: arcCrackle 0.3s steps(3) infinite;
+    transform: translateY(-50%) rotate(30deg);
+  }
+
+  .arc-2 {
+    right: 15px;
+    height: 8px;
+    animation: arcCrackle 0.25s steps(3) infinite;
+    animation-delay: -0.1s;
+    transform: translateY(-50%) rotate(-25deg);
+  }
+
+  @keyframes arcCrackle {
+    0% { opacity: 0.3; transform: translateY(-50%) rotate(30deg) scaleY(0.7); }
+    33% { opacity: 1; transform: translateY(-50%) rotate(35deg) scaleY(1.2); }
+    66% { opacity: 0.5; transform: translateY(-50%) rotate(25deg) scaleY(0.9); }
+    100% { opacity: 0.3; transform: translateY(-50%) rotate(30deg) scaleY(0.7); }
   }
 
   .action-btn {
@@ -514,9 +811,20 @@
 
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
+    .mini-progress-wrapper.celebrating,
+    .mini-progress.celebrating,
     .mini-progress-fill.celebrating,
-    .overflow-star {
+    .shimmer-overlay,
+    .pulse-ring,
+    .particle,
+    .orbit-spark,
+    .overflow-star,
+    .energy-arc {
       animation: none !important;
+    }
+
+    .mini-progress-wrapper.celebrating {
+      filter: drop-shadow(0 0 8px var(--glow-color));
     }
   }
 </style>
