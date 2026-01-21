@@ -288,6 +288,16 @@
       </button>
     </form>
   </div>
+
+  <!-- Footer Links -->
+  <div class="profile-footer">
+    <a href="/policy" class="footer-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Privacy Policy
+    </a>
+  </div>
 </div>
 
 <style>
@@ -683,6 +693,33 @@
       from { transform: rotate(var(--angle)) translateX(55px); }
       to { transform: rotate(calc(var(--angle) + 360deg)) translateX(55px); }
     }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════════════════════════════════════════════ */
+
+  .profile-footer {
+    display: flex;
+    justify-content: center;
+    padding-top: 1rem;
+  }
+
+  .footer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+  }
+
+  .footer-link:hover {
+    color: var(--color-primary-light);
+    opacity: 1;
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════

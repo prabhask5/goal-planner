@@ -376,7 +376,10 @@
           </span>
           <span class="brand-text">Stellar</span>
         </a>
-        <a href="/login" class="btn btn-primary btn-sm">Get Started</a>
+        <div class="nav-simple-actions">
+          <a href="/policy" class="nav-text-link">Privacy</a>
+          <a href="/login" class="btn btn-primary btn-sm">Get Started</a>
+        </div>
       </div>
     </nav>
   {/if}
@@ -870,6 +873,24 @@
   /* Simple nav for unauthenticated */
   .nav-simple .nav-inner {
     justify-content: space-between;
+  }
+
+  .nav-simple-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .nav-text-link {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .nav-text-link:hover {
+    color: var(--color-text);
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════

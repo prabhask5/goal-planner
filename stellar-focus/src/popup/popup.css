@@ -1316,6 +1316,22 @@ body {
   transform: translateY(-1px);
 }
 
+.privacy-link {
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.privacy-link:hover {
+  color: var(--color-primary-light);
+  opacity: 1;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

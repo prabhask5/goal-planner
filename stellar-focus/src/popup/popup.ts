@@ -74,6 +74,7 @@ const userAvatar = document.getElementById('userAvatar') as HTMLElement;
 const userName = document.getElementById('userName') as HTMLElement;
 const openStellarBtn = document.getElementById('openStellarBtn') as HTMLAnchorElement;
 const signupLink = document.getElementById('signupLink') as HTMLAnchorElement;
+const privacyLink = document.getElementById('privacyLink') as HTMLAnchorElement;
 const focusTimeValue = document.getElementById('focusTimeValue') as HTMLElement;
 const activeBlockListCount = document.getElementById('activeBlockListCount') as HTMLElement;
 
@@ -95,6 +96,7 @@ async function init() {
   // Set links (for right-click open in new tab)
   if (openStellarBtn) openStellarBtn.href = config.appUrl;
   if (signupLink) signupLink.href = config.appUrl + '/auth/signup';
+  if (privacyLink) privacyLink.href = config.appUrl + '/policy';
 
   // Network listeners
   window.addEventListener('online', handleOnline);
@@ -525,19 +527,28 @@ function updateStatusDisplay(session: FocusSession | null) {
 function renderBlockLists(lists: BlockList[]) {
   if (!blockListsContainer) return;
 
+  // Clear existing content
+  blockListsContainer.textContent = '';
+
   if (lists.length === 0) {
-    blockListsContainer.innerHTML = `
-      <div class="empty-message">
-        <p>No block lists yet</p>
-        <a href="${config.appUrl}/focus" class="create-link" data-nav-url="${config.appUrl}/focus">Create one in Stellar</a>
-      </div>
-    `;
-    // Add click handler for create link
-    const createLink = blockListsContainer.querySelector('.create-link');
-    createLink?.addEventListener('click', async (e) => {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'empty-message';
+
+    const p = document.createElement('p');
+    p.textContent = 'No block lists yet';
+    emptyDiv.appendChild(p);
+
+    const createLink = document.createElement('a');
+    createLink.href = `${config.appUrl}/focus`;
+    createLink.className = 'create-link';
+    createLink.textContent = 'Create one in Stellar';
+    createLink.addEventListener('click', async (e) => {
       e.preventDefault();
       await navigateToApp(`${config.appUrl}/focus`);
     });
+    emptyDiv.appendChild(createLink);
+
+    blockListsContainer.appendChild(emptyDiv);
     return;
   }
 
@@ -550,32 +561,53 @@ function renderBlockLists(lists: BlockList[]) {
     return 0;
   });
 
-  blockListsContainer.innerHTML = sortedLists.map(list => {
+  for (const list of sortedLists) {
     const isActive = isBlockListActiveToday(list);
     const editUrl = `${config.appUrl}/focus/block-lists/${list.id}`;
-    return `
-      <div class="block-list-item">
-        <span class="list-status ${isActive ? 'enabled' : 'disabled'}"></span>
-        <span class="block-list-name">${escapeHtml(list.name)}</span>
-        <a href="${editUrl}" class="edit-link" data-nav-url="${editUrl}" title="Edit in Stellar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-        </a>
-      </div>
-    `;
-  }).join('');
 
-  // Add click handlers for edit links
-  const editLinks = blockListsContainer.querySelectorAll('.edit-link');
-  editLinks.forEach(link => {
-    link.addEventListener('click', async (e) => {
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'block-list-item';
+
+    const statusSpan = document.createElement('span');
+    statusSpan.className = `list-status ${isActive ? 'enabled' : 'disabled'}`;
+    itemDiv.appendChild(statusSpan);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'block-list-name';
+    nameSpan.textContent = list.name;
+    itemDiv.appendChild(nameSpan);
+
+    const editLink = document.createElement('a');
+    editLink.href = editUrl;
+    editLink.className = 'edit-link';
+    editLink.title = 'Edit in Stellar';
+    editLink.addEventListener('click', async (e) => {
       e.preventDefault();
-      const url = (link as HTMLElement).dataset.navUrl;
-      if (url) await navigateToApp(url);
+      await navigateToApp(editUrl);
     });
-  });
+
+    // Create SVG using namespace
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+
+    const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path1.setAttribute('d', 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7');
+    svg.appendChild(path1);
+
+    const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path2.setAttribute('d', 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z');
+    svg.appendChild(path2);
+
+    editLink.appendChild(svg);
+    itemDiv.appendChild(editLink);
+
+    blockListsContainer.appendChild(itemDiv);
+  }
 }
 
 // Real-time subscription - instant updates
