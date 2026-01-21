@@ -540,6 +540,7 @@ All data is cleared on logout.
 
 ## Related Documentation
 
+- [FRAMEWORKS.md](./FRAMEWORKS.md) - Guide to extension-specific dependencies (webextension-polyfill, esbuild, etc.) for developers new to browser extension development
 - [Stellar README](../README.md) - Main application
 - [Stellar Architecture](../ARCHITECTURE.md) - Backend architecture
 - [Extension Architecture](./ARCHITECTURE.md) - Extension internals

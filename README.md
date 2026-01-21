@@ -695,5 +695,6 @@ See [stellar-focus/README.md](./stellar-focus/README.md) for documentation.
 
 ## Related Documentation
 
+- [FRAMEWORKS.md](./FRAMEWORKS.md) - Guide to all frameworks and dependencies (SvelteKit, Svelte, Supabase, Dexie, etc.) for developers new to these technologies
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture, data flow, sync engine internals
 - [TESTING.md](./TESTING.md) - Comprehensive test plan covering all scenarios
