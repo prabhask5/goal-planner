@@ -500,6 +500,7 @@ create table focus_sessions (
   break_duration integer not null,                   -- minutes
   phase_started_at timestamp with time zone not null,
   phase_remaining_ms bigint not null,                -- milliseconds remaining in current phase
+  elapsed_duration integer default 0 not null,       -- total elapsed focus time in minutes
   deleted boolean default false not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null

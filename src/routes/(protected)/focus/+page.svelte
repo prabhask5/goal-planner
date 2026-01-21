@@ -162,7 +162,7 @@
     <!-- Stats Row -->
     <div class="stats-row">
       <div class="stat-card">
-        <span class="stat-label">Today</span>
+        <span class="stat-label">Focus Time Today</span>
         <span class="stat-value">{todayFocusFormatted}</span>
       </div>
       <div class="stat-card">

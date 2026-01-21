@@ -292,7 +292,11 @@
   }
 
   .progress-ring {
-    transition: stroke-dashoffset 0.1s linear;
+    transition: stroke-dashoffset 0.3s ease-out;
+  }
+
+  .progress-ring.running {
+    transition: stroke-dashoffset 1s linear;
   }
 
   .progress-ring.focus {

@@ -208,6 +208,7 @@ async function refreshBlockLists() {
           id: list.id,
           user_id: list.user_id,
           name: list.name,
+          active_days: list.active_days,
           is_enabled: list.is_enabled,
           order: list.order
         });
@@ -247,11 +248,25 @@ async function isDomainBlocked(hostname: string): Promise<boolean> {
     // Normalize hostname (remove www prefix, lowercase)
     const normalizedHostname = hostname.toLowerCase().replace(/^www\./, '');
 
-    // Get all blocked websites from cache
+    // Get current day of week (0=Sunday, 6=Saturday)
+    const currentDay = new Date().getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+    // Get all block lists and websites from cache
+    const blockLists = await blockListsCache.getAll();
     const blockedWebsites = await blockedWebsitesCache.getAll();
 
-    // Check if hostname matches any blocked domain
+    // Check if hostname matches any blocked domain from an active list
     for (const website of blockedWebsites) {
+      // Find the block list for this website
+      const list = blockLists.find(l => l.id === website.block_list_id);
+      if (!list) continue;
+
+      // Check if list is active today
+      // active_days null means all days, otherwise check if current day is in the array
+      if (list.active_days !== null && !list.active_days.includes(currentDay)) {
+        continue; // Skip this website - list not active today
+      }
+
       const blockedDomain = website.domain.toLowerCase().replace(/^www\./, '');
 
       // Exact match

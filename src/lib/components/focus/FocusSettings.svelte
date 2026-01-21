@@ -73,8 +73,8 @@
           <input
             type="range"
             min="15"
-            max="60"
-            step="5"
+            max="240"
+            step="15"
             bind:value={focusDuration}
             class="slider"
           />
@@ -89,7 +89,7 @@
           <input
             type="range"
             min="3"
-            max="15"
+            max="20"
             step="1"
             bind:value={breakDuration}
             class="slider break"
@@ -105,7 +105,7 @@
           <input
             type="range"
             min="10"
-            max="30"
+            max="60"
             step="5"
             bind:value={longBreakDuration}
             class="slider long-break"
@@ -176,13 +176,14 @@
     inset: 0;
     z-index: 1000;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 1rem;
+    padding: calc(64px + 1.5rem) 1.5rem 1.5rem 1.5rem;
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     animation: fadeIn 0.2s ease-out;
+    overflow-y: auto;
   }
 
   @keyframes fadeIn {
@@ -193,13 +194,15 @@
   .modal {
     width: 100%;
     max-width: 420px;
-    max-height: 90vh;
+    max-height: calc(100vh - 64px - 3rem);
     overflow-y: auto;
     background: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(15, 15, 26, 0.98) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-xl);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px var(--color-primary-glow);
     animation: modalSlideIn 0.3s var(--ease-spring);
+    margin-bottom: 1.5rem;
+    flex-shrink: 0;
   }
 
   @keyframes modalSlideIn {
@@ -409,5 +412,44 @@
   .btn-primary:hover {
     box-shadow: 0 6px 20px var(--color-primary-glow);
     transform: translateY(-1px);
+  }
+
+  /* Tablet responsive toggles */
+  @media (min-width: 641px) and (max-width: 900px) {
+    .modal-backdrop {
+      padding: calc(64px + 1rem) 1rem 1rem 1rem;
+    }
+
+    .modal {
+      max-height: calc(100vh - 64px - 2rem);
+    }
+
+    .toggle-btn {
+      width: 44px;
+      height: 26px;
+    }
+
+    .toggle-knob {
+      width: 20px;
+      height: 20px;
+    }
+
+    .toggle-btn.active .toggle-knob {
+      transform: translateX(18px);
+    }
+  }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .modal-backdrop {
+      padding: calc(env(safe-area-inset-top, 20px) + 1rem) 1rem calc(80px + env(safe-area-inset-bottom, 0) + 1rem) 1rem;
+      align-items: center;
+    }
+
+    .modal {
+      max-width: 100%;
+      max-height: calc(100vh - env(safe-area-inset-top, 20px) - 80px - env(safe-area-inset-bottom, 0) - 2rem);
+      margin-bottom: 0;
+    }
   }
 </style>

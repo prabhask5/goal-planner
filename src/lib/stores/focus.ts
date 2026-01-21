@@ -64,11 +64,17 @@ function createFocusStore() {
     const session = (state as FocusState).session!;
     const settings = (state as FocusState).settings!;
 
+    // Calculate elapsed focus time if completing a focus phase
+    let elapsedFocusMinutes: number | undefined;
+    if (session.phase === 'focus') {
+      elapsedFocusMinutes = session.focus_duration; // Full duration on natural completion
+    }
+
     const next = getNextPhase(session, settings);
 
     if (next.phase === 'idle') {
       // Session complete
-      await repo.stopFocusSession(session.id);
+      await repo.stopFocusSession(session.id, elapsedFocusMinutes);
       const stopped = await repo.getFocusSession(session.id);
       update(s => ({
         ...s,
@@ -85,7 +91,8 @@ function createFocusStore() {
       session.id,
       next.phase,
       next.cycle,
-      next.durationMs
+      next.durationMs,
+      elapsedFocusMinutes
     );
 
     if (updated) {
@@ -268,7 +275,14 @@ function createFocusStore() {
 
       const session = (state as FocusState).session!;
 
-      await repo.stopFocusSession(session.id);
+      // Calculate elapsed focus time if stopping during a focus phase
+      let elapsedFocusMinutes: number | undefined;
+      if (session.phase === 'focus') {
+        const elapsedMs = Date.now() - new Date(session.phase_started_at).getTime();
+        elapsedFocusMinutes = Math.min(Math.floor(elapsedMs / 60000), session.focus_duration);
+      }
+
+      await repo.stopFocusSession(session.id, elapsedFocusMinutes);
 
       update(s => ({
         ...s,
@@ -291,11 +305,18 @@ function createFocusStore() {
       const settings = (state as FocusState).settings!;
       const wasRunning = session.status === 'running';
 
+      // Calculate elapsed focus time if skipping during a focus phase
+      let elapsedFocusMinutes: number | undefined;
+      if (session.phase === 'focus') {
+        const elapsedMs = Date.now() - new Date(session.phase_started_at).getTime();
+        elapsedFocusMinutes = Math.min(Math.floor(elapsedMs / 60000), session.focus_duration);
+      }
+
       const next = getNextPhase(session, settings);
 
       if (next.phase === 'idle') {
         // Session complete
-        await repo.stopFocusSession(session.id);
+        await repo.stopFocusSession(session.id, elapsedFocusMinutes);
         update(s => ({
           ...s,
           session: null,
@@ -311,7 +332,8 @@ function createFocusStore() {
         session.id,
         next.phase,
         next.cycle,
-        next.durationMs
+        next.durationMs,
+        elapsedFocusMinutes
       );
 
       if (updated) {
@@ -523,3 +545,56 @@ function createBlockedWebsitesStore() {
 }
 
 export const blockedWebsitesStore = createBlockedWebsitesStore();
+
+// ============================================================
+// SINGLE BLOCK LIST STORE (for edit page)
+// ============================================================
+
+function createSingleBlockListStore() {
+  const { subscribe, set }: Writable<BlockList | null> = writable(null);
+  let loading = writable(true);
+  let currentId: string | null = null;
+  let unsubscribe: (() => void) | null = null;
+
+  return {
+    subscribe,
+    loading: { subscribe: loading.subscribe },
+
+    load: async (id: string) => {
+      loading.set(true);
+      currentId = id;
+
+      try {
+        const list = await repo.getBlockList(id);
+        set(list);
+
+        // Register for sync complete to auto-refresh
+        if (browser && !unsubscribe) {
+          unsubscribe = sync.onSyncComplete(async () => {
+            if (currentId) {
+              const refreshed = await repo.getBlockList(currentId);
+              set(refreshed);
+            }
+          });
+        }
+      } finally {
+        loading.set(false);
+      }
+    },
+
+    update: async (id: string, updates: Partial<Pick<BlockList, 'name' | 'active_days' | 'is_enabled'>>) => {
+      const updated = await repo.updateBlockList(id, updates);
+      if (updated) {
+        set(updated);
+      }
+      return updated;
+    },
+
+    clear: () => {
+      currentId = null;
+      set(null);
+    }
+  };
+}
+
+export const singleBlockListStore = createSingleBlockListStore();

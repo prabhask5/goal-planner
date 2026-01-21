@@ -26,7 +26,7 @@ interface BlockList {
 
 type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
 
-// Supabase client
+// Supabase client with realtime config
 const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey, {
   auth: {
     storage: {
@@ -43,6 +43,11 @@ const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey, {
     },
     autoRefreshToken: true,
     persistSession: true
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
 });
 
@@ -137,7 +142,7 @@ async function checkAuth() {
       updateUserInfo(session.user);
       updateView();
       await loadData();
-      subscribeToRealtime();
+      await subscribeToRealtime();
     } else {
       currentUserId = null;
       updateView();
@@ -177,7 +182,7 @@ async function handleLogin(e: Event) {
       updateUserInfo(data.user);
       updateView();
       await loadData();
-      subscribeToRealtime();
+      await subscribeToRealtime();
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -210,38 +215,65 @@ function updateUserInfo(user: { email?: string; user_metadata?: { first_name?: s
 
 // Data loading with sync indicator
 async function loadData() {
-  setSyncStatus('syncing');
-
   try {
     await Promise.all([
-      loadFocusStatus(),
+      loadFocusStatus(true), // Initial load shows sync indicator
       loadBlockLists()
     ]);
-    setSyncStatus('synced');
   } catch (error) {
     console.error('Failed to load data:', error);
     setSyncStatus('error');
   }
 }
 
-async function loadFocusStatus() {
+// Track last known session for change detection
+let lastSessionJson: string | null = null;
+
+async function loadFocusStatus(isInitialLoad = false) {
   if (!currentUserId) return;
 
-  const { data, error } = await supabase
-    .from('focus_sessions')
-    .select('*')
-    .eq('user_id', currentUserId)
-    .is('ended_at', null)
-    .order('created_at', { ascending: false })
-    .limit(1);
+  if (isInitialLoad) {
+    setSyncStatus('syncing');
+  }
 
-  if (error) throw error;
+  try {
+    const { data, error } = await supabase
+      .from('focus_sessions')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .is('ended_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-  if (data && data.length > 0) {
-    const session = data[0] as FocusSession;
-    updateStatusDisplay(session);
-  } else {
-    updateStatusDisplay(null);
+    if (error) throw error;
+
+    const session = (data && data.length > 0) ? data[0] as FocusSession : null;
+    const sessionJson = session ? JSON.stringify({ id: session.id, phase: session.phase, status: session.status }) : null;
+
+    // Check if session actually changed
+    const hasChanged = sessionJson !== lastSessionJson;
+    lastSessionJson = sessionJson;
+
+    if (hasChanged) {
+      console.log('[Stellar Focus] Session changed:', session?.phase, session?.status);
+
+      // Show sync animation for changes (but not initial load which already shows it)
+      if (!isInitialLoad) {
+        setSyncStatus('syncing');
+        setTimeout(() => setSyncStatus('synced'), 800);
+      }
+
+      updateStatusDisplay(session);
+    }
+
+    if (isInitialLoad) {
+      setSyncStatus('synced');
+    }
+  } catch (error) {
+    console.error('[Stellar Focus] Load focus status error:', error);
+    if (isInitialLoad) {
+      setSyncStatus('error');
+    }
   }
 }
 
@@ -359,7 +391,7 @@ function renderBlockLists(lists: BlockList[]) {
     <div class="block-list-item">
       <span class="list-status ${list.is_enabled ? 'enabled' : 'disabled'}"></span>
       <span class="block-list-name">${escapeHtml(list.name)}</span>
-      <a href="${config.appUrl}/focus?list=${list.id}" target="_blank" rel="noopener" class="edit-link" title="Edit in Stellar">
+      <a href="${config.appUrl}/focus/block-lists/${list.id}" target="_blank" rel="noopener" class="edit-link" title="Edit in Stellar">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -370,11 +402,26 @@ function renderBlockLists(lists: BlockList[]) {
 }
 
 // Real-time subscription - instant updates
-function subscribeToRealtime() {
-  if (!currentUserId || focusSubscription) return;
+async function subscribeToRealtime() {
+  if (!currentUserId) return;
+
+  // Clean up existing subscription first
+  if (focusSubscription) {
+    supabase.removeChannel(focusSubscription);
+    focusSubscription = null;
+  }
+
+  // Get the current session and set auth token for realtime
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    supabase.realtime.setAuth(session.access_token);
+    console.log('[Stellar Focus] Realtime auth token set');
+  }
 
   // Use unique channel name with user ID for better isolation
   const channelName = `focus-sessions-${currentUserId}-${Date.now()}`;
+
+  console.log('[Stellar Focus] Setting up realtime subscription...');
 
   focusSubscription = supabase
     .channel(channelName)
@@ -387,11 +434,14 @@ function subscribeToRealtime() {
         filter: `user_id=eq.${currentUserId}`
       },
       (payload) => {
-        console.log('[Stellar Focus] Real-time update:', payload.eventType, payload.new);
+        console.log('[Stellar Focus] 🚀 INSTANT Real-time update:', payload.eventType);
 
         // Handle the update directly from payload for instant response
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           const session = payload.new as FocusSession & { ended_at?: string };
+
+          // Update the lastSessionJson to prevent duplicate updates from polling
+          lastSessionJson = session ? JSON.stringify({ id: session.id, phase: session.phase, status: session.status }) : null;
 
           // Check if this is an active session (not ended)
           if (!session.ended_at) {
@@ -401,6 +451,7 @@ function subscribeToRealtime() {
             updateStatusDisplay(null);
           }
         } else if (payload.eventType === 'DELETE') {
+          lastSessionJson = null;
           updateStatusDisplay(null);
         }
 
@@ -412,11 +463,13 @@ function subscribeToRealtime() {
     .subscribe((status, err) => {
       console.log('[Stellar Focus] Subscription status:', status, err || '');
       if (status === 'SUBSCRIBED') {
-        console.log('[Stellar Focus] Real-time connected!');
+        console.log('[Stellar Focus] ✅ Real-time connected! Instant updates enabled.');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error('[Stellar Focus] ❌ Realtime failed:', err);
       }
     });
 
-  // Also poll periodically as backup (every 30s)
+  // Fast polling as fallback (1 second = near-instant if realtime fails)
   startPolling();
 }
 
@@ -432,11 +485,12 @@ let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 function startPolling() {
   stopPolling();
+  // Poll every 1 second for near-instant updates if realtime fails
   pollInterval = setInterval(async () => {
     if (isOnline && currentUserId) {
       await loadFocusStatus();
     }
-  }, 30000); // 30 seconds
+  }, 1000); // 1 second - feels instant
 }
 
 function stopPolling() {

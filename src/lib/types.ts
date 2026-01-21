@@ -194,6 +194,7 @@ export interface FocusSession {
   break_duration: number;
   phase_started_at: string;
   phase_remaining_ms: number;
+  elapsed_duration: number; // Total elapsed focus time in minutes
   created_at: string;
   updated_at: string;
   deleted?: boolean;

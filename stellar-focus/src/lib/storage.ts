@@ -25,10 +25,13 @@ interface OfflineSession {
   expiresAt: string;
 }
 
+type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
 interface CachedBlockList {
   id: string;
   user_id: string;
   name: string;
+  active_days: DayOfWeek[] | null;  // null = all days
   is_enabled: boolean;
   order: number;
 }

@@ -1,6 +1,9 @@
 <script lang="ts">
-  import type { BlockList, BlockedWebsite } from '$lib/types';
+  import { goto } from '$app/navigation';
+  import type { BlockList, BlockedWebsite, DayOfWeek } from '$lib/types';
   import { blockListStore, blockedWebsitesStore } from '$lib/stores/focus';
+  import Modal from '$lib/components/Modal.svelte';
+  import BlockListForm from './BlockListForm.svelte';
 
   interface Props {
     userId: string;
@@ -8,12 +11,23 @@
 
   let { userId }: Props = $props();
 
+  // Day labels for display
+  const dayLabels: { short: string; full: string; value: DayOfWeek }[] = [
+    { short: 'S', full: 'Sun', value: 0 },
+    { short: 'M', full: 'Mon', value: 1 },
+    { short: 'T', full: 'Tue', value: 2 },
+    { short: 'W', full: 'Wed', value: 3 },
+    { short: 'T', full: 'Thu', value: 4 },
+    { short: 'F', full: 'Fri', value: 5 },
+    { short: 'S', full: 'Sat', value: 6 }
+  ];
+
   // Local state
   let isOpen = $state(false);
   let editingListId = $state<string | null>(null);
   let newListName = $state('');
   let newWebsite = $state('');
-  let showCreateForm = $state(false);
+  let showCreateModal = $state(false);
 
   // Load block lists on mount
   $effect(() => {
@@ -29,11 +43,24 @@
     }
   });
 
-  async function createList() {
-    if (!newListName.trim()) return;
-    await blockListStore.create(newListName.trim());
-    newListName = '';
-    showCreateForm = false;
+  async function createList(data: { name: string; activeDays: DayOfWeek[] | null }) {
+    const newList = await blockListStore.create(data.name);
+    if (newList && data.activeDays !== null) {
+      // Update with active_days if not all days
+      await blockListStore.update(newList.id, { active_days: data.activeDays });
+    }
+    showCreateModal = false;
+  }
+
+  function getActiveDaysLabel(activeDays: DayOfWeek[] | null): string {
+    if (activeDays === null) return 'Every day';
+    if (activeDays.length === 5 && !activeDays.includes(0) && !activeDays.includes(6)) {
+      return 'Weekdays';
+    }
+    if (activeDays.length === 2 && activeDays.includes(0) && activeDays.includes(6)) {
+      return 'Weekends';
+    }
+    return activeDays.map(d => dayLabels[d].short).join('');
   }
 
   async function deleteList(id: string) {
@@ -58,7 +85,7 @@
   }
 
   function openEditor(listId: string) {
-    editingListId = listId;
+    goto(`/focus/block-lists/${listId}`);
   }
 
   function closeEditor() {
@@ -105,123 +132,61 @@
         </a>
       </div>
 
-      {#if editingListId}
-        <!-- Editing a specific list -->
-        {@const list = $blockListStore.find(l => l.id === editingListId)}
-        {#if list}
-          <div class="editor">
-            <div class="editor-header">
-              <button class="back-btn" onclick={closeEditor}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                  <polyline points="15,18 9,12 15,6"/>
-                </svg>
-              </button>
-              <h4>{list.name}</h4>
-            </div>
+      <!-- List of block lists -->
+      <div class="list-view">
+        <button class="create-btn" onclick={() => showCreateModal = true}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Create Block List</span>
+        </button>
 
-            <!-- Add website form -->
-            <form class="add-form" onsubmit={(e) => { e.preventDefault(); addWebsite(); }}>
-              <input
-                type="text"
-                placeholder="Add website (e.g., twitter.com)"
-                bind:value={newWebsite}
-                class="input"
-              />
-              <button type="submit" class="add-btn" disabled={!newWebsite.trim()}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
+        <div class="lists">
+          {#each $blockListStore as list}
+            <div class="list-item">
+              <button
+                class="toggle-btn"
+                class:active={list.is_enabled}
+                onclick={() => toggleList(list.id)}
+                aria-pressed={list.is_enabled}
+              >
+                <span class="toggle-knob"></span>
               </button>
-            </form>
 
-            <!-- Website list -->
-            <div class="website-list">
-              {#each $blockedWebsitesStore as website}
-                <div class="website-item">
-                  <span class="domain">{website.domain}</span>
-                  <button class="delete-btn" onclick={() => removeWebsite(website.id)}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                      <line x1="18" y1="6" x2="6" y2="18"/>
-                      <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                </div>
-              {:else}
-                <p class="empty-text">No websites added yet</p>
-              {/each}
-            </div>
-          </div>
-        {/if}
-      {:else}
-        <!-- List of block lists -->
-        <div class="list-view">
-          {#if showCreateForm}
-            <form class="add-form" onsubmit={(e) => { e.preventDefault(); createList(); }}>
-              <input
-                type="text"
-                placeholder="List name"
-                bind:value={newListName}
-                class="input"
-              />
-              <button type="submit" class="add-btn" disabled={!newListName.trim()}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </button>
-              <button type="button" class="cancel-btn" onclick={() => { showCreateForm = false; newListName = ''; }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </form>
-          {:else}
-            <button class="create-btn" onclick={() => showCreateForm = true}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              <span>Create Block List</span>
-            </button>
-          {/if}
-
-          <div class="lists">
-            {#each $blockListStore as list}
-              <div class="list-item">
-                <button
-                  class="toggle-btn"
-                  class:active={list.is_enabled}
-                  onclick={() => toggleList(list.id)}
-                  aria-pressed={list.is_enabled}
-                >
-                  <span class="toggle-knob"></span>
-                </button>
-
-                <button class="list-info" onclick={() => openEditor(list.id)}>
+              <button class="list-info" onclick={() => openEditor(list.id)}>
+                <div class="list-details">
                   <span class="list-name">{list.name}</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <polyline points="9,18 15,12 9,6"/>
-                  </svg>
-                </button>
+                  <span class="list-days">{getActiveDaysLabel(list.active_days)}</span>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <polyline points="9,18 15,12 9,6"/>
+                </svg>
+              </button>
 
-                <button class="delete-btn" onclick={() => deleteList(list.id)}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <polyline points="3,6 5,6 21,6"/>
-                    <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
-                  </svg>
-                </button>
-              </div>
-            {:else}
-              <p class="empty-text">No block lists yet. Create one to block distracting websites during focus sessions.</p>
-            {/each}
-          </div>
+              <button class="delete-btn" onclick={() => deleteList(list.id)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <polyline points="3,6 5,6 21,6"/>
+                  <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
+                </svg>
+              </button>
+            </div>
+          {:else}
+            <p class="empty-text">No block lists yet. Create one to block distracting websites during focus sessions.</p>
+          {/each}
         </div>
-      {/if}
+      </div>
     </div>
   {/if}
 </div>
+
+<!-- Create Block List Modal -->
+<Modal open={showCreateModal} title="Create Block List" onClose={() => showCreateModal = false}>
+  <BlockListForm
+    onSubmit={createList}
+    onCancel={() => showCreateModal = false}
+  />
+</Modal>
 
 <style>
   .block-list-manager {
@@ -477,8 +442,20 @@
     text-align: left;
   }
 
+  .list-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
   .list-name {
     font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .list-days {
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
     font-weight: 500;
   }
 
@@ -591,5 +568,22 @@
 
   .banner-btn:active {
     transform: translateY(0);
+  }
+
+  /* Tablet responsive toggles */
+  @media (min-width: 641px) and (max-width: 900px) {
+    .toggle-btn {
+      width: 36px;
+      height: 22px;
+    }
+
+    .toggle-knob {
+      width: 16px;
+      height: 16px;
+    }
+
+    .toggle-btn.active .toggle-knob {
+      transform: translateX(14px);
+    }
   }
 </style>

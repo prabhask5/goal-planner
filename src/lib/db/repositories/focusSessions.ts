@@ -42,6 +42,7 @@ export async function createFocusSession(
     break_duration: breakDuration,
     phase_started_at: timestamp,
     phase_remaining_ms: focusDurationMs,
+    elapsed_duration: 0,
     created_at: timestamp,
     updated_at: timestamp
   };
@@ -60,6 +61,7 @@ export async function createFocusSession(
       break_duration: breakDuration,
       phase_started_at: timestamp,
       phase_remaining_ms: focusDurationMs,
+      elapsed_duration: 0,
       created_at: timestamp,
       updated_at: timestamp
     });
@@ -71,7 +73,7 @@ export async function createFocusSession(
 
 export async function updateFocusSession(
   id: string,
-  updates: Partial<Pick<FocusSession, 'phase' | 'status' | 'current_cycle' | 'phase_started_at' | 'phase_remaining_ms' | 'ended_at'>>
+  updates: Partial<Pick<FocusSession, 'phase' | 'status' | 'current_cycle' | 'phase_started_at' | 'phase_remaining_ms' | 'ended_at' | 'elapsed_duration'>>
 ): Promise<FocusSession | undefined> {
   const timestamp = now();
 
@@ -101,28 +103,49 @@ export async function resumeFocusSession(id: string): Promise<FocusSession | und
   });
 }
 
-export async function stopFocusSession(id: string): Promise<FocusSession | undefined> {
+export async function stopFocusSession(id: string, currentFocusElapsedMinutes?: number): Promise<FocusSession | undefined> {
   const timestamp = now();
-  return updateFocusSession(id, {
+  const session = await db.focusSessions.get(id);
+  if (!session) return undefined;
+
+  const updates: Partial<Pick<FocusSession, 'phase' | 'status' | 'current_cycle' | 'phase_started_at' | 'phase_remaining_ms' | 'ended_at' | 'elapsed_duration'>> = {
     status: 'stopped',
     ended_at: timestamp,
     phase: 'idle'
-  });
+  };
+
+  // If stopping during a focus phase, add the elapsed time
+  if (currentFocusElapsedMinutes !== undefined) {
+    updates.elapsed_duration = (session.elapsed_duration || 0) + currentFocusElapsedMinutes;
+  }
+
+  return updateFocusSession(id, updates);
 }
 
 export async function advancePhase(
   id: string,
   newPhase: FocusPhase,
   newCycle: number,
-  phaseDurationMs: number
+  phaseDurationMs: number,
+  previousFocusElapsedMinutes?: number
 ): Promise<FocusSession | undefined> {
   const timestamp = now();
-  return updateFocusSession(id, {
+  const session = await db.focusSessions.get(id);
+  if (!session) return undefined;
+
+  // If we're advancing from a focus phase, add the elapsed time
+  const updates: Partial<Pick<FocusSession, 'phase' | 'status' | 'current_cycle' | 'phase_started_at' | 'phase_remaining_ms' | 'ended_at' | 'elapsed_duration'>> = {
     phase: newPhase,
     current_cycle: newCycle,
     phase_started_at: timestamp,
     phase_remaining_ms: phaseDurationMs
-  });
+  };
+
+  if (previousFocusElapsedMinutes !== undefined) {
+    updates.elapsed_duration = (session.elapsed_duration || 0) + previousFocusElapsedMinutes;
+  }
+
+  return updateFocusSession(id, updates);
 }
 
 export async function getTodayFocusTime(userId: string): Promise<number> {
@@ -135,18 +158,19 @@ export async function getTodayFocusTime(userId: string): Promise<number> {
     .equals(userId)
     .toArray();
 
-  // Sum up focus time from completed sessions today
+  // Sum up focus time from sessions today using elapsed_duration
   let totalMs = 0;
   for (const session of sessions) {
     if (session.deleted) continue;
     if (session.started_at < todayStr) continue;
 
-    // Count completed focus phases (cycles)
-    // Each completed cycle contributes focus_duration minutes
-    if (session.ended_at) {
-      // Session is complete - count all cycles completed
-      const completedCycles = session.phase === 'idle' ? session.current_cycle : session.current_cycle - 1;
-      totalMs += completedCycles * session.focus_duration * 60 * 1000;
+    // Use elapsed_duration (actual time spent in focus phases)
+    totalMs += (session.elapsed_duration || 0) * 60 * 1000;
+
+    // For currently running focus phase, add current elapsed time
+    if (!session.ended_at && session.phase === 'focus' && session.status === 'running') {
+      const currentElapsed = Date.now() - new Date(session.phase_started_at).getTime();
+      totalMs += Math.min(currentElapsed, session.focus_duration * 60 * 1000);
     }
   }
 
