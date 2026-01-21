@@ -557,7 +557,8 @@ function createBlockedWebsitesStore() {
     create: async (domain: string) => {
       if (!currentBlockListId) return;
       const newWebsite = await repo.createBlockedWebsite(currentBlockListId, domain);
-      update(websites => [...websites, newWebsite]);
+      // Prepend to top
+      update(websites => [newWebsite, ...websites]);
       return newWebsite;
     },
 

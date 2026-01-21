@@ -64,7 +64,7 @@
           <path d="M21 3v6h-6"/>
         </svg>
       </span>
-      <span class="update-text">A new version is available</span>
+      <span class="update-text">A new version of this page is available</span>
     </div>
     <div class="update-actions">
       <button class="update-btn dismiss" onclick={handleDismiss}>Later</button>
