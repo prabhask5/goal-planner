@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	let status: 'verifying' | 'success' | 'error' | 'redirecting' = 'verifying';
+	let status: 'verifying' | 'success' | 'error' | 'redirecting' | 'can_close' = 'verifying';
 	let errorMessage = '';
 
 	const CHANNEL_NAME = 'stellar-auth-channel';
@@ -61,21 +61,29 @@
 			channel.onmessage = (event) => {
 				if (event.data.type === 'TAB_PRESENT') {
 					receivedResponse = true;
-					// Existing tab will focus itself, we can close this one
 					channel.close();
-					window.close();
+					// Try to close this tab - if it fails, show "you can close this tab" message
+					try {
+						window.close();
+					} catch {
+						// Ignore close errors
+					}
+					// If we're still here after a short delay, window.close() failed
+					setTimeout(() => {
+						status = 'can_close';
+					}, 100);
 				}
 			};
 
-			// Ask if any app tab is open
-			channel.postMessage({ type: 'FOCUS_REQUEST', from: 'confirm' });
+			// Ask if any app tab is open, and tell it auth was confirmed so it can refresh
+			channel.postMessage({ type: 'FOCUS_REQUEST', from: 'confirm', authConfirmed: true });
 
 			// Wait for response
 			await new Promise((resolve) => setTimeout(resolve, FOCUS_TIMEOUT_MS));
 
 			channel.close();
 
-			// If no response, no existing tab is open
+			// If no response, no existing tab is open - redirect this tab to home
 			if (!receivedResponse) {
 				goto('/', { replaceState: true });
 			}
@@ -127,6 +135,14 @@
 				</div>
 				<h1>Taking you to Stellar...</h1>
 				<p>Just a moment...</p>
+			{:else if status === 'can_close'}
+				<div class="icon success">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+						<path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+				</div>
+				<h1>You're all set!</h1>
+				<p>Your email is verified. You can close this tab and return to Stellar.</p>
 			{:else if status === 'error'}
 				<div class="icon error">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

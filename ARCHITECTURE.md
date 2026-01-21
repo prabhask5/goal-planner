@@ -14,11 +14,12 @@ Technical reference for Stellar's system architecture covering data flow, synchr
 6. [Conflict Resolution](#conflict-resolution)
 7. [Authentication System](#authentication-system)
 8. [Offline Authentication](#offline-authentication)
-9. [Supabase Integration](#supabase-integration)
-10. [Realtime Subscriptions](#realtime-subscriptions)
-11. [PWA Service Worker](#pwa-service-worker)
-12. [Focus Timer State Machine](#focus-timer-state-machine)
-13. [Failure Modes and Recovery](#failure-modes-and-recovery)
+9. [Inter-Tab Communication](#inter-tab-communication)
+10. [Supabase Integration](#supabase-integration)
+11. [Realtime Subscriptions](#realtime-subscriptions)
+12. [PWA Service Worker](#pwa-service-worker)
+13. [Focus Timer State Machine](#focus-timer-state-machine)
+14. [Failure Modes and Recovery](#failure-modes-and-recovery)
 
 ---
 
@@ -765,6 +766,193 @@ User Offline + Has Cached Credentials
             ▼
        Grant Access
 ```
+
+---
+
+## Inter-Tab Communication
+
+The app uses the BroadcastChannel API to enable communication between browser tabs, primarily for the email confirmation flow.
+
+### Channel Configuration
+
+**Channel Name:** `stellar-auth-channel`
+
+**Files:**
+- `src/routes/+layout.svelte` - Main listener in root layout
+- `src/routes/confirm/+page.svelte` - Confirmation page sender
+
+### Message Types
+
+| Type | Direction | Purpose |
+|------|-----------|---------|
+| `FOCUS_REQUEST` | Confirm → App | Asks if any Stellar tab is open |
+| `TAB_PRESENT` | App → Confirm | Responds that a tab is open |
+
+### Message Payloads
+
+```typescript
+// FOCUS_REQUEST (sent from confirm page)
+{
+  type: 'FOCUS_REQUEST',
+  from: 'confirm',
+  authConfirmed: boolean  // true if email was just verified
+}
+
+// TAB_PRESENT (sent from app)
+{
+  type: 'TAB_PRESENT'
+}
+```
+
+### Email Confirmation Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         EMAIL CONFIRMATION FLOW                              │
+│                                                                              │
+│  User signs up        User clicks email       Confirm page opens            │
+│  in Stellar tab  ───▶  confirmation link  ───▶  (new tab)                   │
+│       │                                              │                       │
+│       │                                              │                       │
+│       ▼                                              ▼                       │
+│  ┌─────────────┐                           ┌─────────────────┐              │
+│  │ Main Layout │                           │  Confirm Page   │              │
+│  │             │                           │                 │              │
+│  │ Listening   │◀──── BroadcastChannel ────│ Verify OTP      │              │
+│  │ on channel  │                           │ token           │              │
+│  └──────┬──────┘                           └────────┬────────┘              │
+│         │                                           │                       │
+│         │                                           │ Success               │
+│         │                                           ▼                       │
+│         │                                  ┌─────────────────┐              │
+│         │                                  │ Send            │              │
+│         │◀─────────────────────────────────│ FOCUS_REQUEST   │              │
+│         │     { authConfirmed: true }      │ with authFlag   │              │
+│         │                                  └────────┬────────┘              │
+│         │                                           │                       │
+│         ▼                                           │                       │
+│  ┌─────────────┐                                    │                       │
+│  │ Respond     │                                    │                       │
+│  │ TAB_PRESENT │────────────────────────────────────│                       │
+│  └──────┬──────┘                                    │                       │
+│         │                                           ▼                       │
+│         │                                  ┌─────────────────┐              │
+│         ▼                                  │ Receive         │              │
+│  ┌─────────────┐                           │ TAB_PRESENT     │              │
+│  │ window.     │                           └────────┬────────┘              │
+│  │ focus()     │                                    │                       │
+│  └──────┬──────┘                                    │                       │
+│         │                                           ▼                       │
+│         ▼                                  ┌─────────────────┐              │
+│  ┌─────────────┐                           │ Try window.     │              │
+│  │ Reload page │                           │ close()         │              │
+│  │ (if auth    │                           └────────┬────────┘              │
+│  │  confirmed) │                                    │                       │
+│  └─────────────┘                                    │                       │
+│                                                     ▼                       │
+│                                            ┌─────────────────┐              │
+│                                            │ If close fails, │              │
+│                                            │ show "You can   │              │
+│                                            │ close this tab" │              │
+│                                            └─────────────────┘              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Main Layout Listener
+
+```typescript
+// src/routes/+layout.svelte
+const AUTH_CHANNEL_NAME = 'stellar-auth-channel';
+let authChannel: BroadcastChannel | null = null;
+
+onMount(() => {
+  if ('BroadcastChannel' in window) {
+    authChannel = new BroadcastChannel(AUTH_CHANNEL_NAME);
+
+    authChannel.onmessage = (event) => {
+      if (event.data.type === 'FOCUS_REQUEST') {
+        // Respond that this tab is present
+        authChannel?.postMessage({ type: 'TAB_PRESENT' });
+        // Focus this window/tab
+        window.focus();
+        // If auth was just confirmed, reload to get the updated auth state
+        if (event.data.authConfirmed) {
+          window.location.reload();
+        }
+      }
+    };
+  }
+});
+
+onDestroy(() => {
+  authChannel?.close();
+});
+```
+
+### Confirmation Page Sender
+
+```typescript
+// src/routes/confirm/+page.svelte
+async function focusOrRedirect() {
+  status = 'redirecting';
+
+  if ('BroadcastChannel' in window) {
+    const channel = new BroadcastChannel(CHANNEL_NAME);
+    let receivedResponse = false;
+
+    channel.onmessage = (event) => {
+      if (event.data.type === 'TAB_PRESENT') {
+        receivedResponse = true;
+        channel.close();
+        // Try to close this tab
+        try {
+          window.close();
+        } catch {
+          // Ignore close errors
+        }
+        // If still here, show fallback message
+        setTimeout(() => {
+          status = 'can_close';
+        }, 100);
+      }
+    };
+
+    // Ask if any app tab is open
+    channel.postMessage({ type: 'FOCUS_REQUEST', from: 'confirm', authConfirmed: true });
+
+    // Wait for response (500ms timeout)
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    channel.close();
+
+    // If no response, redirect this tab to home
+    if (!receivedResponse) {
+      goto('/', { replaceState: true });
+    }
+  } else {
+    // BroadcastChannel not supported, just redirect
+    goto('/', { replaceState: true });
+  }
+}
+```
+
+### Browser Support
+
+| Browser | BroadcastChannel Support |
+|---------|-------------------------|
+| Chrome | ✅ Yes (54+) |
+| Firefox | ✅ Yes (38+) |
+| Safari | ✅ Yes (15.4+) |
+| Edge | ✅ Yes (79+) |
+| IE | ❌ No (falls back to redirect) |
+
+### Fallback Behavior
+
+When BroadcastChannel is not available:
+1. Email confirmation link opens new tab
+2. Confirm page verifies token
+3. Confirm page redirects to `/` in same tab
+4. User manually switches back to original tab (if any)
 
 ---
 

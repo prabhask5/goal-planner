@@ -76,9 +76,31 @@
     }
   }
 
+  const AUTH_CHANNEL_NAME = 'stellar-auth-channel';
+  let authChannel: BroadcastChannel | null = null;
+
   onMount(() => {
     // Register reconnect handler
     setReconnectHandler(handleReconnectAuthCheck);
+
+    // Listen for focus requests from confirmation page
+    // This allows the confirmation tab to communicate with any open Stellar tab
+    if ('BroadcastChannel' in window) {
+      authChannel = new BroadcastChannel(AUTH_CHANNEL_NAME);
+
+      authChannel.onmessage = (event) => {
+        if (event.data.type === 'FOCUS_REQUEST') {
+          // Respond that this tab is present
+          authChannel?.postMessage({ type: 'TAB_PRESENT' });
+          // Focus this window/tab
+          window.focus();
+          // If auth was just confirmed, reload to get the updated auth state
+          if (event.data.authConfirmed) {
+            window.location.reload();
+          }
+        }
+      };
+    }
 
     // Proactively cache app shell for offline support
     // This ensures all JS/CSS assets are cached after first load
@@ -109,6 +131,8 @@
   onDestroy(() => {
     // Cleanup reconnect handler
     setReconnectHandler(null);
+    // Cleanup auth channel
+    authChannel?.close();
   });
 
   // Get user's first name from appropriate source

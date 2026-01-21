@@ -202,7 +202,19 @@ A space-themed productivity Progressive Web App featuring offline-first architec
 - Session stored in localStorage via Supabase client
 - Automatic token refresh
 
-#### 6.2 Offline Authentication
+#### 6.2 Email Confirmation Flow
+- **Confirmation Email**: Space-themed HTML email with:
+  - Stellar logo (circle with checkmark) next to brand name
+  - Starfield background with colored stars (purple, pink, green)
+  - Nebula cloud effects
+  - Gradient CTA button matching app design
+- **Confirmation Page**: Verifies email token via Supabase, then:
+  - Attempts to focus existing Stellar tab using BroadcastChannel API
+  - Signals the original tab to reload (to pick up authenticated state)
+  - Auto-closes if possible, otherwise shows "You can close this tab" message
+  - Falls back to redirect if no existing tab found
+
+#### 6.3 Offline Authentication
 - **Credential Caching**: On successful online login:
   - Email stored
   - Password hashed with PBKDF2-SHA256 (100k iterations)
@@ -216,7 +228,7 @@ A space-themed productivity Progressive Web App featuring offline-first architec
 - **Session Extension**: Activity extends offline session
 - **Limitations**: Sign-up requires internet
 
-#### 6.3 Profile Management
+#### 6.4 Profile Management
 - View current user info (name, email)
 - Update first/last name
 - Change password (requires current password)
@@ -333,6 +345,25 @@ A space-themed productivity Progressive Web App featuring offline-first architec
 - Orbital rings with animated particles
 - Shooting star animations
 - Glassmorphic card containing form
+
+### Email Confirmation Page (`/confirm`)
+
+**States:**
+1. **Verifying**: Spinner shown while validating token with Supabase
+2. **Success**: Checkmark icon, "Email Verified!" message
+3. **Redirecting**: Clock icon, attempting to return to existing Stellar tab
+4. **Can Close**: Checkmark icon, "You can close this tab" message (when auto-close fails)
+5. **Error**: X icon, error message with "Go to Login" button
+
+**Interactions:**
+- Automatic token verification on page load
+- BroadcastChannel communication with existing Stellar tabs
+- Auto-close attempt after successful verification
+
+**Visual:**
+- Space-themed background with stars and nebula
+- Glassmorphic card with status messages
+- Phase-specific icons and colors
 
 ### Home Page (`/`)
 

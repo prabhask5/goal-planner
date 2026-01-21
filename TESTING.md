@@ -89,6 +89,33 @@ Comprehensive test plan covering features, edge cases, offline behavior, synchro
 | Multiple tabs | Open app in multiple tabs | All tabs share session state |
 | Force sign out from server | Invalidate session server-side | User logged out on next sync |
 
+### 1.7 Email Confirmation
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Successful confirmation | Click email link with valid token | Email verified, success message shown |
+| Invalid token | Visit confirm page with bad token | Error message displayed |
+| Expired token | Click link after 24 hours | Error: token expired |
+| Return to existing tab | Sign up in tab A, click email link | Tab A focuses and reloads, new tab closes or shows "close tab" message |
+| No existing tab | Close all Stellar tabs, click email link | Confirm page redirects to home |
+| Confirmation email design | Receive signup email | Email shows logo, stars background, styled button |
+| Email link target | Inspect link in email | Link opens in new tab (target="_blank") |
+| BroadcastChannel not supported | Test in old browser/IE | Falls back to redirect |
+| Manual close fallback | If window.close() blocked | Shows "You can close this tab" message |
+| Auth state refresh | Confirm email, return to original tab | Original tab shows authenticated state |
+
+### 1.8 Email Confirmation - Inter-Tab Communication
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Channel message sent | Sign up, click confirm link | FOCUS_REQUEST message broadcast |
+| Channel response received | Have Stellar tab open, click link | TAB_PRESENT response sent back |
+| Multiple tabs open | Have 3 Stellar tabs, click confirm | One tab responds, focuses |
+| Tab focus | Confirm with existing tab in background | Existing tab brought to focus |
+| Page reload on auth | Confirm email | Original tab reloads to pick up session |
+| Channel cleanup | Close tabs normally | No dangling channel listeners |
+| Timeout handling | No Stellar tab open | 500ms timeout, then redirect |
+
 ---
 
 ## 2. Goal Lists Tests
