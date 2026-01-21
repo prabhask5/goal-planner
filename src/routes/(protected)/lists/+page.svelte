@@ -13,6 +13,11 @@
   let newListName = $state('');
   let creating = $state(false);
 
+  // Focus action for accessibility (replaces autofocus attribute)
+  function focus(node: HTMLElement) {
+    node.focus();
+  }
+
   // Subscribe to stores
   let lists = $state<GoalListWithProgress[]>([]);
   let loading = $state(true);
@@ -150,7 +155,7 @@
         bind:value={newListName}
         placeholder="Enter list name..."
         required
-        autofocus
+        use:focus
       />
     </div>
     <div class="form-actions">

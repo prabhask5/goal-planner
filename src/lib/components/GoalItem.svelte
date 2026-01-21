@@ -14,6 +14,11 @@
 
   let { goal, onToggleComplete, onIncrement, onDecrement, onSetValue, onEdit, onDelete }: Props = $props();
 
+  // Focus action for accessibility
+  function focus(node: HTMLElement) {
+    node.focus();
+  }
+
   let editing = $state(false);
   let inputValue = $state('');
 
@@ -90,7 +95,7 @@
             onblur={commitValue}
             min="0"
             max={goal.target_value ?? undefined}
-            autofocus
+            use:focus
           />
         {:else}
           <button

@@ -27,6 +27,11 @@
     onRequestCreateCategory
   }: Props = $props();
 
+  // Focus action for accessibility
+  function focus(node: HTMLElement) {
+    node.focus();
+  }
+
   // Form state
   let name = $state('');
   let dueDate = $state('');
@@ -112,7 +117,7 @@
         bind:value={name}
         class="field-input"
         placeholder="What needs to be done?"
-        autofocus
+        use:focus
       />
     </div>
 

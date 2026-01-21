@@ -9,6 +9,11 @@
 
   let { open, onClose, onCreate }: Props = $props();
 
+  // Focus action for accessibility
+  function focus(node: HTMLElement) {
+    node.focus();
+  }
+
   const presetColors = [
     '#6c5ce7', // Purple
     '#ff79c6', // Pink
@@ -56,7 +61,7 @@
         bind:value={name}
         class="field-input"
         placeholder="e.g. Work, Personal, Health..."
-        autofocus
+        use:focus
       />
     </div>
 

@@ -14,6 +14,11 @@
 
   let { open, task, categories, onClose, onUpdate, onToggle, onDelete }: Props = $props();
 
+  // Focus action for accessibility
+  function focus(node: HTMLElement) {
+    node.focus();
+  }
+
   let editingName = $state(false);
   let name = $state('');
   let dueDate = $state('');
@@ -93,7 +98,7 @@
             class="field-input"
             onblur={handleNameSubmit}
             onkeydown={(e) => e.key === 'Enter' && handleNameSubmit()}
-            autofocus
+            use:focus
           />
         {:else}
           <button class="field-value editable" onclick={() => editingName = true}>

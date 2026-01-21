@@ -106,6 +106,10 @@
   }
 </script>
 
+<svelte:head>
+  <title>Profile - Stellar</title>
+</svelte:head>
+
 <div class="profile-page">
   <!-- Header -->
   <header class="profile-header">

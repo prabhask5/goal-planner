@@ -161,22 +161,24 @@
                 class:active={list.is_enabled}
                 onclick={() => toggleList(list.id)}
                 aria-pressed={list.is_enabled}
+                aria-label={list.is_enabled ? `Disable ${list.name}` : `Enable ${list.name}`}
+                role="switch"
               >
                 <span class="toggle-knob"></span>
               </button>
 
-              <button class="list-info" onclick={() => openEditor(list.id)}>
+              <button class="list-info" onclick={() => openEditor(list.id)} aria-label={`Edit ${list.name}`}>
                 <div class="list-details">
                   <span class="list-name">{list.name}</span>
                   <span class="list-days">{getActiveDaysLabel(list.active_days)}</span>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
                   <polyline points="9,18 15,12 9,6"/>
                 </svg>
               </button>
 
-              <button class="delete-btn" onclick={() => deleteList(list.id)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <button class="delete-btn" onclick={() => deleteList(list.id)} aria-label={`Delete ${list.name}`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
                   <polyline points="3,6 5,6 21,6"/>
                   <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
                 </svg>

@@ -66,11 +66,12 @@
       <div class="modal-body">
         <!-- Focus Duration -->
         <div class="setting-group">
-          <label class="setting-label">
+          <label class="setting-label" for="focus-duration">
             <span class="label-text">Focus Duration</span>
             <span class="label-value">{focusDuration} min</span>
           </label>
           <input
+            id="focus-duration"
             type="range"
             min="15"
             max="240"
@@ -82,11 +83,12 @@
 
         <!-- Break Duration -->
         <div class="setting-group">
-          <label class="setting-label">
+          <label class="setting-label" for="break-duration">
             <span class="label-text">Short Break</span>
             <span class="label-value">{breakDuration} min</span>
           </label>
           <input
+            id="break-duration"
             type="range"
             min="3"
             max="20"
@@ -98,11 +100,12 @@
 
         <!-- Long Break Duration -->
         <div class="setting-group">
-          <label class="setting-label">
+          <label class="setting-label" for="long-break-duration">
             <span class="label-text">Long Break</span>
             <span class="label-value">{longBreakDuration} min</span>
           </label>
           <input
+            id="long-break-duration"
             type="range"
             min="10"
             max="60"
@@ -114,11 +117,12 @@
 
         <!-- Cycles Before Long Break -->
         <div class="setting-group">
-          <label class="setting-label">
+          <label class="setting-label" for="cycles-before-long-break">
             <span class="label-text">Cycles Before Long Break</span>
             <span class="label-value">{cyclesBeforeLongBreak}</span>
           </label>
           <input
+            id="cycles-before-long-break"
             type="range"
             min="2"
             max="6"
@@ -132,30 +136,34 @@
 
         <!-- Auto-start toggles -->
         <div class="setting-group toggle-group">
-          <label class="toggle-label">
+          <span class="toggle-label" id="auto-start-breaks-label">
             <span class="label-text">Auto-start Breaks</span>
             <span class="label-desc">Automatically start break timer after focus</span>
-          </label>
+          </span>
           <button
             class="toggle-btn"
             class:active={autoStartBreaks}
             onclick={() => autoStartBreaks = !autoStartBreaks}
             aria-pressed={autoStartBreaks}
+            aria-labelledby="auto-start-breaks-label"
+            role="switch"
           >
             <span class="toggle-knob"></span>
           </button>
         </div>
 
         <div class="setting-group toggle-group">
-          <label class="toggle-label">
+          <span class="toggle-label" id="auto-start-focus-label">
             <span class="label-text">Auto-start Focus</span>
             <span class="label-desc">Automatically start focus timer after break</span>
-          </label>
+          </span>
           <button
             class="toggle-btn"
             class:active={autoStartFocus}
             onclick={() => autoStartFocus = !autoStartFocus}
             aria-pressed={autoStartFocus}
+            aria-labelledby="auto-start-focus-label"
+            role="switch"
           >
             <span class="toggle-knob"></span>
           </button>

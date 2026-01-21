@@ -96,6 +96,10 @@
   }
 </script>
 
+<svelte:head>
+  <title>{mode === 'login' ? 'Sign In' : 'Sign Up'} - Stellar</title>
+</svelte:head>
+
 <div class="login-page">
   <!-- Animated Star Field -->
   <div class="starfield">

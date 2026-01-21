@@ -2,12 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <title>Stellar - Goal & Routine Tracker</title>
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-    <!-- Theme and description -->
+    <!-- SEO Meta Tags -->
     <meta name="theme-color" content="#1a1a2e" />
-    <meta name="description" content="Stellar - Track your goals and daily routines" />
+    <meta name="description" content="Stellar - Track your goals, daily routines, and focus sessions. Stay productive with our beautiful goal tracking app." />
+    <meta name="keywords" content="goal tracker, routine tracker, productivity, focus timer, pomodoro, habit tracker" />
+    <meta name="author" content="Stellar" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Stellar - Goal & Routine Tracker" />
+    <meta property="og:description" content="Track your goals, daily routines, and focus sessions. Stay productive with our beautiful goal tracking app." />
+    <meta property="og:image" content="%sveltekit.assets%/icon-512.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Stellar - Goal & Routine Tracker" />
+    <meta name="twitter:description" content="Track your goals, daily routines, and focus sessions." />
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="%sveltekit.assets%/manifest.json" />
@@ -22,30 +37,31 @@
     <meta name="format-detection" content="telephone=no" />
 
     %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
 
-    <!-- Register service worker -->
+    <!-- Register service worker (deferred to reduce main-thread work) -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+        // Use requestIdleCallback to defer SW registration until browser is idle
+        var registerSW = function() {
           navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('[App] Service worker registered:', registration.scope);
-
-              // Check for updates on page focus (important for iOS)
-              document.addEventListener('visibilitychange', () => {
+            .then(function(registration) {
+              document.addEventListener('visibilitychange', function() {
                 if (document.visibilityState === 'visible') {
                   registration.update();
                 }
               });
             })
-            .catch((error) => {
-              console.error('[App] Service worker registration failed:', error);
-            });
-        });
+            .catch(function() {});
+        };
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(registerSW);
+        } else {
+          setTimeout(registerSW, 1);
+        }
       }
     </script>
-  </head>
-  <body data-sveltekit-preload-data="hover">
-    <div style="display: contents">%sveltekit.body%</div>
   </body>
 </html>

@@ -7,6 +7,10 @@
   });
 </script>
 
+<svelte:head>
+  <title>Routines - Stellar</title>
+</svelte:head>
+
 <div class="container">
   <p>Redirecting to calendar...</p>
 </div>

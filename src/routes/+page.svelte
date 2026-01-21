@@ -112,6 +112,10 @@
   });
 </script>
 
+<svelte:head>
+  <title>Home - Stellar</title>
+</svelte:head>
+
 {#if isLoading}
   <div class="loading-screen">
     <div class="loading-orb"></div>

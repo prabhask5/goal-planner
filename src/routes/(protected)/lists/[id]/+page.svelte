@@ -20,6 +20,11 @@
   let editingListName = $state(false);
   let newListName = $state('');
 
+  // Focus action for accessibility (replaces autofocus attribute)
+  function focus(node: HTMLElement) {
+    node.focus();
+  }
+
   const listId = $derived($page.params.id);
 
   const totalProgress = $derived(() => {
@@ -180,7 +185,7 @@
           <input
             type="text"
             bind:value={newListName}
-            autofocus
+            use:focus
           />
           <button type="submit" class="btn btn-sm btn-primary">Save</button>
           <button type="button" class="btn btn-sm btn-secondary" onclick={() => { editingListName = false; newListName = list?.name ?? ''; }}>
@@ -191,9 +196,9 @@
         {#if loading}
           <div class="title-skeleton"></div>
         {:else}
-          <h1 onclick={() => (editingListName = true)} title="Click to edit">
-            {list?.name ?? 'List'}
-          </h1>
+          <button class="title-edit-btn" onclick={() => (editingListName = true)} title="Click to edit list name">
+            <h1>{list?.name ?? 'List'}</h1>
+          </button>
         {/if}
       {/if}
     </div>
@@ -335,7 +340,23 @@
     box-shadow: 0 0 20px var(--color-primary-glow);
   }
 
-  .page-header h1 {
+  .title-edit-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .title-edit-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-lg);
+  }
+
+  .page-header h1,
+  .title-edit-btn h1 {
     font-size: 2rem;
     font-weight: 800;
     cursor: pointer;
@@ -363,7 +384,8 @@
     100% { background-position: 200% center; }
   }
 
-  .page-header h1:hover {
+  .page-header h1:hover,
+  .title-edit-btn:hover h1 {
     background: linear-gradient(135deg,
       var(--color-primary-light) 0%,
       var(--color-accent) 50%,

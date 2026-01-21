@@ -14,6 +14,11 @@
 
   let { open, commitments, onClose, onCreate, onUpdate, onDelete, onReorder }: Props = $props();
 
+  // Focus action for accessibility
+  function focus(node: HTMLElement) {
+    node.focus();
+  }
+
   const sections: { key: CommitmentSection; label: string }[] = [
     { key: 'career', label: 'CAREER' },
     { key: 'social', label: 'SOCIAL' },
@@ -143,15 +148,15 @@
               placeholder="New commitment..."
               class="add-input"
               onkeydown={(e) => handleAddKeydown(e, section.key)}
-              autofocus
+              use:focus
             />
-            <button class="confirm-btn" onclick={() => handleAddSubmit(section.key)} disabled={!newName.trim()}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <button class="confirm-btn" onclick={() => handleAddSubmit(section.key)} disabled={!newName.trim()} aria-label="Confirm">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </button>
-            <button class="cancel-btn" onclick={() => { addingTo = null; newName = ''; }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <button class="cancel-btn" onclick={() => { addingTo = null; newName = ''; }} aria-label="Cancel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -188,7 +193,7 @@
                   class="edit-input"
                   onkeydown={handleEditKeydown}
                   onblur={handleEditSubmit}
-                  autofocus
+                  use:focus
                 />
               {:else}
                 <span class="commitment-name" ondblclick={() => startEditing(commitment)}>
