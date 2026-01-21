@@ -51,12 +51,12 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<Modal {open} title="New Category" {onClose}>
+<Modal {open} title="New Tag" {onClose}>
   <form class="form" onsubmit={handleSubmit}>
     <div class="field">
-      <label class="field-label" for="category-name">Category Name</label>
+      <label class="field-label" for="tag-name">Tag Name</label>
       <input
-        id="category-name"
+        id="tag-name"
         type="text"
         bind:value={name}
         class="field-input"
@@ -81,7 +81,7 @@
       </div>
       <div class="color-preview" style="--preview-color: {color}">
         <span class="preview-dot"></span>
-        <span class="preview-text">{name || 'Category Preview'}</span>
+        <span class="preview-text">{name || 'Tag Preview'}</span>
       </div>
     </div>
 
@@ -90,7 +90,7 @@
         Cancel
       </button>
       <button type="submit" class="submit-btn" disabled={!name.trim()}>
-        Create Category
+        Create Tag
       </button>
     </div>
   </form>

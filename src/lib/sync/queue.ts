@@ -44,21 +44,19 @@ export async function coalescePendingOps(): Promise<number> {
         mergedPayload = { ...mergedPayload, ...item.payload };
       }
 
-      // Keep the latest item, update its payload with merged data
-      const latestItem = updateItems[updateItems.length - 1];
-      const itemsToDelete = updateItems.slice(0, -1);
+      // Keep the OLDEST item (so it passes the backoff check) but with merged payload
+      const oldestItem = updateItems[0];
+      const itemsToDelete = updateItems.slice(1);
 
-      // Update the latest item with merged payload
-      if (latestItem.id) {
-        await db.syncQueue.update(latestItem.id, {
+      // Update the oldest item with merged payload (keeps original timestamp for backoff)
+      if (oldestItem.id) {
+        await db.syncQueue.update(oldestItem.id, {
           payload: mergedPayload,
-          // Reset retries since this is effectively a new merged operation
-          retries: 0,
-          timestamp: new Date().toISOString()
+          // Keep original retries and timestamp so it's still eligible for processing
         });
       }
 
-      // Delete older items
+      // Delete newer items (they've been merged into the oldest)
       for (const item of itemsToDelete) {
         if (item.id) {
           await db.syncQueue.delete(item.id);
@@ -76,8 +74,11 @@ export async function coalescePendingOps(): Promise<number> {
 function shouldRetryItem(item: SyncQueueItem): boolean {
   if (item.retries >= MAX_SYNC_RETRIES) return false;
 
-  // Exponential backoff: 2^retries seconds (1s, 2s, 4s, 8s, 16s)
-  const backoffMs = Math.pow(2, item.retries) * 1000;
+  // First attempt (retries=0) is always immediate
+  if (item.retries === 0) return true;
+
+  // Exponential backoff for retries: 2^(retries-1) seconds (1s, 2s, 4s, 8s)
+  const backoffMs = Math.pow(2, item.retries - 1) * 1000;
   const lastAttempt = new Date(item.timestamp).getTime();
   const now = Date.now();
 

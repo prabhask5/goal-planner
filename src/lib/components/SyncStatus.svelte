@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { syncStatusStore } from '$lib/stores/sync';
+  import { syncStatusStore, type SyncError } from '$lib/stores/sync';
   import { isOnline } from '$lib/stores/network';
   import { performSync } from '$lib/sync/engine';
   import type { SyncStatus } from '$lib/types';
@@ -9,6 +9,7 @@
   let online = $state(true);
   let lastError = $state<string | null>(null);
   let lastErrorDetails = $state<string | null>(null);
+  let syncErrors = $state<SyncError[]>([]);
   let lastSyncTime = $state<string | null>(null);
   let syncMessage = $state<string | null>(null);
   let showTooltip = $state(false);
@@ -27,6 +28,7 @@
       pendingCount = value.pendingCount;
       lastError = value.lastError;
       lastErrorDetails = value.lastErrorDetails;
+      syncErrors = value.syncErrors;
       lastSyncTime = value.lastSyncTime;
       syncMessage = value.syncMessage;
     });
@@ -140,6 +142,31 @@
         return 'All your data is up to date.';
     }
   });
+
+  // Format table name for display
+  function formatTableName(table: string): string {
+    return table.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  // Format operation name for display
+  function formatOperation(op: string): string {
+    switch (op) {
+      case 'create': return 'Create';
+      case 'update': return 'Update';
+      case 'delete': return 'Delete';
+      default: return op;
+    }
+  }
+
+  // Get operation color
+  function getOperationColor(op: string): string {
+    switch (op) {
+      case 'create': return 'var(--color-green)';
+      case 'update': return 'var(--color-primary-light)';
+      case 'delete': return 'var(--color-red)';
+      default: return 'var(--color-text-muted)';
+    }
+  }
 </script>
 
 <!-- Sync indicator with tooltip -->
@@ -230,7 +257,7 @@
 
   <!-- Beautiful Tooltip -->
   {#if showTooltip}
-    <div class="tooltip" class:error={displayState() === 'error'}>
+    <div class="tooltip" class:error={displayState() === 'error'} class:has-errors={syncErrors.length > 0}>
       <div class="tooltip-arrow"></div>
       <div class="tooltip-content">
         <!-- Status Header -->
@@ -245,13 +272,13 @@
         <!-- Status Description -->
         <p class="tooltip-description">{statusDescription()}</p>
 
-        <!-- Error Details (expandable) -->
-        {#if displayState() === 'error' && lastErrorDetails && lastErrorDetails !== lastError}
+        <!-- Error Details Section -->
+        {#if displayState() === 'error' && (syncErrors.length > 0 || lastErrorDetails)}
           <button
             class="details-toggle"
             onclick={(e) => { e.stopPropagation(); showDetails = !showDetails; }}
           >
-            <span>{showDetails ? 'Hide' : 'Show'} details</span>
+            <span>{showDetails ? 'Hide' : 'Show'} error details</span>
             <svg
               class="chevron"
               class:expanded={showDetails}
@@ -267,9 +294,35 @@
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </button>
+
           {#if showDetails}
-            <div class="error-details">
-              <code>{lastErrorDetails}</code>
+            <div class="error-details-panel">
+              {#if syncErrors.length > 0}
+                <div class="error-list">
+                  {#each syncErrors as error, i}
+                    <div class="error-item" style="animation-delay: {i * 50}ms">
+                      <div class="error-item-header">
+                        <span class="error-operation" style="color: {getOperationColor(error.operation)}">
+                          {formatOperation(error.operation)}
+                        </span>
+                        <span class="error-table">{formatTableName(error.table)}</span>
+                      </div>
+                      <div class="error-message">
+                        <code>{error.message}</code>
+                      </div>
+                      <div class="error-meta">
+                        <span class="error-entity" title={error.entityId}>
+                          ID: {error.entityId.slice(0, 8)}...
+                        </span>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              {:else if lastErrorDetails}
+                <div class="error-fallback">
+                  <code>{lastErrorDetails}</code>
+                </div>
+              {/if}
             </div>
           {/if}
         {/if}
@@ -665,7 +718,7 @@
 
   .tooltip-content {
     min-width: 240px;
-    max-width: 300px;
+    max-width: 340px;
     padding: 14px 16px;
     background: linear-gradient(145deg,
       rgba(20, 20, 35, 0.98) 0%,
@@ -685,6 +738,10 @@
     background: linear-gradient(145deg,
       rgba(35, 18, 22, 0.98) 0%,
       rgba(25, 15, 18, 0.99) 100%);
+  }
+
+  .tooltip.has-errors .tooltip-content {
+    max-width: 380px;
   }
 
   .tooltip-header {
@@ -793,24 +850,32 @@
     color: rgba(255, 150, 150, 0.9);
   }
 
-  /* Error Details */
+  /* ═══════════════════════════════════════════════════════════════════════════════════
+     ERROR DETAILS PANEL
+     ═══════════════════════════════════════════════════════════════════════════════════ */
+
   .details-toggle {
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-top: 8px;
-    padding: 0;
-    background: none;
-    border: none;
-    font-size: 0.6875rem;
+    margin-top: 10px;
+    padding: 6px 10px;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.2);
+    border-radius: 8px;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: rgba(255, 150, 150, 0.7);
+    color: rgba(255, 150, 150, 0.9);
     cursor: pointer;
-    transition: color 0.2s;
+    transition: all 0.2s;
+    width: 100%;
+    justify-content: center;
   }
 
   .details-toggle:hover {
-    color: rgba(255, 150, 150, 1);
+    background: rgba(255, 107, 107, 0.15);
+    border-color: rgba(255, 107, 107, 0.3);
+    color: rgba(255, 180, 180, 1);
   }
 
   .chevron {
@@ -821,19 +886,15 @@
     transform: rotate(180deg);
   }
 
-  .error-details {
-    margin-top: 8px;
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 107, 107, 0.2);
-    border-radius: 8px;
-    animation: detailsSlideIn 0.2s var(--ease-out);
+  .error-details-panel {
+    margin-top: 10px;
+    animation: detailsSlideIn 0.25s var(--ease-out);
   }
 
   @keyframes detailsSlideIn {
     from {
       opacity: 0;
-      transform: translateY(-4px);
+      transform: translateY(-8px);
     }
     to {
       opacity: 1;
@@ -841,7 +902,110 @@
     }
   }
 
-  .error-details code {
+  .error-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .error-list::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .error-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+  }
+
+  .error-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 107, 107, 0.3);
+    border-radius: 2px;
+  }
+
+  .error-item {
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 107, 107, 0.15);
+    border-radius: 10px;
+    animation: errorItemFadeIn 0.3s var(--ease-out) backwards;
+  }
+
+  @keyframes errorItemFadeIn {
+    from {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .error-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .error-operation {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+  }
+
+  .error-table {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 200, 200, 0.9);
+  }
+
+  .error-message {
+    margin-bottom: 6px;
+  }
+
+  .error-message code {
+    display: block;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    color: rgba(255, 180, 180, 0.95);
+    word-break: break-word;
+    white-space: pre-wrap;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    border-left: 2px solid rgba(255, 107, 107, 0.4);
+  }
+
+  .error-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .error-entity {
+    font-size: 0.625rem;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    color: rgba(255, 150, 150, 0.6);
+    cursor: help;
+  }
+
+  .error-fallback {
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 107, 107, 0.2);
+    border-radius: 8px;
+  }
+
+  .error-fallback code {
     display: block;
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 0.6875rem;
@@ -860,7 +1024,12 @@
 
     .tooltip {
       right: -8px;
-      min-width: 220px;
+      min-width: 280px;
+    }
+
+    .tooltip.has-errors {
+      min-width: 300px;
+      max-width: calc(100vw - 32px);
     }
 
     .tooltip-arrow {
@@ -869,6 +1038,10 @@
 
     .tooltip-content {
       padding: 12px 14px;
+    }
+
+    .error-list {
+      max-height: 160px;
     }
   }
 
@@ -908,6 +1081,14 @@
 
     .icon.active {
       transform: scale(1) rotate(0deg);
+    }
+
+    .error-item {
+      animation: none;
+    }
+
+    .error-details-panel {
+      animation: none;
     }
   }
 </style>

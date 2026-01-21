@@ -704,9 +704,19 @@ async function pullRemoteChanges(): Promise<void> {
 
 // PUSH: Send pending operations to remote
 // Continues until queue is empty to catch items added during sync
+// Track push errors for this sync cycle
+let pushErrors: Array<{ message: string; table: string; operation: string; entityId: string }> = [];
+
+export function getPushErrors() {
+  return pushErrors;
+}
+
 async function pushPendingOps(): Promise<void> {
   const maxIterations = 10; // Safety limit to prevent infinite loops
   let iterations = 0;
+
+  // Clear previous push errors
+  pushErrors = [];
 
   // Coalesce multiple updates to the same entity before pushing
   // This merges e.g. 50 rapid increments into 1 update request
@@ -731,6 +741,21 @@ async function pushPendingOps(): Promise<void> {
         }
       } catch (error) {
         console.error(`Failed to sync item ${item.id}:`, error);
+        // Capture error details for UI display
+        const errorInfo = {
+          message: error instanceof Error ? error.message : String(error),
+          table: item.table,
+          operation: item.operation,
+          entityId: item.entityId
+        };
+        pushErrors.push(errorInfo);
+
+        // Also add to the sync status store for UI
+        syncStatusStore.addSyncError({
+          ...errorInfo,
+          timestamp: new Date().toISOString()
+        });
+
         if (item.id) {
           await incrementRetry(item.id);
         }
@@ -904,7 +929,17 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
       syncStatusStore.setSyncMessage(remaining.length > 0
         ? `${remaining.length} change${remaining.length === 1 ? '' : 's'} failed to sync`
         : 'Everything is synced!');
-      syncStatusStore.setError(null);
+
+      // Show error summary if push failed
+      if (remaining.length > 0 && pushErrors.length > 0) {
+        const latestError = pushErrors[pushErrors.length - 1];
+        syncStatusStore.setError(
+          `Failed to sync ${latestError.table} (${latestError.operation})`,
+          latestError.message
+        );
+      } else {
+        syncStatusStore.setError(null);
+      }
     }
 
     // Notify stores that sync is complete so they can refresh from local

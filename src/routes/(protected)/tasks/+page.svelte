@@ -42,6 +42,7 @@
   let showTagsModal = $state(false);
   let selectedTask = $state<LongTermTaskWithCategory | null>(null);
   let defaultTaskDate = $state<string | undefined>(undefined);
+  let returnToTagsModal = $state(false); // Track if we should return to Tags modal
 
   // Saved task form state (for when switching to category creation)
   let savedTaskFormState = $state<{ name: string; dueDate: string; categoryId: string | null } | null>(null);
@@ -153,6 +154,10 @@
     const userId = getUserId();
     if (!userId) return;
     await taskCategoriesStore.create(name, color, userId);
+  }
+
+  async function handleUpdateCategory(id: string, updates: { name?: string; color?: string }) {
+    await taskCategoriesStore.update(id, updates);
   }
 
   async function handleDeleteCategory(id: string) {
@@ -415,7 +420,15 @@
   open={showTaskModal}
   task={selectedTask}
   {categories}
-  onClose={() => { showTaskModal = false; selectedTask = null; }}
+  onClose={() => {
+    showTaskModal = false;
+    selectedTask = null;
+    // Return to Tags modal if we came from there
+    if (returnToTagsModal) {
+      returnToTagsModal = false;
+      showTagsModal = true;
+    }
+  }}
   onUpdate={handleUpdateLongTermTask}
   onToggle={handleToggleLongTermTask}
   onDelete={handleDeleteLongTermTask}
@@ -426,10 +439,17 @@
   {categories}
   tasks={longTermTasks}
   onClose={() => showTagsModal = false}
-  onTaskClick={(task) => { showTagsModal = false; selectedTask = task; showTaskModal = true; }}
+  onTaskClick={(task) => {
+    // Mark that we should return to Tags modal when task modal closes
+    returnToTagsModal = true;
+    showTagsModal = false;
+    selectedTask = task;
+    showTaskModal = true;
+  }}
   onToggle={handleToggleLongTermTask}
   onDelete={handleDeleteLongTermTask}
   onDeleteCategory={handleDeleteCategory}
+  onUpdateCategory={handleUpdateCategory}
 />
 
 <!-- Transition backdrop - stays visible during modal swaps -->

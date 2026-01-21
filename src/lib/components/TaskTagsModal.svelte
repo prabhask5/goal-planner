@@ -2,6 +2,20 @@
   import { fade, scale } from 'svelte/transition';
   import type { TaskCategory, LongTermTaskWithCategory } from '$lib/types';
 
+  // Available colors for categories (same as CategoryCreateModal)
+  const CATEGORY_COLORS = [
+    '#6c5ce7', // Purple (primary)
+    '#a29bfe', // Light purple
+    '#00d4ff', // Cyan
+    '#26de81', // Green
+    '#ffd93d', // Yellow
+    '#ff6b6b', // Red
+    '#fd79a8', // Pink
+    '#fdcb6e', // Orange
+    '#74b9ff', // Blue
+    '#55efc4', // Teal
+  ];
+
   interface Props {
     open: boolean;
     categories: TaskCategory[];
@@ -11,9 +25,15 @@
     onToggle: (id: string) => void;
     onDelete: (id: string) => void;
     onDeleteCategory: (id: string) => void;
+    onUpdateCategory: (id: string, updates: { name?: string; color?: string }) => void;
   }
 
-  let { open, categories, tasks, onClose, onTaskClick, onToggle, onDelete, onDeleteCategory }: Props = $props();
+  let { open, categories, tasks, onClose, onTaskClick, onToggle, onDelete, onDeleteCategory, onUpdateCategory }: Props = $props();
+
+  // Editing state
+  let editingCategoryId = $state<string | null>(null);
+  let editingCategoryName = $state('');
+  let showColorPicker = $state<string | null>(null);
 
   // Group incomplete tasks by category, sorted by date (soonest first)
   const tasksByCategory = $derived(() => {
@@ -85,7 +105,13 @@
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
-      onClose();
+      if (editingCategoryId) {
+        cancelEditName();
+      } else if (showColorPicker) {
+        showColorPicker = null;
+      } else {
+        onClose();
+      }
     }
   }
 
@@ -95,10 +121,58 @@
     }
   }
 
-  // Confirm before deleting category
-  function handleDeleteCategory(id: string, name: string, taskCount: number) {
+  // Start editing category name
+  function startEditName(category: TaskCategory) {
+    editingCategoryId = category.id;
+    editingCategoryName = category.name;
+    showColorPicker = null;
+  }
+
+  // Save category name
+  function saveEditName() {
+    if (editingCategoryId && editingCategoryName.trim()) {
+      onUpdateCategory(editingCategoryId, { name: editingCategoryName.trim() });
+    }
+    cancelEditName();
+  }
+
+  // Cancel editing
+  function cancelEditName() {
+    editingCategoryId = null;
+    editingCategoryName = '';
+  }
+
+  // Handle name input keydown
+  function handleNameKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      saveEditName();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      cancelEditName();
+    }
+  }
+
+  // Toggle color picker
+  function toggleColorPicker(categoryId: string) {
+    if (showColorPicker === categoryId) {
+      showColorPicker = null;
+    } else {
+      showColorPicker = categoryId;
+      editingCategoryId = null; // Close name editing if open
+    }
+  }
+
+  // Select color
+  function selectColor(categoryId: string, color: string) {
+    onUpdateCategory(categoryId, { color });
+    showColorPicker = null;
+  }
+
+  // Confirm before deleting tag
+  function handleDeleteTag(id: string, name: string, taskCount: number) {
     const message = taskCount > 0
-      ? `Delete "${name}"? ${taskCount} task${taskCount === 1 ? '' : 's'} will become uncategorized.`
+      ? `Delete "${name}"? ${taskCount} task${taskCount === 1 ? '' : 's'} will become untagged.`
       : `Delete "${name}"?`;
 
     if (confirm(message)) {
@@ -141,14 +215,51 @@
               <div class="category-section">
                 <div class="category-header">
                   <div class="category-info">
-                    <span class="category-color" style="background-color: {category.color}"></span>
-                    <span class="category-name">{category.name}</span>
+                    <!-- Color button with picker -->
+                    <div class="color-picker-container">
+                      <button
+                        class="category-color"
+                        style="background-color: {category.color}"
+                        onclick={() => toggleColorPicker(category.id)}
+                        aria-label="Change color"
+                      ></button>
+                      {#if showColorPicker === category.id}
+                        <div class="color-picker" transition:scale={{ duration: 150, start: 0.9 }}>
+                          {#each CATEGORY_COLORS as color}
+                            <button
+                              class="color-option"
+                              class:selected={category.color === color}
+                              style="background-color: {color}"
+                              onclick={() => selectColor(category.id, color)}
+                              aria-label="Select {color}"
+                            ></button>
+                          {/each}
+                        </div>
+                      {/if}
+                    </div>
+
+                    <!-- Editable name -->
+                    {#if editingCategoryId === category.id}
+                      <input
+                        type="text"
+                        class="category-name-input"
+                        bind:value={editingCategoryName}
+                        onkeydown={handleNameKeydown}
+                        onblur={saveEditName}
+                        autofocus
+                      />
+                    {:else}
+                      <button class="category-name" onclick={() => startEditName(category)}>
+                        {category.name}
+                      </button>
+                    {/if}
+
                     <span class="task-count">{categoryTasks.length}</span>
                   </div>
                   <button
-                    class="delete-category-btn"
-                    onclick={() => handleDeleteCategory(category.id, category.name, categoryTasks.length)}
-                    aria-label="Delete category"
+                    class="delete-tag-btn"
+                    onclick={() => handleDeleteTag(category.id, category.name, categoryTasks.length)}
+                    aria-label="Delete tag"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="18" y1="6" x2="6" y2="18" />
@@ -189,20 +300,20 @@
               </div>
             {/each}
 
-            <!-- Uncategorized tasks -->
+            <!-- Untagged tasks -->
             {#if (tasksByCategory().get(null) || []).length > 0}
-              {@const uncategorizedTasks = tasksByCategory().get(null) || []}
-              <div class="category-section uncategorized">
+              {@const untaggedTasks = tasksByCategory().get(null) || []}
+              <div class="category-section untagged">
                 <div class="category-header">
                   <div class="category-info">
-                    <span class="category-color" style="background-color: rgba(108, 92, 231, 0.5)"></span>
-                    <span class="category-name">Uncategorized</span>
-                    <span class="task-count">{uncategorizedTasks.length}</span>
+                    <span class="category-color-static" style="background-color: rgba(108, 92, 231, 0.5)"></span>
+                    <span class="category-name-static">Untagged</span>
+                    <span class="task-count">{untaggedTasks.length}</span>
                   </div>
                 </div>
 
                 <div class="tasks-list">
-                  {#each uncategorizedTasks as task (task.id)}
+                  {#each untaggedTasks as task (task.id)}
                     <div class="task-row" class:overdue={isOverdue(task.due_date)} class:due-today={isDueToday(task.due_date)}>
                       <button
                         class="checkbox"
@@ -404,19 +515,117 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Color picker container */
+  .color-picker-container {
+    position: relative;
   }
 
   .category-color {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-out);
+  }
+
+  .category-color:hover {
+    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .category-color-static {
     width: 12px;
     height: 12px;
     border-radius: var(--radius-sm);
     flex-shrink: 0;
   }
 
+  /* Color picker dropdown */
+  .color-picker {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    padding: 10px;
+    background: rgba(20, 20, 40, 0.98);
+    border: 1px solid rgba(108, 92, 231, 0.3);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+  }
+
+  .color-option {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-out);
+  }
+
+  .color-option:hover {
+    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .color-option.selected {
+    border-color: white;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+  }
+
+  /* Editable category name */
   .category-name {
     font-weight: 600;
     font-size: 0.9375rem;
     color: var(--color-text);
+    background: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    margin: -0.25rem -0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .category-name:hover {
+    background: rgba(108, 92, 231, 0.15);
+  }
+
+  .category-name-static {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+  }
+
+  .category-name-input {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+    background: rgba(108, 92, 231, 0.1);
+    border: 1px solid rgba(108, 92, 231, 0.4);
+    padding: 0.25rem 0.5rem;
+    margin: -0.25rem -0.5rem;
+    border-radius: var(--radius-sm);
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .category-name-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-glow);
   }
 
   .task-count {
@@ -426,9 +635,10 @@
     background: rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-full);
     color: var(--color-primary-light);
+    flex-shrink: 0;
   }
 
-  .delete-category-btn {
+  .delete-tag-btn {
     width: 28px;
     height: 28px;
     border-radius: var(--radius-md);
@@ -441,13 +651,14 @@
     background: none;
     color: var(--color-text-muted);
     cursor: pointer;
+    flex-shrink: 0;
   }
 
-  .category-header:hover .delete-category-btn {
+  .category-header:hover .delete-tag-btn {
     opacity: 0.6;
   }
 
-  .delete-category-btn:hover {
+  .delete-tag-btn:hover {
     opacity: 1 !important;
     color: var(--color-red);
     background: rgba(255, 107, 107, 0.2);
@@ -581,7 +792,7 @@
   }
 
   /* Uncategorized section */
-  .category-section.uncategorized .category-header {
+  .category-section.untagged .category-header {
     background: rgba(30, 30, 50, 0.4);
     border-style: dashed;
   }
@@ -623,8 +834,13 @@
       opacity: 0.3;
     }
 
-    .delete-category-btn {
+    .delete-tag-btn {
       opacity: 0.5;
+    }
+
+    .color-picker {
+      left: 50%;
+      transform: translateX(-50%);
     }
   }
 

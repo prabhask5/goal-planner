@@ -23,12 +23,14 @@
   let name = $state('');
   let dueDate = $state('');
   let categoryId = $state<string | null>(null);
+  let completed = $state(false);
 
   $effect(() => {
     if (task) {
       name = task.name;
       dueDate = task.due_date;
       categoryId = task.category_id;
+      completed = task.completed;
     }
   });
 
@@ -60,6 +62,8 @@
 
   function handleToggle() {
     if (task) {
+      // Update local state immediately for responsive UI
+      completed = !completed;
       onToggle(task.id);
     }
   }
@@ -68,16 +72,16 @@
     if (!task) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dueDate = new Date(task.due_date + 'T00:00:00');
-    return dueDate < today && !task.completed;
+    const taskDueDate = new Date(task.due_date + 'T00:00:00');
+    return taskDueDate < today && !completed;
   }
 
   function isDueToday(): boolean {
     if (!task) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dueDate = new Date(task.due_date + 'T00:00:00');
-    return dueDate.getTime() === today.getTime() && !task.completed;
+    const taskDueDate = new Date(task.due_date + 'T00:00:00');
+    return taskDueDate.getTime() === today.getTime() && !completed;
   }
 
   function formatDisplayDate(dateStr: string): string {
@@ -123,13 +127,13 @@
       </div>
 
       <div class="field">
-        <label class="field-label">Category</label>
+        <label class="field-label">Tag</label>
         <select
           bind:value={categoryId}
           class="field-input"
           onchange={handleCategoryChange}
         >
-          <option value={null}>No category</option>
+          <option value={null}>No tag</option>
           {#each categories as cat}
             <option value={cat.id}>{cat.name}</option>
           {/each}
@@ -146,10 +150,10 @@
         <label class="field-label">Status</label>
         <button
           class="status-toggle"
-          class:completed={task.completed}
+          class:completed={completed}
           onclick={handleToggle}
         >
-          {#if task.completed}
+          {#if completed}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <polyline points="20 6 9 17 4 12" />
             </svg>

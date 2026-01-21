@@ -493,19 +493,25 @@ Comprehensive test plan covering features, edge cases, offline behavior, synchro
 
 | Test Case | Steps | Expected Result |
 |-----------|-------|-----------------|
-| Open modal | Click "View Tags" button | Modal opens showing all categories |
-| Categories displayed | Open modal with tasks | Each category shows as a section |
-| Tasks grouped by category | View modal content | Tasks appear under their category |
-| Tasks sorted by date | View tasks in category | Soonest due date first |
+| Open modal | Click "View Tags" button | Modal opens showing all tags |
+| Tags displayed | Open modal with tasks | Each tag shows as a section |
+| Tasks grouped by tag | View modal content | Tasks appear under their tag |
+| Tasks sorted by date | View tasks in tag | Soonest due date first |
 | Incomplete tasks only | View modal | Only incomplete tasks shown |
-| Toggle task complete | Check checkbox in modal | Task marked complete, disappears from modal |
+| Toggle task complete | Check checkbox in modal | Task marked complete, disappears |
 | Delete task | Click delete on task | Task removed |
-| Click to edit | Click task text | Opens edit form for that task |
-| Delete category | Click delete on category header | Category and tasks removed |
-| Empty category | Delete all tasks in category | Category section disappears |
+| Click to edit | Click task text | Opens edit modal, returns to Tags modal on close |
+| Return navigation | Edit task from Tags modal, close edit | Returns to Tags modal |
+| Edit tag name | Click on tag name | Inline input appears, saves on Enter/blur |
+| Change tag color | Click color swatch | Color picker appears with options |
+| Select new color | Click color in picker | Tag color updates immediately |
+| Delete tag | Click delete on tag header | Tag removed, tasks become untagged |
+| Delete tag with tasks | Delete tag that has tasks | Tasks move to "Untagged" section |
+| Untagged section | Have tasks without tags | "Untagged" section appears |
 | Responsive button text | View on small screen | Button shows "Tags" instead of "View Tags" |
-| Modal scroll | Many categories/tasks | Modal content scrolls, header fixed |
+| Modal scroll | Many tags/tasks | Modal content scrolls, header fixed |
 | Close modal | Click outside or X | Modal closes |
+| Escape key behavior | Press Escape while editing | Cancels edit, doesn't close modal |
 
 ---
 

@@ -1,11 +1,21 @@
 import { writable } from 'svelte/store';
 import type { SyncStatus } from '$lib/types';
 
+// Detailed sync error for debugging
+export interface SyncError {
+  table: string;
+  operation: string;
+  entityId: string;
+  message: string;
+  timestamp: string;
+}
+
 interface SyncState {
   status: SyncStatus;
   pendingCount: number;
   lastError: string | null; // Friendly error message
   lastErrorDetails: string | null; // Raw technical error
+  syncErrors: SyncError[]; // Detailed errors for debugging
   lastSyncTime: string | null;
   syncMessage: string | null; // Human-readable status message
   isTabVisible: boolean; // Track if tab is visible
@@ -14,12 +24,16 @@ interface SyncState {
 // Minimum time to show 'syncing' state to prevent flickering (ms)
 const MIN_SYNCING_TIME = 500;
 
+// Max errors to keep in history
+const MAX_ERROR_HISTORY = 10;
+
 function createSyncStatusStore() {
   const { subscribe, set, update } = writable<SyncState>({
     status: 'idle',
     pendingCount: 0,
     lastError: null,
     lastErrorDetails: null,
+    syncErrors: [],
     lastSyncTime: null,
     syncMessage: null,
     isTabVisible: true
@@ -44,10 +58,10 @@ function createSyncStatusStore() {
       }
 
       if (status === 'syncing') {
-        // Starting sync - record the time
+        // Starting sync - record the time and clear previous errors
         syncingStartTime = Date.now();
         currentStatus = status;
-        update(state => ({ ...state, status, lastError: null }));
+        update(state => ({ ...state, status, lastError: null, syncErrors: [] }));
       } else if (syncingStartTime !== null) {
         // Ending sync - ensure minimum display time
         const elapsed = Date.now() - syncingStartTime;
@@ -80,6 +94,11 @@ function createSyncStatusStore() {
       lastError: friendly,
       lastErrorDetails: raw ?? null
     })),
+    addSyncError: (error: SyncError) => update(state => ({
+      ...state,
+      syncErrors: [...state.syncErrors, error].slice(-MAX_ERROR_HISTORY)
+    })),
+    clearSyncErrors: () => update(state => ({ ...state, syncErrors: [] })),
     setLastSyncTime: (time: string) => update(state => ({ ...state, lastSyncTime: time })),
     setSyncMessage: (message: string | null) => update(state => ({ ...state, syncMessage: message })),
     setTabVisible: (visible: boolean) => update(state => ({ ...state, isTabVisible: visible })),
@@ -90,7 +109,7 @@ function createSyncStatusStore() {
       }
       syncingStartTime = null;
       currentStatus = 'idle';
-      set({ status: 'idle', pendingCount: 0, lastError: null, lastErrorDetails: null, lastSyncTime: null, syncMessage: null, isTabVisible: true });
+      set({ status: 'idle', pendingCount: 0, lastError: null, lastErrorDetails: null, syncErrors: [], lastSyncTime: null, syncMessage: null, isTabVisible: true });
     }
   };
 }

@@ -79,7 +79,7 @@
 
   function handleDeleteCategory(e: Event, id: string) {
     e.stopPropagation();
-    if (confirm('Delete this category? Tasks will keep their data but lose the category tag.')) {
+    if (confirm('Delete this tag? Tasks will keep their data but lose the tag.')) {
       onDeleteCategory(id);
       if (categoryId === id) {
         categoryId = null;
@@ -133,7 +133,7 @@
     </div>
 
     <div class="field">
-      <label class="field-label">Category (optional)</label>
+      <label class="field-label">Tag (optional)</label>
 
       <!-- Custom Dropdown -->
       <div class="category-dropdown">
@@ -148,7 +148,7 @@
               {selectedCategory.name}
             </span>
           {:else}
-            <span class="placeholder">Select a category...</span>
+            <span class="placeholder">Select a tag...</span>
           {/if}
           <svg
             class="chevron"
@@ -168,7 +168,7 @@
 
         {#if dropdownOpen}
           <div class="dropdown-menu">
-            <!-- No category option -->
+            <!-- No tag option -->
             <button
               type="button"
               class="dropdown-item"
@@ -177,7 +177,7 @@
             >
               <span class="item-content">
                 <span class="cat-dot none"></span>
-                No category
+                No tag
               </span>
             </button>
 
@@ -199,7 +199,7 @@
                   type="button"
                   class="delete-btn"
                   onclick={(e) => handleDeleteCategory(e, cat.id)}
-                  aria-label="Delete category"
+                  aria-label="Delete tag"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -212,7 +212,7 @@
             <!-- Divider -->
             <div class="dropdown-divider"></div>
 
-            <!-- Add Category Button -->
+            <!-- Add Tag Button -->
             <button
               type="button"
               class="dropdown-item add-category-btn"
@@ -222,7 +222,7 @@
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              Add Category
+              Add Tag
             </button>
           </div>
         {/if}
