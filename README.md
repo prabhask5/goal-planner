@@ -208,9 +208,15 @@ A space-themed productivity Progressive Web App featuring offline-first architec
   - Starfield background with colored stars (purple, pink, green)
   - Nebula cloud effects
   - Gradient CTA button matching app design
+- **Resend Confirmation Email**:
+  - After signup, success message includes "Resend email" button
+  - 30-second cooldown between resend attempts (prevents abuse)
+  - Visual countdown timer shows remaining cooldown
+  - Loading state while sending
 - **Confirmation Page**: Verifies email token via Supabase, then:
   - Attempts to focus existing Stellar tab using BroadcastChannel API
-  - Signals the original tab to reload (to pick up authenticated state)
+  - Original tab independently verifies auth state (secure - doesn't trust message)
+  - Login page navigates to home when auth is confirmed
   - Auto-closes if possible, otherwise shows "You can close this tab" message
   - Falls back to redirect if no existing tab found
 

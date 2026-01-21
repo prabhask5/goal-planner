@@ -96,13 +96,14 @@ Comprehensive test plan covering features, edge cases, offline behavior, synchro
 | Successful confirmation | Click email link with valid token | Email verified, success message shown |
 | Invalid token | Visit confirm page with bad token | Error message displayed |
 | Expired token | Click link after 24 hours | Error: token expired |
-| Return to existing tab | Sign up in tab A, click email link | Tab A focuses and reloads, new tab closes or shows "close tab" message |
+| Return to existing tab | Sign up in tab A, click email link | Tab A focuses, verifies auth, navigates to home |
 | No existing tab | Close all Stellar tabs, click email link | Confirm page redirects to home |
 | Confirmation email design | Receive signup email | Email shows logo, stars background, styled button |
 | Email link target | Inspect link in email | Link opens in new tab (target="_blank") |
 | BroadcastChannel not supported | Test in old browser/IE | Falls back to redirect |
 | Manual close fallback | If window.close() blocked | Shows "You can close this tab" message |
-| Auth state refresh | Confirm email, return to original tab | Original tab shows authenticated state |
+| Auth state on original tab | Confirm email, check original tab | Original tab shows home page (not login) |
+| Session available after confirm | After confirmation, check getSession() | Valid session returned |
 
 ### 1.8 Email Confirmation - Inter-Tab Communication
 
@@ -112,9 +113,28 @@ Comprehensive test plan covering features, edge cases, offline behavior, synchro
 | Channel response received | Have Stellar tab open, click link | TAB_PRESENT response sent back |
 | Multiple tabs open | Have 3 Stellar tabs, click confirm | One tab responds, focuses |
 | Tab focus | Confirm with existing tab in background | Existing tab brought to focus |
-| Page reload on auth | Confirm email | Original tab reloads to pick up session |
+| Login page auth verification | Confirm email with login page open | Login page independently calls getSession() |
+| Navigation to home | Confirm email with login page open | Login page navigates to home via goto() |
+| Non-login page reload | Confirm email with protected page open | Protected page reloads |
 | Channel cleanup | Close tabs normally | No dangling channel listeners |
 | Timeout handling | No Stellar tab open | 500ms timeout, then redirect |
+| Security - don't trust message | Manually broadcast authConfirmed: true | Login page verifies with getSession(), doesn't auto-navigate |
+
+### 1.9 Resend Confirmation Email
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Resend button appears | Sign up with valid email | Success message shows resend button |
+| Resend email success | Click resend button | Email sent, cooldown starts |
+| 30-second cooldown | Click resend, observe button | Button disabled, shows countdown |
+| Cooldown countdown | Wait and observe | Countdown decrements every second |
+| Cooldown expires | Wait 30 seconds | Button re-enabled, says "Resend email" |
+| Resend during cooldown | Try clicking disabled button | Nothing happens, button stays disabled |
+| Loading state | Click resend button | Button shows spinner and "Sending..." |
+| Resend error | Resend with invalid email | Error message displayed |
+| Multiple resends | Resend, wait 30s, resend again | Both emails sent successfully |
+| Resend after page reload | Sign up, reload page, try resend | Resend button not shown (email state lost) |
+| Email stored for resend | Sign up, observe state | Email address saved for resend function |
 
 ---
 

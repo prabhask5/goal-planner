@@ -175,3 +175,16 @@ export async function changePassword(
   return { error: error?.message || null };
 }
 
+/**
+ * Resend confirmation email for signup
+ * Should be rate-limited on the client side (30 second cooldown)
+ */
+export async function resendConfirmationEmail(email: string): Promise<{ error: string | null }> {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email
+  });
+
+  return { error: error?.message || null };
+}
+

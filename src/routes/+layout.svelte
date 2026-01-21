@@ -88,15 +88,22 @@
     if ('BroadcastChannel' in window) {
       authChannel = new BroadcastChannel(AUTH_CHANNEL_NAME);
 
-      authChannel.onmessage = (event) => {
+      authChannel.onmessage = async (event) => {
         if (event.data.type === 'FOCUS_REQUEST') {
           // Respond that this tab is present
           authChannel?.postMessage({ type: 'TAB_PRESENT' });
           // Focus this window/tab
           window.focus();
-          // If auth was just confirmed, reload to get the updated auth state
+          // If auth was just confirmed, handle the auth state update
           if (event.data.authConfirmed) {
-            window.location.reload();
+            // The login page has its own handler that navigates to home
+            // For other pages, we need to check auth and navigate/reload appropriately
+            const isOnLoginPage = window.location.pathname.startsWith('/login');
+            if (!isOnLoginPage) {
+              // On protected pages, reload to refresh auth state
+              window.location.reload();
+            }
+            // Login page handles its own navigation via its own BroadcastChannel listener
           }
         }
       };

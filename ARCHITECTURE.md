@@ -584,6 +584,23 @@ async function signOut() {
 }
 ```
 
+#### Resend Confirmation Email
+```typescript
+async function resendConfirmationEmail(email: string): Promise<{ error: string | null }> {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email
+  });
+
+  return { error: error?.message || null };
+}
+```
+
+**Rate Limiting (Client-Side):**
+- 30-second cooldown between resend attempts
+- Countdown timer displayed to user
+- Prevents accidental duplicate sends and abuse
+
 ### Session Management
 
 - Supabase client auto-refreshes tokens before expiry
@@ -779,6 +796,7 @@ The app uses the BroadcastChannel API to enable communication between browser ta
 
 **Files:**
 - `src/routes/+layout.svelte` - Main listener in root layout
+- `src/routes/login/+page.svelte` - Login page listener (handles auth verification)
 - `src/routes/confirm/+page.svelte` - Confirmation page sender
 
 ### Message Types
@@ -816,8 +834,8 @@ The app uses the BroadcastChannel API to enable communication between browser ta
 │       │                                              │                       │
 │       ▼                                              ▼                       │
 │  ┌─────────────┐                           ┌─────────────────┐              │
-│  │ Main Layout │                           │  Confirm Page   │              │
-│  │             │                           │                 │              │
+│  │ Login Page  │                           │  Confirm Page   │              │
+│  │ + Layout    │                           │                 │              │
 │  │ Listening   │◀──── BroadcastChannel ────│ Verify OTP      │              │
 │  │ on channel  │                           │ token           │              │
 │  └──────┬──────┘                           └────────┬────────┘              │
@@ -832,31 +850,39 @@ The app uses the BroadcastChannel API to enable communication between browser ta
 │         │                                           │                       │
 │         ▼                                           │                       │
 │  ┌─────────────┐                                    │                       │
-│  │ Respond     │                                    │                       │
-│  │ TAB_PRESENT │────────────────────────────────────│                       │
+│  │ Layout:     │                                    │                       │
+│  │ Respond     │────────────────────────────────────│                       │
+│  │ TAB_PRESENT │                                    │                       │
+│  │ + focus()   │                                    │                       │
 │  └──────┬──────┘                                    │                       │
 │         │                                           ▼                       │
 │         │                                  ┌─────────────────┐              │
 │         ▼                                  │ Receive         │              │
 │  ┌─────────────┐                           │ TAB_PRESENT     │              │
-│  │ window.     │                           └────────┬────────┘              │
-│  │ focus()     │                                    │                       │
-│  └──────┬──────┘                                    │                       │
-│         │                                           ▼                       │
-│         ▼                                  ┌─────────────────┐              │
-│  ┌─────────────┐                           │ Try window.     │              │
-│  │ Reload page │                           │ close()         │              │
-│  │ (if auth    │                           └────────┬────────┘              │
-│  │  confirmed) │                                    │                       │
-│  └─────────────┘                                    │                       │
-│                                                     ▼                       │
-│                                            ┌─────────────────┐              │
-│                                            │ If close fails, │              │
+│  │ Login Page: │                           └────────┬────────┘              │
+│  │ Check auth  │                                    │                       │
+│  │ via         │                                    │                       │
+│  │ getSession()│                                    ▼                       │
+│  └──────┬──────┘                           ┌─────────────────┐              │
+│         │                                  │ Try window.     │              │
+│         │ If authenticated                 │ close()         │              │
+│         ▼                                  └────────┬────────┘              │
+│  ┌─────────────┐                                    │                       │
+│  │ Navigate to │                                    │                       │
+│  │ home (/)    │                                    ▼                       │
+│  │ via goto()  │                           ┌─────────────────┐              │
+│  └─────────────┘                           │ If close fails, │              │
 │                                            │ show "You can   │              │
 │                                            │ close this tab" │              │
 │                                            └─────────────────┘              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Security: Independent Auth Verification
+
+The login page does **not** trust the `authConfirmed` flag from the BroadcastChannel message.
+Instead, it independently verifies the authentication state by calling `getSession()`.
+This prevents potential attacks where a malicious script could broadcast fake auth confirmations.
 
 ### Main Layout Listener
 
@@ -869,15 +895,59 @@ onMount(() => {
   if ('BroadcastChannel' in window) {
     authChannel = new BroadcastChannel(AUTH_CHANNEL_NAME);
 
-    authChannel.onmessage = (event) => {
+    authChannel.onmessage = async (event) => {
       if (event.data.type === 'FOCUS_REQUEST') {
         // Respond that this tab is present
         authChannel?.postMessage({ type: 'TAB_PRESENT' });
         // Focus this window/tab
         window.focus();
-        // If auth was just confirmed, reload to get the updated auth state
+        // If auth was just confirmed, handle the auth state update
         if (event.data.authConfirmed) {
-          window.location.reload();
+          // The login page has its own handler that navigates to home
+          // For other pages, reload to refresh auth state
+          const isOnLoginPage = window.location.pathname.startsWith('/login');
+          if (!isOnLoginPage) {
+            window.location.reload();
+          }
+          // Login page handles its own navigation
+        }
+      }
+    };
+  }
+});
+
+onDestroy(() => {
+  authChannel?.close();
+});
+```
+
+### Login Page Listener
+
+The login page has its own BroadcastChannel listener that independently verifies auth state:
+
+```typescript
+// src/routes/login/+page.svelte
+const AUTH_CHANNEL_NAME = 'stellar-auth-channel';
+let authChannel: BroadcastChannel | null = null;
+
+onMount(async () => {
+  // Check if user is already authenticated
+  const session = await getSession();
+  if (session) {
+    goto(redirectUrl);
+    return;
+  }
+
+  // Listen for auth confirmation from other tabs
+  if ('BroadcastChannel' in window) {
+    authChannel = new BroadcastChannel(AUTH_CHANNEL_NAME);
+
+    authChannel.onmessage = async (event) => {
+      if (event.data.type === 'FOCUS_REQUEST' && event.data.authConfirmed) {
+        // Another tab confirmed auth - verify independently (don't trust message)
+        const session = await getSession();
+        if (session) {
+          goto(redirectUrl);  // Navigate to home
         }
       }
     };

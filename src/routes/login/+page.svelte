@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { signIn, signUp } from '$lib/supabase/auth';
+  import { signIn, signUp, getSession, resendConfirmationEmail } from '$lib/supabase/auth';
   import { getOfflineCredentials, verifyOfflinePassword } from '$lib/auth/offlineCredentials';
   import { createOfflineSession } from '$lib/auth/offlineSession';
   import { isOnline } from '$lib/stores/network';
@@ -26,10 +26,50 @@
   let isOfflineLoginMode = $derived(!$isOnline && cachedCredentials !== null);
   let showNoInternetMessage = $derived(!$isOnline && cachedCredentials === null);
 
-  // Check for cached credentials on mount
+  // Resend confirmation email state
+  let pendingConfirmationEmail = $state<string | null>(null);
+  let resendCooldown = $state(0);
+  let resendLoading = $state(false);
+  let resendIntervalId: ReturnType<typeof setInterval> | null = null;
+
+  // BroadcastChannel for inter-tab communication
+  const AUTH_CHANNEL_NAME = 'stellar-auth-channel';
+  let authChannel: BroadcastChannel | null = null;
+
+  // Check for cached credentials and existing auth on mount
   onMount(async () => {
     const cached = await getOfflineCredentials();
     cachedCredentials = cached;
+
+    // Check if user is already authenticated (e.g., from email confirmation in another tab)
+    const session = await getSession();
+    if (session) {
+      goto(redirectUrl);
+      return;
+    }
+
+    // Listen for auth confirmation from other tabs
+    if ('BroadcastChannel' in window) {
+      authChannel = new BroadcastChannel(AUTH_CHANNEL_NAME);
+
+      authChannel.onmessage = async (event) => {
+        if (event.data.type === 'FOCUS_REQUEST' && event.data.authConfirmed) {
+          // Another tab confirmed auth - check our session independently (don't trust the message)
+          const session = await getSession();
+          if (session) {
+            // Auth is valid, navigate to home
+            goto(redirectUrl);
+          }
+        }
+      };
+    }
+  });
+
+  onDestroy(() => {
+    authChannel?.close();
+    if (resendIntervalId) {
+      clearInterval(resendIntervalId);
+    }
   });
 
   async function handleSubmit(e: Event) {
@@ -58,6 +98,7 @@
         loading = false;
         return;
       }
+      const signupEmail = email; // Store before clearing
       const result = await signUp(email, password, firstName.trim(), lastName.trim());
       if (result.error) {
         error = result.error;
@@ -65,11 +106,44 @@
         goto(redirectUrl);
       } else {
         success = 'Check your email for the confirmation link!';
+        pendingConfirmationEmail = signupEmail;
         mode = 'login';
+        // Clear form fields
+        email = '';
+        password = '';
+        firstName = '';
+        lastName = '';
       }
     }
 
     loading = false;
+  }
+
+  async function handleResendEmail() {
+    if (!pendingConfirmationEmail || resendCooldown > 0 || resendLoading) return;
+
+    resendLoading = true;
+    error = null;
+
+    const result = await resendConfirmationEmail(pendingConfirmationEmail);
+
+    if (result.error) {
+      error = result.error;
+    } else {
+      // Start 30 second cooldown
+      resendCooldown = 30;
+      resendIntervalId = setInterval(() => {
+        resendCooldown--;
+        if (resendCooldown <= 0) {
+          if (resendIntervalId) {
+            clearInterval(resendIntervalId);
+            resendIntervalId = null;
+          }
+        }
+      }, 1000);
+    }
+
+    resendLoading = false;
   }
 
   async function handleOfflineLogin() {
@@ -355,7 +429,35 @@
           {/if}
 
           {#if success}
-            <div class="message success">{success}</div>
+            <div class="message success">
+              <div class="success-content">
+                <svg class="success-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <span>{success}</span>
+              </div>
+              {#if pendingConfirmationEmail}
+                <div class="resend-section">
+                  <span class="resend-text">Didn't receive it?</span>
+                  <button
+                    type="button"
+                    class="resend-btn"
+                    onclick={handleResendEmail}
+                    disabled={resendCooldown > 0 || resendLoading}
+                  >
+                    {#if resendLoading}
+                      <span class="resend-spinner"></span>
+                      Sending...
+                    {:else if resendCooldown > 0}
+                      Resend in {resendCooldown}s
+                    {:else}
+                      Resend email
+                    {/if}
+                  </button>
+                </div>
+              {/if}
+            </div>
           {/if}
 
           <button type="submit" class="btn btn-primary submit-btn" disabled={loading}>
@@ -891,6 +993,64 @@
     color: var(--color-green);
     border: 1px solid rgba(38, 222, 129, 0.4);
     box-shadow: 0 0 20px rgba(38, 222, 129, 0.1);
+  }
+
+  .success-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .success-icon {
+    flex-shrink: 0;
+  }
+
+  .resend-section {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(38, 222, 129, 0.2);
+  }
+
+  .resend-text {
+    font-size: 0.8125rem;
+    opacity: 0.9;
+  }
+
+  .resend-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-green);
+    background: rgba(38, 222, 129, 0.15);
+    border: 1px solid rgba(38, 222, 129, 0.3);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .resend-btn:hover:not(:disabled) {
+    background: rgba(38, 222, 129, 0.25);
+    border-color: rgba(38, 222, 129, 0.5);
+  }
+
+  .resend-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .resend-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(38, 222, 129, 0.3);
+    border-top-color: var(--color-green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
   }
 
   .submit-btn {
