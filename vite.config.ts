@@ -29,5 +29,32 @@ function serviceWorkerVersion() {
 }
 
 export default defineConfig({
-  plugins: [sveltekit(), serviceWorkerVersion()]
+  plugins: [sveltekit(), serviceWorkerVersion()],
+  build: {
+    // Optimize chunk splitting for better caching
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // Separate vendor chunks for better caching
+          if (id.includes('node_modules')) {
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase';
+            }
+            if (id.includes('date-fns')) {
+              return 'vendor-date-fns';
+            }
+            if (id.includes('dexie')) {
+              return 'vendor-dexie';
+            }
+          }
+        }
+      }
+    },
+    // Reduce chunk size warnings threshold
+    chunkSizeWarningLimit: 500,
+    // Enable minification
+    minify: 'esbuild',
+    // Target modern browsers for smaller bundles
+    target: 'es2020'
+  }
 });

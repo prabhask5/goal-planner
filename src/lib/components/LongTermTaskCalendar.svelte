@@ -75,11 +75,14 @@
       {@const dayTasks = getTasksForDate(day)}
       {@const hasTasksDue = dayTasks.length > 0}
 
-      <button
+      <div
         class="day-cell"
         class:today={isToday}
         class:has-tasks={hasTasksDue}
         onclick={() => onDayClick(day)}
+        onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onDayClick(day)}
+        role="button"
+        tabindex="0"
         aria-label="{formatDate(day)}{hasTasksDue ? `, ${dayTasks.length} task(s) due` : ''}"
       >
         <span class="day-number">{day.getDate()}</span>
@@ -101,7 +104,7 @@
             {/if}
           </div>
         {/if}
-      </button>
+      </div>
     {/each}
   </div>
 </div>
