@@ -900,11 +900,189 @@ All entity tables are included in tombstone cleanup:
 
 ---
 
-## Debug Tools
+## Debugging & Logging
 
-All debug functions are exposed on `window` for browser console access.
+Stellar uses a multi-layer debugging system: console logs for developers, a visual SyncStatus component for users, and window-exposed debug functions for advanced troubleshooting.
 
-### Sync Statistics
+### Console Logging
+
+All console logs use bracketed prefixes for easy filtering. Open browser DevTools and filter by prefix to isolate specific subsystems.
+
+#### [SYNC] - Sync Engine Operations
+
+The primary logging category, covering the entire sync lifecycle:
+
+```
+[SYNC] Cleared 5 pending sync operations
+[SYNC] Coalesced 49 redundant operations (50 → 1)
+[SYNC] Initial hydration: 150 records
+[SYNC] Cycle #15: trigger=periodic, pushed=2, pulled=50 records (12.45 KB), 847ms
+```
+
+**What each log means:**
+- **Cleared**: Queue was cleared (usually on logout or reset)
+- **Coalesced**: Multiple rapid changes to the same entity were merged into one operation
+- **Initial hydration**: First data load after page refresh
+- **Cycle**: Complete sync cycle summary with trigger type (`user`, `periodic`, `visibility`, `reconnect`), items pushed/pulled, data size, and duration
+
+#### [Tombstone] - Soft Delete Cleanup
+
+Logs when tombstone records are cleaned up:
+
+```
+[Tombstone] Cleaned 12 old records from local goals
+[Tombstone] Cleaned 8 old records from server daily_goal_progress
+```
+
+#### [Auth] - Authentication Events
+
+Authentication-related warnings and errors:
+
+```
+[Auth] Offline - keeping session despite error
+[Auth] Detected corrupted session, attempting to clear
+```
+
+#### [Network] - Network State Changes
+
+Network connectivity and reconnection events:
+
+```
+[Network] Reconnect callback error: <error details>
+```
+
+---
+
+### SyncStatus UI Component
+
+Located in `src/lib/components/SyncStatus.svelte`, this component provides visual feedback about sync state to users.
+
+#### Display States
+
+| State | Icon | Color | Ring Animation | Message |
+|-------|------|-------|----------------|---------|
+| **OFFLINE** | WiFi with slash | Yellow | None | "Changes will sync when you're back online." |
+| **SYNCING** | Spinner (rotating) | Purple | Pulsing purple border | "Syncing your data..." |
+| **SYNCED** | Checkmark (animated draw) | Green | Pulsing green border | "All your data is up to date." |
+| **PENDING** | Bidirectional arrows | Purple | Badge with count | "X change(s) waiting to sync." |
+| **ERROR** | Exclamation circle (shake) | Red | Pulsing red border | Shows specific error message |
+
+#### Morphing Icon System
+
+All icons share the same SVG container with smooth transitions between states:
+- Opacity: 0 → 1 (0.35s ease)
+- Transform: scale(0.5) rotate(-90°) → scale(1) rotate(0°) (0.45s spring)
+
+#### Tooltip
+
+Hovering the sync indicator shows a floating tooltip with:
+- Status header with colored dot indicator
+- Description text explaining current state
+- Last sync time in relative format ("5m ago", "Just now")
+- "Tap to sync now" hint when manual sync is available
+- Expandable error details panel when in error state
+
+#### Error Details Panel
+
+When errors exist, users can expand the tooltip to see:
+- **Operation type**: Color-coded badge (green=CREATE, blue=UPDATE, red=DELETE)
+- **Table name**: Which data type was affected
+- **Error message**: Raw technical error in monospace
+- **Entity ID**: First 8 characters of the affected record's UUID
+- Up to 10 most recent errors, with staggered fade-in animation
+
+---
+
+### Sync Status Store
+
+The sync store (`src/lib/stores/sync.ts`) manages all sync-related state:
+
+```typescript
+interface SyncState {
+  status: 'idle' | 'syncing' | 'error' | 'offline';
+  pendingCount: number;         // Queued changes waiting to sync
+  lastError: string | null;     // User-friendly error message
+  lastErrorDetails: string | null; // Raw technical error
+  syncErrors: SyncError[];      // Detailed error history (max 10)
+  lastSyncTime: string | null;  // ISO timestamp of last success
+  syncMessage: string | null;   // Custom override message
+  isTabVisible: boolean;        // Tab visibility state
+}
+
+interface SyncError {
+  table: string;      // e.g., 'goals', 'daily_tasks'
+  operation: string;  // 'create' | 'update' | 'delete'
+  entityId: string;   // UUID of affected entity
+  message: string;    // Error message
+  timestamp: string;  // When error occurred
+}
+```
+
+#### Anti-Flicker Logic
+
+To prevent the sync indicator from flashing briefly during fast syncs, the store enforces a **minimum 500ms display time** for the "syncing" state. If a sync completes in under 500ms, the state change is delayed until the minimum is reached.
+
+---
+
+### Error Classification & Display
+
+Errors are classified to determine when to show them to users:
+
+#### Transient Errors (Auto-Retry)
+
+These typically resolve on their own and are **not shown until retry limit (3) is reached**:
+- Network issues: "fetch", "network", "failed to fetch"
+- Timeouts: "timeout", "timed out"
+- Connection: "connection", "offline"
+- Rate limiting: "rate", "limit", "too many", "429"
+- Server errors: "500", "502", "503", "504", "unavailable"
+
+#### Persistent Errors (Shown Immediately)
+
+These require user action and are **shown immediately**:
+- Authentication: "jwt", "token", "unauthorized", "401"
+- Validation errors
+- Business logic errors
+
+#### Error Message Flow
+
+```
+Raw Error (Supabase API)
+         ↓
+Classification (transient vs persistent)
+         ↓
+Extraction (extractErrorMessage) → gets core message
+         ↓
+Parsing (parseErrorMessage) → user-friendly text
+         ↓
+Storage in sync store:
+  • lastError (friendly)
+  • lastErrorDetails (raw)
+  • syncErrors[] (detailed history)
+         ↓
+UI Display:
+  • Red icon with shake animation
+  • Friendly message in tooltip
+  • Expandable technical details
+```
+
+#### User-Friendly Error Messages
+
+| Technical Error | User-Friendly Message |
+|----------------|----------------------|
+| Network/fetch failures | "Network connection lost. Changes saved locally." |
+| Timeout errors | "Server took too long to respond. Will retry." |
+| Auth/JWT errors | "Session expired. Please sign in again." |
+| Rate limiting (429) | "Too many requests. Will retry shortly." |
+| Server errors (5xx) | "Server is temporarily unavailable." |
+
+---
+
+### Browser Console Debug Functions
+
+All debug functions are exposed on `window` for advanced troubleshooting.
+
+#### Sync Statistics
 
 ```javascript
 window.__stellarSyncStats()
@@ -915,7 +1093,7 @@ window.__stellarSyncStats()
 - Cycles in last minute
 - Last 10 cycle details (trigger, pushed items, pulled records, egress bytes, duration)
 
-### Egress Monitoring
+#### Egress Monitoring
 
 ```javascript
 window.__stellarEgress()
@@ -943,7 +1121,7 @@ Total egress: 125.50 KB (450 records)
 - Per-table breakdown with percentages
 - Recent sync cycle egress
 
-### Tombstone Status
+#### Tombstone Status
 
 ```javascript
 // Check status
@@ -963,7 +1141,7 @@ window.__stellarTombstones({ cleanup: true, force: true })
 - Eligible for cleanup counts
 - Oldest tombstone date per table
 
-### PWA Cache Status
+#### PWA Cache Status
 
 ```javascript
 // In browser console (when service worker is active)
@@ -986,6 +1164,48 @@ navigator.serviceWorker.addEventListener('message', e => {
   precacheComplete: true,
   uncached: []          // First 10 uncached assets (if any)
 }
+```
+
+---
+
+### System Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      USER INTERACTION                        │
+│  (Click button, make changes, pull-to-refresh)              │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │   Sync Engine   │
+                    │  (engine.ts)    │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┴──────────────┐
+              │                             │
+              ▼                             ▼
+     ┌─────────────────┐          ┌─────────────────┐
+     │ Console Logging │          │ Sync Status     │
+     │ [SYNC] [Auth]   │          │ Store           │
+     │ [Tombstone]     │          │ (sync.ts)       │
+     └─────────────────┘          └────────┬────────┘
+                                           │
+                                           ▼
+                                  ┌─────────────────┐
+                                  │ SyncStatus      │
+                                  │ Component       │
+                                  │ (UI Display)    │
+                                  └────────┬────────┘
+                                           │
+                                           ▼
+                                  ┌─────────────────┐
+                                  │ Visual Feedback │
+                                  │ • Icon morphs   │
+                                  │ • Animations    │
+                                  │ • Tooltip       │
+                                  │ • Error panel   │
+                                  └─────────────────┘
 ```
 
 ---
