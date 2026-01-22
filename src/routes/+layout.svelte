@@ -388,23 +388,26 @@
   {#if isAuthenticated}
     <header class="island-header">
       <div class="island-left">
-        <span class="island-brand">
-          <svg width="18" height="18" viewBox="0 0 100 100" fill="none">
-            <circle cx="50" cy="50" r="45" stroke="url(#islandGrad)" stroke-width="6" fill="none"/>
-            <path d="M30 52 L45 67 L72 35" stroke="url(#islandCheck)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-            <defs>
-              <linearGradient id="islandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#6c5ce7"/>
-                <stop offset="100%" stop-color="#ff79c6"/>
-              </linearGradient>
-              <linearGradient id="islandCheck" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#26de81"/>
-                <stop offset="100%" stop-color="#00d4ff"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </span>
-        <span class="island-title">{$page.url.pathname.startsWith('/tasks') ? 'Tasks' : $page.url.pathname.startsWith('/calendar') ? 'Routines' : $page.url.pathname.startsWith('/focus') ? 'Focus' : 'Goals'}</span>
+        <!-- Brand matches desktop: logo + "Stellar" text -->
+        <a href="/" class="island-brand-link">
+          <span class="island-brand">
+            <svg width="22" height="22" viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="45" stroke="url(#islandGrad)" stroke-width="6" fill="none"/>
+              <path d="M30 52 L45 67 L72 35" stroke="url(#islandCheck)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <defs>
+                <linearGradient id="islandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#6c5ce7"/>
+                  <stop offset="100%" stop-color="#ff79c6"/>
+                </linearGradient>
+                <linearGradient id="islandCheck" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#26de81"/>
+                  <stop offset="100%" stop-color="#00d4ff"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+          <span class="island-brand-text">Stellar</span>
+        </a>
       </div>
       <!-- Center gap for Dynamic Island -->
       <div class="island-center"></div>
@@ -658,20 +661,19 @@
   /* Container for the split layout */
   .island-header {
     flex-direction: row;
-    align-items: flex-start;
+    /* Center vertically to align brand with SyncStatus */
+    align-items: center;
     justify-content: space-between;
     padding-left: max(12px, env(safe-area-inset-left, 12px));
     padding-right: max(12px, env(safe-area-inset-right, 12px));
-    padding-bottom: 12px;
+    padding-bottom: 0;
   }
 
-  /* Left side - Brand and current section */
+  /* Left side - Brand (logo + Stellar text, matching desktop) */
   .island-left {
     display: flex;
     align-items: center;
-    gap: 0.625rem;
     padding-left: 4px;
-    max-width: 120px; /* Keep away from Dynamic Island */
     /* Staggered fade in */
     animation: islandItemFadeIn 0.5s var(--ease-out) 0.2s backwards;
   }
@@ -687,10 +689,20 @@
     }
   }
 
+  /* Brand link container - matches desktop nav-brand style */
+  .island-brand-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   .island-brand {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
     /* Subtle float animation for the brand */
     animation: brandFloatMobile 4s ease-in-out infinite;
   }
@@ -700,22 +712,26 @@
     50% { transform: translateY(-2px); }
   }
 
-  .island-title {
-    font-size: 0.75rem;
+  /* Brand text - matches desktop brand-text style */
+  .island-brand-text {
+    font-size: 1rem;
     font-weight: 700;
-    color: var(--color-text);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    /* Gradient text effect */
+    letter-spacing: -0.02em;
+    /* Gradient text effect matching desktop */
     background: linear-gradient(135deg,
       var(--color-text) 0%,
-      var(--color-primary-light) 100%);
+      var(--color-primary-light) 50%,
+      var(--color-text) 100%);
+    background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: brandTextShimmer 8s linear infinite;
+  }
+
+  @keyframes brandTextShimmer {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
   }
 
   /* Center gap - Reserved space for Dynamic Island */
@@ -733,7 +749,6 @@
     align-items: center;
     justify-content: flex-end;
     padding-right: 4px;
-    max-width: 120px; /* Keep away from Dynamic Island */
     /* Staggered fade in from right */
     animation: islandItemFadeInRight 0.5s var(--ease-out) 0.3s backwards;
   }
@@ -751,20 +766,35 @@
 
   /* Sync indicator sizing for island header */
   .island-right :global(.sync-indicator) {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-width: 1.5px;
   }
 
-  .island-right :global(.sync-indicator svg) {
-    width: 15px;
-    height: 15px;
+  .island-right :global(.sync-indicator .indicator-core) {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Only make synced and syncing icons bigger on mobile */
+  .island-right :global(.sync-indicator .icon-synced),
+  .island-right :global(.sync-indicator .icon-syncing) {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Keep other icons at default size */
+  .island-right :global(.sync-indicator .icon-offline),
+  .island-right :global(.sync-indicator .icon-error),
+  .island-right :global(.sync-indicator .icon-pending) {
+    width: 16px;
+    height: 16px;
   }
 
   .island-right :global(.pending-badge) {
-    min-width: 15px;
-    height: 15px;
-    font-size: 9px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
     padding: 0 4px;
   }
 
@@ -1136,29 +1166,27 @@
   .nav-mobile {
     display: none;
     position: fixed;
+    /* Position at absolute bottom of viewport */
     bottom: 0;
     left: 0;
     right: 0;
     z-index: 100;
-    /* SOLID background that extends behind home indicator - no black bars */
-    background: #080810;
-    /* iPhone safe area for home indicator - critical for iPhone 16 Pro */
-    padding-bottom: env(safe-area-inset-bottom, 0);
-    padding-left: env(safe-area-inset-left, 0);
-    padding-right: env(safe-area-inset-right, 0);
+    /* No padding - let children handle safe areas */
   }
 
-  /* Glass morphism background with cosmic gradient - extends to absolute bottom */
+  /* Glass morphism background - fills entire nav including safe area */
   .nav-mobile-bg {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    /* Extend beyond parent's padding-bottom to fill safe area */
-    bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+    /* Fill to the absolute bottom edge of the screen */
+    bottom: 0;
+    /* SOLID color that extends to the very bottom - eliminates black bar */
     background: linear-gradient(180deg,
-      rgba(12, 12, 24, 0.85) 0%,
-      rgba(8, 8, 16, 0.95) 100%);
+      rgba(12, 12, 24, 0.95) 0%,
+      rgba(8, 8, 16, 0.98) 50%,
+      #080810 100%);
     backdrop-filter: blur(40px) saturate(200%);
     -webkit-backdrop-filter: blur(40px) saturate(200%);
     border-top: 1px solid rgba(108, 92, 231, 0.15);
@@ -1214,6 +1242,10 @@
     max-width: 420px;
     margin: 0 auto;
     padding: 0 0.75rem;
+    /* Add safe area padding at bottom for home indicator - content stays above it */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0));
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0));
     z-index: 1;
   }
 
@@ -1493,8 +1525,8 @@
       max-width: 95px;
     }
 
-    .island-title {
-      font-size: 0.625rem;
+    .island-brand-text {
+      font-size: 0.75rem;
     }
 
     .island-brand svg {
@@ -1527,8 +1559,8 @@
       max-width: 118px;
     }
 
-    .island-title {
-      font-size: 0.6875rem;
+    .island-brand-text {
+      font-size: 0.875rem;
     }
 
     .tab-bar {
@@ -1553,8 +1585,8 @@
       max-width: 120px;
     }
 
-    .island-title {
-      font-size: 0.75rem;
+    .island-brand-text {
+      font-size: 0.9375rem;
     }
 
     .island-brand svg {
@@ -1608,8 +1640,8 @@
       max-width: 135px;
     }
 
-    .island-title {
-      font-size: 0.8125rem;
+    .island-brand-text {
+      font-size: 1rem;
     }
 
     .island-brand svg {

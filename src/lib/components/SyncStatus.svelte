@@ -211,7 +211,7 @@
       <svg
         class="icon icon-syncing"
         class:active={displayState() === 'syncing'}
-        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+        width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
       >
         <circle class="spinner-track" cx="12" cy="12" r="9" stroke-opacity="0.2"/>
         <path class="spinner-arc" d="M21 12a9 9 0 1 1-6.219-8.56"/>
@@ -222,7 +222,7 @@
         class="icon icon-synced"
         class:active={displayState() === 'synced'}
         class:morph-in={isTransitioning && displayState() === 'synced'}
-        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+        width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
       >
         <circle class="check-circle" cx="12" cy="12" r="9"/>
         <polyline class="check-mark" points="8 12 11 15 16 9"/>
@@ -403,8 +403,8 @@
 
   .indicator-core {
     position: relative;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
