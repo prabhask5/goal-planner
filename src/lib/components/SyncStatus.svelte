@@ -672,6 +672,20 @@
 
   .sync-indicator.offline .indicator-ring {
     border-color: rgba(255, 217, 61, 0.2);
+    animation: ringPulseYellow 2s ease-in-out infinite;
+  }
+
+  @keyframes ringPulseYellow {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+      border-color: rgba(255, 217, 61, 0.2);
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.3;
+      border-color: rgba(255, 217, 61, 0.4);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -1057,7 +1071,9 @@
 
     .sync-indicator.syncing .indicator-ring,
     .sync-indicator.synced .indicator-ring,
-    .sync-indicator.error .indicator-ring {
+    .sync-indicator.error .indicator-ring,
+    .sync-indicator.pending .indicator-ring,
+    .sync-indicator.offline .indicator-ring {
       animation: none;
     }
 
@@ -1066,7 +1082,9 @@
     }
 
     .icon-synced.morph-in,
-    .icon-error.morph-in {
+    .icon-error.morph-in,
+    .icon-pending.morph-in,
+    .icon-syncing.morph-in.active {
       animation: none;
     }
 
