@@ -183,33 +183,59 @@
 
     // Proactively cache all app chunks for full offline support
     // This runs in the background after page load, so it doesn't affect Lighthouse scores
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      // Give the page time to fully load, then trigger background precaching
-      setTimeout(() => {
-        // First, cache current page's assets
-        const scripts = Array.from(document.querySelectorAll('script[src]'))
-          .map((el) => (el as HTMLScriptElement).src)
-          .filter((src) => src.startsWith(location.origin));
-
-        const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-          .map((el) => (el as HTMLLinkElement).href)
-          .filter((href) => href.startsWith(location.origin));
-
-        const urls = [...scripts, ...styles];
-
-        if (urls.length > 0) {
-          navigator.serviceWorker.controller.postMessage({
-            type: 'CACHE_URLS',
-            urls
-          });
+    if ('serviceWorker' in navigator) {
+      // Listen for precache completion messages from service worker
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'PRECACHE_COMPLETE') {
+          const { cached, total } = event.data;
+          console.log(`[PWA] Background precaching complete: ${cached}/${total} assets cached`);
+          if (cached === total) {
+            console.log('[PWA] Full offline support ready - all pages accessible offline');
+          } else {
+            console.warn(`[PWA] Some assets failed to cache: ${total - cached} missing`);
+          }
         }
+      });
 
-        // Then trigger full background precaching for all app chunks
-        // This ensures offline support for all pages, not just visited ones
-        navigator.serviceWorker.controller.postMessage({
-          type: 'PRECACHE_ALL'
-        });
-      }, 3000); // Wait 3 seconds after page load for better UX
+      // Wait for service worker to be ready (handles first load case)
+      navigator.serviceWorker.ready.then((registration) => {
+        console.log('[PWA] Service worker ready, scheduling background precache...');
+
+        // Give the page time to fully load, then trigger background precaching
+        setTimeout(() => {
+          const controller = navigator.serviceWorker.controller || registration.active;
+          if (!controller) {
+            console.warn('[PWA] No service worker controller available');
+            return;
+          }
+
+          // First, cache current page's assets
+          const scripts = Array.from(document.querySelectorAll('script[src]'))
+            .map((el) => (el as HTMLScriptElement).src)
+            .filter((src) => src.startsWith(location.origin));
+
+          const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+            .map((el) => (el as HTMLLinkElement).href)
+            .filter((href) => href.startsWith(location.origin));
+
+          const urls = [...scripts, ...styles];
+
+          if (urls.length > 0) {
+            console.log(`[PWA] Caching ${urls.length} current page assets...`);
+            controller.postMessage({
+              type: 'CACHE_URLS',
+              urls
+            });
+          }
+
+          // Then trigger full background precaching for all app chunks
+          // This ensures offline support for all pages, not just visited ones
+          console.log('[PWA] Triggering background precache of all app chunks...');
+          controller.postMessage({
+            type: 'PRECACHE_ALL'
+          });
+        }, 2000); // Wait 2 seconds after page load for better UX
+      });
     }
   });
 

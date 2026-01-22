@@ -364,6 +364,48 @@ User Offline + Has Cached Credentials
 - Timing-safe comparison prevents timing attacks
 - 1-hour session expiry limits exposure window
 
+### Reconnection Auth Validation
+
+When transitioning from offline to online mode, credentials are validated BEFORE allowing sync:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                RECONNECTION AUTH FLOW                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Network Reconnects                                              │
+│         │                                                        │
+│         ▼                                                        │
+│  ┌────────────────────────┐                                      │
+│  │ Was user in offline    │──No──▶ Allow sync immediately        │
+│  │ mode?                  │                                      │
+│  └───────────┬────────────┘                                      │
+│              │ Yes                                               │
+│              ▼                                                   │
+│  ┌────────────────────────┐                                      │
+│  │ Try Supabase session   │                                      │
+│  │ refresh (getSession)   │                                      │
+│  └───────────┬────────────┘                                      │
+│              │                                                   │
+│     ┌────────┴────────┐                                          │
+│     │                 │                                          │
+│  Success           Failure                                       │
+│     │                 │                                          │
+│     ▼                 ▼                                          │
+│  ┌─────────┐   ┌──────────────────────┐                         │
+│  │ Allow   │   │ Clear sync queue     │                         │
+│  │ sync    │   │ Clear offline session│                         │
+│  │         │   │ Redirect to login    │                         │
+│  └─────────┘   └──────────────────────┘                         │
+│                                                                  │
+│  SECURITY: Pending sync queue is cleared on auth failure        │
+│  to prevent unauthorized data from syncing to server.           │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+This prevents a compromised offline session from syncing malicious data to the server.
+
 ---
 
 ## Inter-Tab Communication
@@ -454,26 +496,70 @@ SvelteKit uses code-splitting, loading JavaScript chunks on-demand for each rout
 │  Build Time (vite.config.ts):                                    │
 │  • Generate /static/asset-manifest.json                         │
 │  • Lists all 78+ JS/CSS chunks under /_app/immutable/           │
+│  • Includes ALL route nodes (static + dynamic [id] routes)      │
+│  • Written to both static/ and build output for consistency     │
 │                                                                  │
 │  Service Worker Install:                                         │
 │  • Cache only minimal shell (/, manifest, icons)                │
 │  • Fast install = good Lighthouse score                         │
 │                                                                  │
 │  After Page Load (+layout.svelte):                               │
-│  • Wait 3 seconds for page to stabilize                         │
-│  • Send PRECACHE_ALL message to service worker                  │
+│  • Wait for service worker to be ready                          │
+│  • Wait 2 seconds for page to stabilize                         │
+│  • Cache current page's scripts/styles immediately              │
+│  • Send PRECACHE_ALL message to trigger full precache           │
+│  • Listen for PRECACHE_COMPLETE notification                    │
 │                                                                  │
 │  Background Precache (sw.js):                                    │
-│  • Fetch asset-manifest.json                                    │
+│  • Fetch asset-manifest.json with cache-busting                 │
+│  • Retry up to 3 times if manifest unavailable                  │
 │  • Check which chunks are not yet cached                        │
 │  • Cache in batches of 5 with 100ms delays                      │
+│  • Notify clients when complete                                 │
 │  • Doesn't block user interaction                               │
 │                                                                  │
 │  Result:                                                         │
 │  • All pages work offline after background caching completes    │
+│  • Dynamic routes (/lists/[id], /routines/[id]) work offline   │
+│  • Items created offline are accessible via their detail pages  │
 │  • Initial load performance unaffected                          │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+### Asset Manifest Structure
+
+```json
+{
+  "version": "mkord3a4",
+  "assets": [
+    "/_app/immutable/assets/0.zpRqGnlj.css",
+    "/_app/immutable/chunks/B1TmeaDs.js",
+    "/_app/immutable/entry/app.JetVtHNI.js",
+    "/_app/immutable/nodes/0.DYIarTUp.js",
+    "/_app/immutable/nodes/7.DbtjPWAl.js",
+    ...
+  ]
+}
+```
+
+Node files (`nodes/X.js`) are the compiled route components. All routes, including dynamic `[id]` routes, are included.
+
+### Cache Status Debugging
+
+The service worker provides cache status inspection:
+
+```javascript
+// In browser console (when service worker is active)
+navigator.serviceWorker.controller.postMessage({ type: 'GET_CACHE_STATUS' });
+
+// Listen for response
+navigator.serviceWorker.addEventListener('message', e => {
+  if (e.data.cached !== undefined) {
+    console.log('Cache status:', e.data);
+    // { cached: 78, total: 78, ready: true, version: "mkord3a4" }
+  }
+});
 ```
 
 ### Cache Lifecycle
@@ -502,9 +588,11 @@ SvelteKit uses code-splitting, loading JavaScript chunks on-demand for each rout
 │  • Service worker takes control, page reloads                   │
 │                                                                  │
 │  Background Precache (post-load):                                │
-│  • App sends PRECACHE_ALL after 3s                              │
-│  • SW fetches manifest and caches all chunks                    │
-│  • Enables full offline navigation                              │
+│  • App sends PRECACHE_ALL after 2s delay                        │
+│  • SW fetches manifest (retries 3x if unavailable)              │
+│  • Caches all chunks in batches of 5                            │
+│  • Sends PRECACHE_COMPLETE when done                            │
+│  • Enables full offline navigation including dynamic routes     │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```

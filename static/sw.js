@@ -1,5 +1,5 @@
 // Version is updated automatically on each build by vite.config.ts
-const APP_VERSION = 'mkoqcil2';
+const APP_VERSION = 'mkord17p';
 const CACHE_NAME = `stellar-${APP_VERSION}`;
 
 // Core app shell assets to precache on install (minimal for fast install)
@@ -320,22 +320,36 @@ async function handleOtherRequest(request) {
 
 // Background precache all app chunks for full offline support
 // This runs after the page is loaded, so it doesn't affect Lighthouse scores
-async function backgroundPrecache() {
+async function backgroundPrecache(retryCount = 0) {
   if (backgroundPrecacheComplete) return;
 
   try {
     const cache = await caches.open(CACHE_NAME);
-    const manifestResponse = await fetch('/asset-manifest.json');
+
+    // Try to fetch manifest with cache-busting
+    const manifestResponse = await fetch('/asset-manifest.json?_=' + Date.now(), {
+      cache: 'no-store'
+    });
 
     if (!manifestResponse.ok) {
-      console.warn('[SW] Asset manifest not found, offline support may be limited');
+      if (retryCount < 3) {
+        console.log(`[SW] Asset manifest not found, retrying in 2s (attempt ${retryCount + 1}/3)...`);
+        setTimeout(() => backgroundPrecache(retryCount + 1), 2000);
+        return;
+      }
+      console.warn('[SW] Asset manifest not found after retries, offline support may be limited');
       return;
     }
 
     const manifest = await manifestResponse.json();
     const assets = manifest.assets || [];
 
-    console.log(`[SW] Background precaching ${assets.length} chunks...`);
+    if (assets.length === 0) {
+      console.warn('[SW] Asset manifest is empty, offline support may be limited');
+      return;
+    }
+
+    console.log(`[SW] Background precaching ${assets.length} chunks (version: ${manifest.version})...`);
 
     // Check which assets are already cached
     const uncachedAssets = [];
@@ -347,8 +361,9 @@ async function backgroundPrecache() {
     }
 
     if (uncachedAssets.length === 0) {
-      console.log('[SW] All chunks already cached');
+      console.log('[SW] All chunks already cached - full offline support ready');
       backgroundPrecacheComplete = true;
+      notifyClients({ type: 'PRECACHE_COMPLETE', cached: assets.length, total: assets.length });
       return;
     }
 
@@ -356,13 +371,19 @@ async function backgroundPrecache() {
 
     // Cache in small batches with delays to avoid impacting performance
     const batchSize = 5;
+    let successCount = 0;
     for (let i = 0; i < uncachedAssets.length; i += batchSize) {
       const batch = uncachedAssets.slice(i, i + batchSize);
-      await Promise.allSettled(
-        batch.map(url => cache.add(url).catch(err => {
-          console.warn(`[SW] Failed to cache chunk ${url}:`, err);
-        }))
+      const results = await Promise.allSettled(
+        batch.map(url => cache.add(url))
       );
+      results.forEach((r, idx) => {
+        if (r.status === 'fulfilled') {
+          successCount++;
+        } else {
+          console.warn(`[SW] Failed to cache: ${batch[idx]}`);
+        }
+      });
       // Small delay between batches to avoid network congestion
       if (i + batchSize < uncachedAssets.length) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -370,9 +391,66 @@ async function backgroundPrecache() {
     }
 
     backgroundPrecacheComplete = true;
-    console.log('[SW] Background precache complete - full offline support ready');
+    const totalCached = assets.length - uncachedAssets.length + successCount;
+    console.log(`[SW] Background precache complete - ${totalCached}/${assets.length} chunks cached`);
+    notifyClients({ type: 'PRECACHE_COMPLETE', cached: totalCached, total: assets.length });
   } catch (e) {
     console.warn('[SW] Background precache failed:', e);
+  }
+}
+
+// Notify all clients of an event
+async function notifyClients(message) {
+  const clients = await self.clients.matchAll({ type: 'window' });
+  clients.forEach(client => client.postMessage(message));
+}
+
+// Get cache status for debugging
+async function getCacheStatus() {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+
+    // Try cache first, then network
+    let manifestResponse = await cache.match('/asset-manifest.json');
+    if (!manifestResponse) {
+      try {
+        manifestResponse = await fetch('/asset-manifest.json');
+        if (manifestResponse.ok) {
+          // Cache it for future use
+          cache.put('/asset-manifest.json', manifestResponse.clone());
+        }
+      } catch {
+        // Offline and no cached manifest
+      }
+    }
+
+    if (!manifestResponse) {
+      return { cached: 0, total: 0, ready: false, error: 'No manifest available' };
+    }
+
+    const manifest = await manifestResponse.clone().json();
+    const assets = manifest.assets || [];
+
+    let cachedCount = 0;
+    const uncachedAssets = [];
+    for (const url of assets) {
+      if (await cache.match(url)) {
+        cachedCount++;
+      } else {
+        uncachedAssets.push(url);
+      }
+    }
+
+    return {
+      cached: cachedCount,
+      total: assets.length,
+      ready: cachedCount === assets.length,
+      version: manifest.version,
+      precacheComplete: backgroundPrecacheComplete,
+      uncached: uncachedAssets.slice(0, 10) // First 10 uncached for debugging
+    };
+  } catch (e) {
+    return { cached: 0, total: 0, ready: false, error: e.message };
   }
 }
 
@@ -400,6 +478,13 @@ self.addEventListener('message', (event) => {
           console.warn(`[SW] Failed to cache ${url}:`, err);
         });
       });
+    });
+  }
+
+  // Return cache status for debugging
+  if (event.data?.type === 'GET_CACHE_STATUS') {
+    getCacheStatus().then(status => {
+      event.ports[0]?.postMessage(status);
     });
   }
 });

@@ -54,15 +54,19 @@ function serviceWorkerVersion() {
           .map(f => f.replace(resolve('.svelte-kit/output/client'), ''))
           .filter(f => f.endsWith('.js') || f.endsWith('.css'));
 
-        // Write manifest to static folder
         const manifest = {
           version: Date.now().toString(36),
           assets
         };
-        writeFileSync(
-          resolve('static/asset-manifest.json'),
-          JSON.stringify(manifest, null, 2)
-        );
+        const manifestContent = JSON.stringify(manifest, null, 2);
+
+        // Write to static folder (for future builds and dev server)
+        writeFileSync(resolve('static/asset-manifest.json'), manifestContent);
+
+        // Also write to build output (for current build - static files copied before closeBundle)
+        const buildOutputPath = resolve('.svelte-kit/output/client/asset-manifest.json');
+        writeFileSync(buildOutputPath, manifestContent);
+
         console.log(`[SW] Generated asset manifest with ${assets.length} files`);
       } catch (e) {
         console.warn('[SW] Could not generate asset manifest:', e);
