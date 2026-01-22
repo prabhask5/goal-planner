@@ -181,7 +181,7 @@
       rgba(20, 20, 40, 0.9) 0%,
       rgba(10, 10, 25, 0.95) 100%);
     border-radius: var(--radius-full);
-    overflow: visible;
+    overflow: hidden;
     position: relative;
     box-shadow:
       inset 0 2px 6px rgba(0, 0, 0, 0.4),
@@ -232,7 +232,6 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
     animation: progressPulse 2s ease-in-out infinite;
     z-index: 1;
-    overflow: hidden;
   }
 
   .progress-fill.celebrating {
