@@ -17,7 +17,10 @@ Technical reference for Stellar's system architecture covering data flow, synchr
 9. [Inter-Tab Communication](#inter-tab-communication)
 10. [PWA Caching Strategies](#pwa-caching-strategies)
 11. [Focus Timer State Machine](#focus-timer-state-machine)
-12. [Failure Modes and Recovery](#failure-modes-and-recovery)
+12. [Egress Optimization](#egress-optimization)
+13. [Failure Modes and Recovery](#failure-modes-and-recovery)
+14. [Tombstone Cleanup](#tombstone-cleanup)
+15. [Debug Tools](#debug-tools)
 
 ---
 
@@ -817,6 +820,172 @@ window.__stellarSyncStats?.()
 │  • Full reset as last resort (preserves server data)           │
 │                                                                 │
 └────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Tombstone Cleanup
+
+Soft-deleted records (tombstones) accumulate over time. The cleanup system removes old tombstones from both local IndexedDB and Supabase server.
+
+### Configuration
+
+| Parameter | Value | Purpose |
+|-----------|-------|---------|
+| `TOMBSTONE_MAX_AGE_DAYS` | 30 days | Records deleted longer than this are cleaned up |
+| `CLEANUP_INTERVAL_MS` | 24 hours | Server cleanup runs at most once per day |
+
+### Cleanup Triggers
+
+| Trigger | Local Cleanup | Server Cleanup |
+|---------|---------------|----------------|
+| Sync engine initialization | Yes | Yes |
+| Periodic sync (15 min) | Yes | Yes (if 24h elapsed) |
+| Manual debug call | Yes | Yes (with force option) |
+
+### Cleanup Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    TOMBSTONE CLEANUP                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Calculate cutoff: NOW - 30 days                                 │
+│                                                                  │
+│  LOCAL CLEANUP (IndexedDB):                                      │
+│  For each table:                                                 │
+│    DELETE WHERE deleted = true AND updated_at < cutoff           │
+│    Log count if > 0                                              │
+│                                                                  │
+│  SERVER CLEANUP (Supabase):                                      │
+│  Skip if last run < 24 hours ago (unless forced)                 │
+│  Skip if offline                                                 │
+│  For each table:                                                 │
+│    DELETE WHERE deleted = true AND updated_at < cutoff           │
+│    Check for errors (RLS, permissions)                           │
+│    Log count if > 0                                              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Debug Interface
+
+```javascript
+// Check tombstone status across local and server
+window.__stellarTombstones()
+
+// Output shows:
+// - Cutoff date (30 days ago)
+// - Last server cleanup timestamp
+// - Per-table tombstone counts
+// - How many are eligible for cleanup
+// - Oldest tombstone date per table
+
+// Run cleanup
+window.__stellarTombstones({ cleanup: true })
+
+// Force server cleanup (bypass 24h limit)
+window.__stellarTombstones({ cleanup: true, force: true })
+```
+
+### Tables Cleaned
+
+All entity tables are included in tombstone cleanup:
+- `goal_lists`, `goals`
+- `daily_routine_goals`, `daily_goal_progress`
+- `task_categories`, `commitments`
+- `daily_tasks`, `long_term_tasks`
+- `focus_settings`, `focus_sessions`
+- `block_lists`, `blocked_websites`
+
+---
+
+## Debug Tools
+
+All debug functions are exposed on `window` for browser console access.
+
+### Sync Statistics
+
+```javascript
+window.__stellarSyncStats()
+```
+
+**Output:**
+- Total sync cycles since page load
+- Cycles in last minute
+- Last 10 cycle details (trigger, pushed items, pulled records, egress bytes, duration)
+
+### Egress Monitoring
+
+```javascript
+window.__stellarEgress()
+```
+
+**Output:**
+```
+=== STELLAR EGRESS STATS ===
+Session started: 2025-01-21T10:00:00.000Z
+Total egress: 125.50 KB (450 records)
+
+--- BY TABLE ---
+  daily_goal_progress: 45.20 KB (200 records, 36.0%)
+  goals: 32.10 KB (100 records, 25.6%)
+  daily_routine_goals: 18.50 KB (50 records, 14.7%)
+  ...
+
+--- RECENT SYNC CYCLES ---
+  2025-01-21T10:15:00.000Z: 2.30 KB (15 records)
+  2025-01-21T10:30:00.000Z: 1.10 KB (8 records)
+```
+
+**Tracks:**
+- Total bytes and records pulled from Supabase this session
+- Per-table breakdown with percentages
+- Recent sync cycle egress
+
+### Tombstone Status
+
+```javascript
+// Check status
+window.__stellarTombstones()
+
+// Run cleanup
+window.__stellarTombstones({ cleanup: true })
+
+// Force server cleanup (bypass 24h limit)
+window.__stellarTombstones({ cleanup: true, force: true })
+```
+
+**Output:**
+- Cutoff date (30 days ago)
+- Last server cleanup timestamp
+- Per-table tombstone counts (local and server)
+- Eligible for cleanup counts
+- Oldest tombstone date per table
+
+### PWA Cache Status
+
+```javascript
+// In browser console (when service worker is active)
+navigator.serviceWorker.controller.postMessage({ type: 'GET_CACHE_STATUS' });
+
+navigator.serviceWorker.addEventListener('message', e => {
+  if (e.data.cached !== undefined) {
+    console.log('Cache status:', e.data);
+  }
+});
+```
+
+**Output:**
+```javascript
+{
+  cached: 78,           // Number of assets cached
+  total: 78,            // Total assets in manifest
+  ready: true,          // All assets cached?
+  version: "mkord3a4",  // Build version
+  precacheComplete: true,
+  uncached: []          // First 10 uncached assets (if any)
+}
 ```
 
 ---

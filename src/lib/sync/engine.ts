@@ -71,11 +71,68 @@ interface SyncCycleStats {
   trigger: string;
   pushedItems: number;
   pulledTables: number;
+  pulledRecords: number;
+  egressBytes: number;
   durationMs: number;
 }
 
 const syncStats: SyncCycleStats[] = [];
 let totalSyncCycles = 0;
+
+// Egress tracking
+interface EgressStats {
+  totalBytes: number;
+  totalRecords: number;
+  byTable: Record<string, { bytes: number; records: number }>;
+  sessionStart: string;
+}
+
+const egressStats: EgressStats = {
+  totalBytes: 0,
+  totalRecords: 0,
+  byTable: {},
+  sessionStart: new Date().toISOString()
+};
+
+// Helper to estimate JSON size in bytes
+function estimateJsonSize(data: unknown): number {
+  try {
+    return new Blob([JSON.stringify(data)]).size;
+  } catch {
+    // Fallback: rough estimate based on JSON string length
+    return JSON.stringify(data).length;
+  }
+}
+
+// Track egress for a table
+function trackEgress(tableName: string, data: unknown[] | null): { bytes: number; records: number } {
+  if (!data || data.length === 0) {
+    return { bytes: 0, records: 0 };
+  }
+
+  const bytes = estimateJsonSize(data);
+  const records = data.length;
+
+  // Update totals
+  egressStats.totalBytes += bytes;
+  egressStats.totalRecords += records;
+
+  // Update per-table stats
+  if (!egressStats.byTable[tableName]) {
+    egressStats.byTable[tableName] = { bytes: 0, records: 0 };
+  }
+  egressStats.byTable[tableName].bytes += bytes;
+  egressStats.byTable[tableName].records += records;
+
+  return { bytes, records };
+}
+
+// Format bytes for display
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
 
 function logSyncCycle(stats: Omit<SyncCycleStats, 'timestamp'>) {
   const entry: SyncCycleStats = {
@@ -93,11 +150,13 @@ function logSyncCycle(stats: Omit<SyncCycleStats, 'timestamp'>) {
   console.log(
     `[SYNC] Cycle #${totalSyncCycles}: ` +
     `trigger=${stats.trigger}, pushed=${stats.pushedItems}, ` +
-    `pulled=${stats.pulledTables} tables, ${stats.durationMs}ms`
+    `pulled=${stats.pulledRecords} records (${formatBytes(stats.egressBytes)}), ${stats.durationMs}ms`
   );
 }
 
 // Export for debugging in browser console: window.__stellarSyncStats?.()
+// Also: window.__stellarTombstones?.() or window.__stellarTombstones?.({ cleanup: true, force: true })
+// Also: window.__stellarEgress?.()
 if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__stellarSyncStats = () => {
     const recentMinute = syncStats.filter(s =>
@@ -109,6 +168,44 @@ if (typeof window !== 'undefined') {
     console.log(`Recent cycles:`, syncStats.slice(-10));
     return { totalSyncCycles, recentMinute: recentMinute.length, recent: syncStats.slice(-10) };
   };
+
+  (window as unknown as Record<string, unknown>).__stellarEgress = () => {
+    console.log('=== STELLAR EGRESS STATS ===');
+    console.log(`Session started: ${egressStats.sessionStart}`);
+    console.log(`Total egress: ${formatBytes(egressStats.totalBytes)} (${egressStats.totalRecords} records)`);
+    console.log('');
+    console.log('--- BY TABLE ---');
+
+    // Sort tables by bytes descending
+    const sortedTables = Object.entries(egressStats.byTable)
+      .sort(([, a], [, b]) => b.bytes - a.bytes);
+
+    for (const [table, stats] of sortedTables) {
+      const pct = egressStats.totalBytes > 0
+        ? ((stats.bytes / egressStats.totalBytes) * 100).toFixed(1)
+        : '0';
+      console.log(`  ${table}: ${formatBytes(stats.bytes)} (${stats.records} records, ${pct}%)`);
+    }
+
+    console.log('');
+    console.log('--- RECENT SYNC CYCLES ---');
+    const recent = syncStats.slice(-5);
+    for (const cycle of recent) {
+      console.log(`  ${cycle.timestamp}: ${formatBytes(cycle.egressBytes)} (${cycle.pulledRecords} records)`);
+    }
+
+    return {
+      sessionStart: egressStats.sessionStart,
+      totalBytes: egressStats.totalBytes,
+      totalFormatted: formatBytes(egressStats.totalBytes),
+      totalRecords: egressStats.totalRecords,
+      byTable: egressStats.byTable,
+      recentCycles: syncStats.slice(-10)
+    };
+  };
+
+  // Tombstone debug - will be initialized after debugTombstones function is defined
+  // See below where it's assigned after the function definition
 }
 
 // Column definitions for each table (explicit to reduce egress vs select('*'))
@@ -563,7 +660,8 @@ function setLastSyncCursor(cursor: string, userId: string | null): void {
 }
 
 // PULL: Fetch changes from remote since last sync
-async function pullRemoteChanges(): Promise<void> {
+// Returns egress stats for this pull operation
+async function pullRemoteChanges(): Promise<{ bytes: number; records: number }> {
   const userId = await getCurrentUserId();
 
   // Abort if no authenticated user (avoids confusing RLS errors)
@@ -577,6 +675,10 @@ async function pullRemoteChanges(): Promise<void> {
   // Track the newest updated_at we see
   let newestUpdate = lastSync;
 
+  // Track egress for this pull
+  let pullBytes = 0;
+  let pullRecords = 0;
+
   // Pull goal_lists changed since last sync
   const { data: remoteLists, error: listsError } = await supabase
     .from('goal_lists')
@@ -584,6 +686,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (listsError) throw listsError;
+  const listsEgress = trackEgress('goal_lists', remoteLists);
+  pullBytes += listsEgress.bytes;
+  pullRecords += listsEgress.records;
 
   // Pull goals changed since last sync
   const { data: remoteGoals, error: goalsError } = await supabase
@@ -592,6 +697,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (goalsError) throw goalsError;
+  const goalsEgress = trackEgress('goals', remoteGoals);
+  pullBytes += goalsEgress.bytes;
+  pullRecords += goalsEgress.records;
 
   // Pull daily_routine_goals changed since last sync
   const { data: remoteRoutines, error: routinesError } = await supabase
@@ -600,6 +708,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (routinesError) throw routinesError;
+  const routinesEgress = trackEgress('daily_routine_goals', remoteRoutines);
+  pullBytes += routinesEgress.bytes;
+  pullRecords += routinesEgress.records;
 
   // Pull daily_goal_progress changed since last sync
   const { data: remoteProgress, error: progressError } = await supabase
@@ -608,6 +719,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (progressError) throw progressError;
+  const progressEgress = trackEgress('daily_goal_progress', remoteProgress);
+  pullBytes += progressEgress.bytes;
+  pullRecords += progressEgress.records;
 
   // Pull task_categories changed since last sync
   const { data: remoteCategories, error: categoriesError } = await supabase
@@ -616,6 +730,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (categoriesError) throw categoriesError;
+  const categoriesEgress = trackEgress('task_categories', remoteCategories);
+  pullBytes += categoriesEgress.bytes;
+  pullRecords += categoriesEgress.records;
 
   // Pull commitments changed since last sync
   const { data: remoteCommitments, error: commitmentsError } = await supabase
@@ -624,6 +741,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (commitmentsError) throw commitmentsError;
+  const commitmentsEgress = trackEgress('commitments', remoteCommitments);
+  pullBytes += commitmentsEgress.bytes;
+  pullRecords += commitmentsEgress.records;
 
   // Pull daily_tasks changed since last sync
   const { data: remoteDailyTasks, error: dailyTasksError } = await supabase
@@ -632,6 +752,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (dailyTasksError) throw dailyTasksError;
+  const dailyTasksEgress = trackEgress('daily_tasks', remoteDailyTasks);
+  pullBytes += dailyTasksEgress.bytes;
+  pullRecords += dailyTasksEgress.records;
 
   // Pull long_term_tasks changed since last sync
   const { data: remoteLongTermTasks, error: longTermTasksError } = await supabase
@@ -640,6 +763,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (longTermTasksError) throw longTermTasksError;
+  const longTermTasksEgress = trackEgress('long_term_tasks', remoteLongTermTasks);
+  pullBytes += longTermTasksEgress.bytes;
+  pullRecords += longTermTasksEgress.records;
 
   // Pull focus_settings changed since last sync
   const { data: remoteFocusSettings, error: focusSettingsError } = await supabase
@@ -648,6 +774,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (focusSettingsError) throw focusSettingsError;
+  const focusSettingsEgress = trackEgress('focus_settings', remoteFocusSettings);
+  pullBytes += focusSettingsEgress.bytes;
+  pullRecords += focusSettingsEgress.records;
 
   // Pull focus_sessions changed since last sync
   const { data: remoteFocusSessions, error: focusSessionsError } = await supabase
@@ -656,6 +785,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (focusSessionsError) throw focusSessionsError;
+  const focusSessionsEgress = trackEgress('focus_sessions', remoteFocusSessions);
+  pullBytes += focusSessionsEgress.bytes;
+  pullRecords += focusSessionsEgress.records;
 
   // Pull block_lists changed since last sync
   const { data: remoteBlockLists, error: blockListsError } = await supabase
@@ -664,6 +796,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (blockListsError) throw blockListsError;
+  const blockListsEgress = trackEgress('block_lists', remoteBlockLists);
+  pullBytes += blockListsEgress.bytes;
+  pullRecords += blockListsEgress.records;
 
   // Pull blocked_websites changed since last sync
   const { data: remoteBlockedWebsites, error: blockedWebsitesError } = await supabase
@@ -672,6 +807,9 @@ async function pullRemoteChanges(): Promise<void> {
     .gt('updated_at', lastSync);
 
   if (blockedWebsitesError) throw blockedWebsitesError;
+  const blockedWebsitesEgress = trackEgress('blocked_websites', remoteBlockedWebsites);
+  pullBytes += blockedWebsitesEgress.bytes;
+  pullRecords += blockedWebsitesEgress.records;
 
   // Apply changes to local DB with conflict handling
   await db.transaction('rw', [db.goalLists, db.goals, db.dailyRoutineGoals, db.dailyGoalProgress, db.taskCategories, db.commitments, db.dailyTasks, db.longTermTasks, db.focusSettings, db.focusSessions, db.blockLists, db.blockedWebsites], async () => {
@@ -812,6 +950,8 @@ async function pullRemoteChanges(): Promise<void> {
 
   // Update sync cursor (per-user)
   setLastSyncCursor(newestUpdate, userId);
+
+  return { bytes: pullBytes, records: pullRecords };
 }
 
 // PUSH: Send pending operations to remote
@@ -1050,6 +1190,8 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
   const cycleStart = Date.now();
   const trigger = quiet ? 'periodic' : 'user';
   let pushedItems = 0;
+  let cycleEgressBytes = 0;
+  let cycleEgressRecords = 0;
 
   let pushSucceeded = false;
   let pullSucceeded = false;
@@ -1077,10 +1219,11 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
     let pullAttempts = 0;
     const maxPullAttempts = 3;
     let lastPullError: unknown = null;
+    let pullEgress = { bytes: 0, records: 0 };
 
     while (pullAttempts < maxPullAttempts && !pullSucceeded) {
       try {
-        await pullRemoteChanges();
+        pullEgress = await pullRemoteChanges();
         pullSucceeded = true;
       } catch (pullError) {
         lastPullError = pullError;
@@ -1095,6 +1238,10 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
     if (!pullSucceeded && lastPullError) {
       throw lastPullError;
     }
+
+    // Store egress for logging
+    cycleEgressBytes = pullEgress.bytes;
+    cycleEgressRecords = pullEgress.records;
 
     // Update status only for non-quiet syncs
     if (!quiet) {
@@ -1143,6 +1290,8 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
       trigger,
       pushedItems,
       pulledTables: pullSucceeded ? 12 : 0, // 12 tables pulled on success
+      pulledRecords: cycleEgressRecords,
+      egressBytes: cycleEgressBytes,
       durationMs: Date.now() - cycleStart,
     });
     releaseSyncLock();
@@ -1261,6 +1410,26 @@ export async function hydrateFromRemote(): Promise<void> {
       .or('deleted.is.null,deleted.eq.false');
     if (blockedWebsitesError) throw blockedWebsitesError;
 
+    // Track egress for initial hydration
+    trackEgress('goal_lists', lists);
+    trackEgress('goals', goals);
+    trackEgress('daily_routine_goals', routines);
+    trackEgress('daily_goal_progress', progress);
+    trackEgress('task_categories', categories);
+    trackEgress('commitments', commitments);
+    trackEgress('daily_tasks', dailyTasks);
+    trackEgress('long_term_tasks', longTermTasks);
+    trackEgress('focus_settings', focusSettings);
+    trackEgress('focus_sessions', focusSessions);
+    trackEgress('block_lists', blockLists);
+    trackEgress('blocked_websites', blockedWebsites);
+
+    const totalRecords = (lists?.length || 0) + (goals?.length || 0) + (routines?.length || 0) +
+      (progress?.length || 0) + (categories?.length || 0) + (commitments?.length || 0) +
+      (dailyTasks?.length || 0) + (longTermTasks?.length || 0) + (focusSettings?.length || 0) +
+      (focusSessions?.length || 0) + (blockLists?.length || 0) + (blockedWebsites?.length || 0);
+    console.log(`[SYNC] Initial hydration: ${totalRecords} records (${formatBytes(egressStats.totalBytes)})`);
+
     // Calculate the max updated_at from all pulled data to use as sync cursor
     // This prevents missing changes that happened during hydration
     let maxUpdatedAt = '1970-01-01T00:00:00.000Z';
@@ -1358,39 +1527,59 @@ const CLEANUP_INTERVAL_MS = 86400000; // 24 hours - only run server cleanup once
 let lastServerCleanup = 0;
 
 // Clean up old tombstones from LOCAL IndexedDB
-async function cleanupLocalTombstones(): Promise<void> {
+async function cleanupLocalTombstones(): Promise<number> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - TOMBSTONE_MAX_AGE_DAYS);
   const cutoffStr = cutoffDate.toISOString();
 
+  let totalDeleted = 0;
+
   try {
     await db.transaction('rw', [db.goalLists, db.goals, db.dailyRoutineGoals, db.dailyGoalProgress, db.taskCategories, db.commitments, db.dailyTasks, db.longTermTasks, db.focusSettings, db.focusSessions, db.blockLists, db.blockedWebsites], async () => {
-      // Delete old tombstones from each table
-      await db.goalLists.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.goals.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.dailyRoutineGoals.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.dailyGoalProgress.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.taskCategories.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.commitments.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.dailyTasks.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.longTermTasks.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.focusSettings.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.focusSessions.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.blockLists.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
-      await db.blockedWebsites.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+      // Delete old tombstones from each table and count
+      const tables = [
+        { table: db.goalLists, name: 'goalLists' },
+        { table: db.goals, name: 'goals' },
+        { table: db.dailyRoutineGoals, name: 'dailyRoutineGoals' },
+        { table: db.dailyGoalProgress, name: 'dailyGoalProgress' },
+        { table: db.taskCategories, name: 'taskCategories' },
+        { table: db.commitments, name: 'commitments' },
+        { table: db.dailyTasks, name: 'dailyTasks' },
+        { table: db.longTermTasks, name: 'longTermTasks' },
+        { table: db.focusSettings, name: 'focusSettings' },
+        { table: db.focusSessions, name: 'focusSessions' },
+        { table: db.blockLists, name: 'blockLists' },
+        { table: db.blockedWebsites, name: 'blockedWebsites' }
+      ];
+
+      for (const { table, name } of tables) {
+        const count = await table.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+        if (count > 0) {
+          console.log(`[Tombstone] Cleaned ${count} old records from local ${name}`);
+          totalDeleted += count;
+        }
+      }
     });
+
+    if (totalDeleted > 0) {
+      console.log(`[Tombstone] Local cleanup complete: ${totalDeleted} total records removed`);
+    }
   } catch (error) {
-    console.error('Failed to cleanup local tombstones:', error);
+    console.error('[Tombstone] Failed to cleanup local tombstones:', error);
   }
+
+  return totalDeleted;
 }
 
 // Clean up old tombstones from SUPABASE (runs once per day max)
-async function cleanupServerTombstones(): Promise<void> {
-  // Only run once per day to avoid unnecessary requests
+async function cleanupServerTombstones(force = false): Promise<number> {
+  // Only run once per day to avoid unnecessary requests (unless forced)
   const now = Date.now();
-  if (now - lastServerCleanup < CLEANUP_INTERVAL_MS) return;
+  if (!force && now - lastServerCleanup < CLEANUP_INTERVAL_MS) {
+    return 0;
+  }
 
-  if (typeof navigator === 'undefined' || !navigator.onLine) return;
+  if (typeof navigator === 'undefined' || !navigator.onLine) return 0;
 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - TOMBSTONE_MAX_AGE_DAYS);
@@ -1411,24 +1600,158 @@ async function cleanupServerTombstones(): Promise<void> {
     'blocked_websites'
   ];
 
+  let totalDeleted = 0;
+
   try {
     for (const table of tables) {
-      await supabase
+      const { data, error } = await supabase
         .from(table)
         .delete()
         .eq('deleted', true)
-        .lt('updated_at', cutoffStr);
+        .lt('updated_at', cutoffStr)
+        .select('id');
+
+      if (error) {
+        console.error(`[Tombstone] Failed to cleanup ${table}:`, error.message);
+      } else if (data && data.length > 0) {
+        console.log(`[Tombstone] Cleaned ${data.length} old records from server ${table}`);
+        totalDeleted += data.length;
+      }
     }
+
     lastServerCleanup = now;
+
+    if (totalDeleted > 0) {
+      console.log(`[Tombstone] Server cleanup complete: ${totalDeleted} total records removed`);
+    }
   } catch (error) {
-    console.error('Failed to cleanup server tombstones:', error);
+    console.error('[Tombstone] Failed to cleanup server tombstones:', error);
   }
+
+  return totalDeleted;
 }
 
 // Combined cleanup function
-async function cleanupOldTombstones(): Promise<void> {
-  await cleanupLocalTombstones();
-  await cleanupServerTombstones();
+async function cleanupOldTombstones(): Promise<{ local: number; server: number }> {
+  const local = await cleanupLocalTombstones();
+  const server = await cleanupServerTombstones();
+  return { local, server };
+}
+
+// Debug function to check tombstone status and manually trigger cleanup
+export async function debugTombstones(options?: { cleanup?: boolean; force?: boolean }): Promise<void> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - TOMBSTONE_MAX_AGE_DAYS);
+  const cutoffStr = cutoffDate.toISOString();
+
+  console.log('=== TOMBSTONE DEBUG ===');
+  console.log(`Cutoff date (${TOMBSTONE_MAX_AGE_DAYS} days ago): ${cutoffStr}`);
+  console.log(`Last server cleanup: ${lastServerCleanup ? new Date(lastServerCleanup).toISOString() : 'Never'}`);
+  console.log('');
+
+  // Check local tombstones
+  console.log('--- LOCAL TOMBSTONES (IndexedDB) ---');
+  const localTables = [
+    { table: db.goalLists, name: 'goalLists' },
+    { table: db.goals, name: 'goals' },
+    { table: db.dailyRoutineGoals, name: 'dailyRoutineGoals' },
+    { table: db.dailyGoalProgress, name: 'dailyGoalProgress' },
+    { table: db.taskCategories, name: 'taskCategories' },
+    { table: db.commitments, name: 'commitments' },
+    { table: db.dailyTasks, name: 'dailyTasks' },
+    { table: db.longTermTasks, name: 'longTermTasks' },
+    { table: db.focusSettings, name: 'focusSettings' },
+    { table: db.focusSessions, name: 'focusSessions' },
+    { table: db.blockLists, name: 'blockLists' },
+    { table: db.blockedWebsites, name: 'blockedWebsites' }
+  ];
+
+  let totalLocalTombstones = 0;
+  let totalLocalEligible = 0;
+
+  for (const { table, name } of localTables) {
+    const allDeleted = await table.filter(item => item.deleted === true).toArray();
+    const eligible = allDeleted.filter(item => item.updated_at < cutoffStr);
+
+    if (allDeleted.length > 0) {
+      console.log(`  ${name}: ${allDeleted.length} tombstones (${eligible.length} eligible for cleanup)`);
+      totalLocalTombstones += allDeleted.length;
+      totalLocalEligible += eligible.length;
+
+      // Show oldest tombstone
+      if (allDeleted.length > 0) {
+        const oldest = allDeleted.reduce((a, b) => a.updated_at < b.updated_at ? a : b);
+        console.log(`    Oldest: ${oldest.updated_at}`);
+      }
+    }
+  }
+
+  console.log(`  TOTAL: ${totalLocalTombstones} tombstones (${totalLocalEligible} eligible)`);
+  console.log('');
+
+  // Check server tombstones (if online)
+  if (navigator.onLine) {
+    console.log('--- SERVER TOMBSTONES (Supabase) ---');
+    const serverTables = [
+      'goal_lists', 'goals', 'daily_routine_goals', 'daily_goal_progress',
+      'task_categories', 'commitments', 'daily_tasks', 'long_term_tasks',
+      'focus_settings', 'focus_sessions', 'block_lists', 'blocked_websites'
+    ];
+
+    let totalServerTombstones = 0;
+    let totalServerEligible = 0;
+
+    for (const table of serverTables) {
+      const { data: allDeleted, error } = await supabase
+        .from(table)
+        .select('id,updated_at')
+        .eq('deleted', true);
+
+      if (error) {
+        console.log(`  ${table}: ERROR - ${error.message}`);
+        continue;
+      }
+
+      const eligible = (allDeleted || []).filter(item => item.updated_at < cutoffStr);
+
+      if (allDeleted && allDeleted.length > 0) {
+        console.log(`  ${table}: ${allDeleted.length} tombstones (${eligible.length} eligible for cleanup)`);
+        totalServerTombstones += allDeleted.length;
+        totalServerEligible += eligible.length;
+
+        // Show oldest tombstone
+        const oldest = allDeleted.reduce((a, b) => a.updated_at < b.updated_at ? a : b);
+        console.log(`    Oldest: ${oldest.updated_at}`);
+      }
+    }
+
+    console.log(`  TOTAL: ${totalServerTombstones} tombstones (${totalServerEligible} eligible)`);
+  } else {
+    console.log('--- SERVER TOMBSTONES: Offline, skipping ---');
+  }
+
+  console.log('');
+
+  // Run cleanup if requested
+  if (options?.cleanup) {
+    console.log('--- RUNNING CLEANUP ---');
+    const localDeleted = await cleanupLocalTombstones();
+    const serverDeleted = options?.force
+      ? await cleanupServerTombstones(true)
+      : await cleanupServerTombstones();
+
+    console.log(`Cleanup complete: ${localDeleted} local, ${serverDeleted} server records removed`);
+  } else {
+    console.log('To run cleanup, call: debugTombstones({ cleanup: true })');
+    console.log('To force server cleanup (bypass 24h limit): debugTombstones({ cleanup: true, force: true })');
+  }
+
+  console.log('========================');
+}
+
+// Expose tombstone debug to window for console access
+if (typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__stellarTombstones = debugTombstones;
 }
 
 // ============================================================
