@@ -1,0 +1,33 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "tags": ["-lintignore"],
+  "workspaces": {
+    ".": {
+      "entry": [
+        "src/routes/**/+*.ts",
+        "src/routes/**/+*.svelte",
+        "static/sw.js"
+      ],
+      "project": ["src/**/*.{ts,svelte}", "static/**/*.js"],
+      "ignore": [
+        ".svelte-kit/**",
+        "node_modules/**",
+        "static/asset-manifest.json"
+      ]
+    },
+    "stellar-focus": {
+      "entry": [
+        "src/background/service-worker.ts",
+        "src/popup/popup.ts",
+        "src/pages/blocked.ts"
+      ],
+      "project": ["src/**/*.ts"],
+      "ignore": [
+        "dist-chrome/**",
+        "dist-firefox/**",
+        "node_modules/**",
+        "src/*.example.ts"
+      ]
+    }
+  }
+}
