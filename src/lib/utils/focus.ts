@@ -1,15 +1,5 @@
 import type { FocusPhase, FocusSession, FocusSettings } from '$lib/types';
 
-// Default settings
-export const DEFAULT_FOCUS_SETTINGS = {
-  focus_duration: 25,
-  break_duration: 5,
-  long_break_duration: 15,
-  cycles_before_long_break: 4,
-  auto_start_breaks: false,
-  auto_start_focus: false
-};
-
 // Calculate remaining time in milliseconds for current phase
 export function calculateRemainingMs(session: FocusSession): number {
   if (session.status === 'paused') {

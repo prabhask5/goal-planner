@@ -1,13 +1,11 @@
 import { writable, derived, type Writable, type Readable } from 'svelte/store';
-import type { FocusSettings, FocusSession, FocusPhase, BlockList, BlockedWebsite } from '$lib/types';
+import type { FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
 import * as repo from '$lib/db/repositories';
 import * as sync from '$lib/sync/engine';
 import { browser } from '$app/environment';
 import {
   calculateRemainingMs,
-  getNextPhase,
-  formatTime,
-  DEFAULT_FOCUS_SETTINGS
+  getNextPhase
 } from '$lib/utils/focus';
 
 // ============================================================

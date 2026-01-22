@@ -157,12 +157,6 @@ function createAuthStateStore() {
 
 export const authState = createAuthStateStore();
 
-// Derived store for checking if user is authenticated (any mode)
-export const isAuthenticated: Readable<boolean> = derived(
-  authState,
-  $authState => $authState.mode !== 'none' && !$authState.isLoading
-);
-
 // Derived store for getting user display info
 export const userDisplayInfo: Readable<{
   firstName: string;

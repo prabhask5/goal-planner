@@ -40,7 +40,7 @@ export async function createOfflineSession(userId: string): Promise<OfflineSessi
  * Get the current offline session
  * Returns null if no session exists
  */
-export async function getOfflineSession(): Promise<OfflineSession | null> {
+async function getOfflineSession(): Promise<OfflineSession | null> {
   const session = await db.offlineSession.get(SESSION_ID);
   return session || null;
 }
@@ -68,30 +68,7 @@ export async function getValidOfflineSession(): Promise<OfflineSession | null> {
   return session;
 }
 
-/**
- * Check if there is a valid offline session
- */
-export async function hasValidOfflineSession(): Promise<boolean> {
-  const session = await getValidOfflineSession();
-  return session !== null;
-}
 
-/**
- * Extend the offline session (refresh expiration)
- * Called when user is actively using the app offline
- */
-export async function extendOfflineSession(): Promise<void> {
-  const session = await getOfflineSession();
-  if (!session) {
-    return;
-  }
-
-  const newExpiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-
-  await db.offlineSession.update(SESSION_ID, {
-    expiresAt: newExpiresAt.toISOString()
-  });
-}
 
 /**
  * Clear the offline session (on logout or session invalidation)
@@ -100,29 +77,3 @@ export async function clearOfflineSession(): Promise<void> {
   await db.offlineSession.delete(SESSION_ID);
 }
 
-/**
- * Get session info for display purposes
- * Returns null if no valid session
- */
-export async function getOfflineSessionInfo(): Promise<{
-  userId: string;
-  createdAt: Date;
-  expiresAt: Date;
-  remainingMs: number;
-} | null> {
-  const session = await getValidOfflineSession();
-  if (!session) {
-    return null;
-  }
-
-  const now = new Date();
-  const expiresAt = new Date(session.expiresAt);
-  const remainingMs = expiresAt.getTime() - now.getTime();
-
-  return {
-    userId: session.userId,
-    createdAt: new Date(session.createdAt),
-    expiresAt,
-    remainingMs
-  };
-}

@@ -6,16 +6,26 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "knip": "knip"
+    "knip": "knip",
+    "lint": "eslint src",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "depcheck": "depcheck --ignores='@sveltejs/adapter-auto,@sveltejs/vite-plugin-svelte,@types/node,globals'"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@sveltejs/adapter-auto": "^4.0.0",
     "@sveltejs/kit": "^2.21.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@types/node": "^25.0.10",
+    "depcheck": "^1.4.7",
+    "eslint": "^9.39.2",
+    "eslint-plugin-svelte": "^3.14.0",
+    "globals": "^17.0.0",
     "knip": "^5.82.1",
     "svelte": "^5.0.0",
+    "svelte-check": "^4.3.5",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.53.1",
     "vite": "^6.0.0"
   },
   "dependencies": {

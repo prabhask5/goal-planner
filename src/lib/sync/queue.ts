@@ -4,9 +4,6 @@ import type { SyncQueueItem, SyncOperationType, SyncQueueTable } from '$lib/type
 // Max retries before giving up on a sync item
 const MAX_SYNC_RETRIES = 5;
 
-// Max queue size to prevent memory issues on low-end devices
-const MAX_QUEUE_SIZE = 1000;
-
 /**
  * Operation-aware coalescing for the sync queue.
  *
@@ -113,8 +110,8 @@ export async function coalescePendingOps(): Promise<number> {
 
           // Delete the rest
           for (let i = 1; i < ops.length; i++) {
-            if (ops[i].id) {
-              await db.syncQueue.delete(ops[i].id);
+            if (ops[i].id !== undefined) {
+              await db.syncQueue.delete(ops[i].id!);
               coalesced++;
             }
           }
@@ -147,8 +144,8 @@ export async function coalescePendingOps(): Promise<number> {
         } else {
           // Odd number of toggles = single toggle, keep oldest
           for (let i = 1; i < ops.length; i++) {
-            if (ops[i].id) {
-              await db.syncQueue.delete(ops[i].id);
+            if (ops[i].id !== undefined) {
+              await db.syncQueue.delete(ops[i].id!);
               coalesced++;
             }
           }
@@ -354,26 +351,6 @@ export async function queueIncrement(
   sideEffects?: Record<string, unknown>
 ): Promise<void> {
   await queueSyncDirect(table, 'increment', entityId, {
-    field,
-    delta,
-    sideEffects,
-    updated_at: new Date().toISOString()
-  }, baseVersion);
-}
-
-/**
- * Queue a decrement operation.
- * This is a helper function for cleaner repository code.
- */
-export async function queueDecrement(
-  table: SyncQueueTable,
-  entityId: string,
-  field: string,
-  delta: number,
-  baseVersion?: string,
-  sideEffects?: Record<string, unknown>
-): Promise<void> {
-  await queueSyncDirect(table, 'decrement', entityId, {
     field,
     delta,
     sideEffects,

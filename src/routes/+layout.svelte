@@ -73,7 +73,7 @@
       // CRITICAL: Validate credentials with Supabase BEFORE allowing sync
       // This prevents syncing data from a compromised/expired offline session
       console.log('[Auth] Validating cached credentials with Supabase...');
-      const session = await validateCredentials(credentials.email, credentials.email);
+      await validateCredentials(credentials.email, credentials.email);
 
       // If validateCredentials returns null, we need to try with the actual password
       // But we don't store plaintext password - only hash. So we try to refresh session.
@@ -1411,7 +1411,6 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 
-  .tab-item.active .mobile-avatar,
   .tab-profile:hover .mobile-avatar {
     border-color: rgba(108, 92, 231, 0.6);
     box-shadow:
@@ -1706,8 +1705,7 @@
   @media (prefers-reduced-motion: reduce) {
     .brand-icon,
     .brand-text,
-    .active-indicator,
-    .tab-active-dot {
+    .active-indicator {
       animation: none;
     }
 

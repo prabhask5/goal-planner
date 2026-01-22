@@ -18,7 +18,7 @@ export async function cacheOfflineCredentials(
   email: string,
   password: string,
   user: User,
-  session: Session
+  _session: Session
 ): Promise<void> {
   const salt = generateSalt();
   const passwordHash = await hashPassword(password, salt);

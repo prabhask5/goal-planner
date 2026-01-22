@@ -324,7 +324,7 @@ Before pushing, operations are coalesced to reduce requests:
 
 - `src/lib/types.ts` - `SyncOperationType`, `SyncQueueItem`
 - `src/lib/sync/queue.ts` - Coalescing logic, `queueIncrement`, `queueToggle`
-- `src/lib/sync/conflicts.ts` - Conflict detection and resolution
+- `src/lib/sync/engine.ts` - Conflict resolution during pull
 - `supabase/migrations/20260122_sync_operations.sql` - Server functions
 
 ---
@@ -468,9 +468,10 @@ When A reconnects:
 Result: Correct sum of all increments
 ```
 
-### File Location
+### File Locations
 
-`src/lib/sync/conflicts.ts` - Conflict detection, resolution logic, coalescing rules.
+- `src/lib/sync/queue.ts` - Coalescing logic
+- `src/lib/sync/engine.ts` - Conflict detection during pull phase
 
 ---
 

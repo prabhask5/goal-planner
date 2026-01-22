@@ -1,12 +1,12 @@
 import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/db/client';
 import { getPendingSync, removeSyncItem, incrementRetry, getPendingEntityIds, cleanupFailedItems, coalescePendingOps } from './queue';
-import type { SyncQueueItem, Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress, TaskCategory, Commitment, DailyTask, LongTermTask, LongTermTaskWithCategory, FocusSettings, FocusSession, BlockList, BlockedWebsite, SyncQueueTable } from '$lib/types';
+import type { SyncQueueItem, Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress, TaskCategory, Commitment, DailyTask, LongTermTaskWithCategory, SyncQueueTable } from '$lib/types';
 import { syncStatusStore } from '$lib/stores/sync';
 import { calculateGoalProgress } from '$lib/utils/colors';
 import { isRoutineActiveOnDate } from '$lib/utils/dates';
-import { initAdaptivePolling, stopAdaptivePolling, updateSyncCursor, skipNextScheduledPoll, POLLING_INTERVALS } from './polling';
-import { initTabCoordinator, stopTabCoordinator, isLeaderTab, notifySyncStarted, notifySyncComplete as notifyTabsSyncComplete, notifyLocalWrite } from './tabCoordinator';
+import { initAdaptivePolling, stopAdaptivePolling, updateSyncCursor, skipNextScheduledPoll } from './polling';
+import { initTabCoordinator, stopTabCoordinator, isLeaderTab, notifySyncStarted, notifySyncComplete as notifyTabsSyncComplete } from './tabCoordinator';
 import { isBeingEdited, deferUpdate, startEditProtection, stopEditProtection, setApplyDeferredCallback } from './editProtection';
 
 // ============================================================
@@ -45,7 +45,7 @@ export async function clearPendingSyncQueue(): Promise<number> {
  * Mark that we need auth validation before next sync
  * Called when going offline
  */
-export function markOffline(): void {
+function markOffline(): void {
   wasOffline = true;
   authValidatedAfterReconnect = false;
 }
@@ -62,7 +62,7 @@ export function markAuthValidated(): void {
 /**
  * Check if auth needs validation before syncing
  */
-export function needsAuthValidation(): boolean {
+function needsAuthValidation(): boolean {
   return wasOffline && !authValidatedAfterReconnect;
 }
 
@@ -242,11 +242,6 @@ const RECENTLY_MODIFIED_TTL_MS = 5000; // Protect recently modified entities for
 // Track recently modified entity IDs to prevent pull from overwriting fresh local changes
 // This provides an additional layer of protection beyond the pending queue check
 const recentlyModifiedEntities: Map<string, number> = new Map();
-
-// Mark an entity as recently modified (called by repositories after local writes)
-export function markEntityModified(entityId: string): void {
-  recentlyModifiedEntities.set(entityId, Date.now());
-}
 
 // Check if entity was recently modified locally
 function isRecentlyModified(entityId: string): boolean {
@@ -916,10 +911,6 @@ async function pullRemoteChanges(minCursor?: string): Promise<{ bytes: number; r
 // Track push errors for this sync cycle
 let pushErrors: Array<{ message: string; table: string; operation: string; entityId: string }> = [];
 
-export function getPushErrors() {
-  return pushErrors;
-}
-
 interface PushStats {
   originalCount: number;
   coalescedCount: number;
@@ -1524,7 +1515,7 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
 }
 
 // Initial hydration: if local DB is empty, pull everything from remote
-export async function hydrateFromRemote(): Promise<void> {
+async function hydrateFromRemote(): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.onLine) return;
 
   // Atomically acquire sync lock to prevent concurrent syncs/hydrations
@@ -1778,7 +1769,7 @@ async function cleanupLocalTombstones(): Promise<number> {
       ];
 
       for (const { table, name } of tables) {
-        const count = await table.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+        const count = await table.filter(item => item.deleted === true && item.updated_at < cutoffStr).delete();
         if (count > 0) {
           console.log(`[Tombstone] Cleaned ${count} old records from local ${name}`);
           totalDeleted += count;
@@ -1864,7 +1855,7 @@ async function cleanupOldTombstones(): Promise<{ local: number; server: number }
 }
 
 // Debug function to check tombstone status and manually trigger cleanup
-export async function debugTombstones(options?: { cleanup?: boolean; force?: boolean }): Promise<void> {
+async function debugTombstones(options?: { cleanup?: boolean; force?: boolean }): Promise<void> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - TOMBSTONE_MAX_AGE_DAYS);
   const cutoffStr = cutoffDate.toISOString();
@@ -2005,7 +1996,8 @@ export function startSyncEngine(): void {
     // Apply deferred update to local database
     const dexieTable = getLocalTable(update.table as SyncQueueTable);
     if (dexieTable) {
-      await dexieTable.put(update.data);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await dexieTable.put(update.data as any);
       notifySyncComplete();
     }
   });

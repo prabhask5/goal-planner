@@ -71,7 +71,7 @@ export async function createFocusSession(
   return newSession;
 }
 
-export async function updateFocusSession(
+async function updateFocusSession(
   id: string,
   updates: Partial<Pick<FocusSession, 'phase' | 'status' | 'current_cycle' | 'phase_started_at' | 'phase_remaining_ms' | 'ended_at' | 'elapsed_duration'>>
 ): Promise<FocusSession | undefined> {

@@ -17,7 +17,7 @@
 import { supabase } from '$lib/supabase/client';
 
 // Polling interval constants (in milliseconds)
-export const POLLING_INTERVALS = {
+const POLLING_INTERVALS = {
   ACTIVE: 5000,        // 5 seconds when user is actively interacting
   IDLE: 15000,         // 15 seconds when tab focused but no activity
   NONE: 0,             // No polling when hidden, unfocused, or offline
@@ -48,7 +48,7 @@ function isUserIdle(): boolean {
 }
 
 // Determine current polling interval based on state
-export function getCurrentPollingInterval(): number {
+function getCurrentPollingInterval(): number {
   // No polling if offline, tab hidden, or tab not focused
   // When tab becomes visible/focused again, immediate sync is triggered
   if (!isOnline || !isTabVisible || !isTabFocused) {
@@ -65,7 +65,7 @@ export function getCurrentPollingInterval(): number {
 }
 
 // Check if there are updates since last sync (lightweight query)
-export async function checkForUpdates(cursor: string): Promise<boolean> {
+async function checkForUpdates(cursor: string): Promise<boolean> {
   try {
     const { data, error } = await supabase.rpc('check_updates_since', {
       p_cursor: cursor
@@ -289,14 +289,8 @@ export function skipNextScheduledPoll(): void {
   skipNextPoll = true;
 }
 
-// Force an immediate poll (used for manual sync trigger)
-export async function pollNow(): Promise<void> {
-  await runPoll();
-  scheduleNextPoll();
-}
-
 // Get current polling state for debugging
-export function getPollingState(): {
+function getPollingState(): {
   interval: number;
   isOnline: boolean;
   isTabVisible: boolean;

@@ -113,29 +113,6 @@ export function isBeingEdited(table: string, entityId: string): boolean {
 }
 
 /**
- * Check if a specific field is being edited.
- * Returns true if that specific field should be protected.
- */
-export function isFieldBeingEdited(table: string, entityId: string, field: string): boolean {
-  const key = makeKey(table, entityId);
-  const edit = activeEdits.get(key);
-
-  if (!edit) return false;
-
-  const timeSinceActivity = Date.now() - edit.lastActivityAt;
-  if (timeSinceActivity > EDIT_PROTECTION_MS) {
-    activeEdits.delete(key);
-    return false;
-  }
-
-  // If no specific field tracked, protect all fields
-  if (!edit.field) return true;
-
-  // Only protect the specific field being edited
-  return edit.field === field;
-}
-
-/**
  * Defer a remote update for later application.
  * Call this when a remote update arrives for an entity being edited.
  */
@@ -194,7 +171,7 @@ export function setApplyDeferredCallback(
  * Get all currently deferred updates.
  * Useful for debugging.
  */
-export function getDeferredUpdates(): DeferredUpdate[] {
+function getDeferredUpdates(): DeferredUpdate[] {
   return Array.from(deferredUpdates.values());
 }
 
@@ -202,7 +179,7 @@ export function getDeferredUpdates(): DeferredUpdate[] {
  * Get all currently active edits.
  * Useful for debugging.
  */
-export function getActiveEdits(): Array<{
+function getActiveEdits(): Array<{
   table: string;
   entityId: string;
   field?: string;
@@ -223,7 +200,7 @@ export function getActiveEdits(): Array<{
  * Clean up expired entries.
  * Called periodically to prevent memory leaks.
  */
-export function cleanupExpired(): void {
+function cleanupExpired(): void {
   const now = Date.now();
 
   // Clean up expired active edits

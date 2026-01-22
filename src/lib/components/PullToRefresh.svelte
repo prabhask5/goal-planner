@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { performSync } from '$lib/sync/engine';
-  import { syncStatusStore } from '$lib/stores/sync';
   import { invalidateAll } from '$app/navigation';
 
   interface Props {
@@ -20,15 +19,6 @@
   const PULL_THRESHOLD = 55;
   const MAX_PULL = 120;
   const RESISTANCE = 0.6;
-
-  // Subscribe to sync status
-  let syncStatus = $state<'idle' | 'syncing' | 'error'>('idle');
-  $effect(() => {
-    const unsub = syncStatusStore.subscribe((value) => {
-      syncStatus = value.status;
-    });
-    return unsub;
-  });
 
   function snapBack() {
     const animate = () => {

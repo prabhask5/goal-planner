@@ -55,9 +55,6 @@ export interface DailyGoalProgress {
 // Sync-related types
 export type SyncQueueTable = 'goal_lists' | 'goals' | 'daily_routine_goals' | 'daily_goal_progress' | 'task_categories' | 'commitments' | 'daily_tasks' | 'long_term_tasks' | 'focus_settings' | 'focus_sessions' | 'block_lists' | 'blocked_websites';
 
-// Basic sync operations
-export type SyncOperation = 'create' | 'update' | 'delete';
-
 // Extended operation types for operation-based sync
 export type SyncOperationType =
   | 'create'
@@ -66,19 +63,6 @@ export type SyncOperationType =
   | 'increment'   // Delta operation for numeric fields
   | 'decrement'   // Delta operation for numeric fields
   | 'toggle';     // Boolean flip operation
-
-// Payload types for different operations
-export interface IncrementPayload {
-  field: string;
-  delta: number;
-  baseVersion?: string;
-  sideEffects?: Record<string, unknown>;
-}
-
-export interface TogglePayload {
-  field: string;
-  baseVersion?: string;
-}
 
 export interface SyncQueueItem {
   id?: number;

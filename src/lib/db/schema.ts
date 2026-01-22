@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, SyncQueueItem, TaskCategory, Commitment, DailyTask, LongTermTask, OfflineCredentials, OfflineSession, FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
 
-export class GoalPlannerDB extends Dexie {
+class GoalPlannerDB extends Dexie {
   goalLists!: Table<GoalList, string>;
   goals!: Table<Goal, string>;
   dailyRoutineGoals!: Table<DailyRoutineGoal, string>;

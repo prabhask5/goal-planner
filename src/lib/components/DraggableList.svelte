@@ -40,7 +40,6 @@
     if (draggedId === null || !containerEl) return;
 
     // Find which item we're over
-    const containerRect = containerEl.getBoundingClientRect();
     const itemElements = containerEl.querySelectorAll('[data-draggable-item]');
 
     let newDropIndex = items.length - 1; // Default to end
@@ -59,7 +58,7 @@
     dropTargetIndex = newDropIndex;
   }
 
-  async function handlePointerUp(e: PointerEvent) {
+  async function handlePointerUp(_e: PointerEvent) {
     document.removeEventListener('pointermove', handlePointerMove);
     document.removeEventListener('pointerup', handlePointerUp);
     document.removeEventListener('pointercancel', handlePointerUp);

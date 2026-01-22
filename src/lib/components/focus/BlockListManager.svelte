@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import type { BlockList, BlockedWebsite, DayOfWeek } from '$lib/types';
-  import { blockListStore, blockedWebsitesStore } from '$lib/stores/focus';
+  import type { DayOfWeek } from '$lib/types';
+  import { blockListStore } from '$lib/stores/focus';
   import Modal from '$lib/components/Modal.svelte';
   import BlockListForm from './BlockListForm.svelte';
 
@@ -24,22 +24,12 @@
 
   // Local state
   let isOpen = $state(false);
-  let editingListId = $state<string | null>(null);
-  let newListName = $state('');
-  let newWebsite = $state('');
   let showCreateModal = $state(false);
 
   // Load block lists on mount
   $effect(() => {
     if (userId) {
       blockListStore.load(userId);
-    }
-  });
-
-  // Load websites when editing a list
-  $effect(() => {
-    if (editingListId) {
-      blockedWebsitesStore.load(editingListId);
     }
   });
 
@@ -65,32 +55,14 @@
 
   async function deleteList(id: string) {
     await blockListStore.delete(id);
-    if (editingListId === id) {
-      editingListId = null;
-    }
   }
 
   async function toggleList(id: string) {
     await blockListStore.toggle(id);
   }
 
-  async function addWebsite() {
-    if (!newWebsite.trim() || !editingListId) return;
-    await blockedWebsitesStore.create(newWebsite.trim());
-    newWebsite = '';
-  }
-
-  async function removeWebsite(id: string) {
-    await blockedWebsitesStore.delete(id);
-  }
-
   function openEditor(listId: string) {
     goto(`/focus/block-lists/${listId}`);
-  }
-
-  function closeEditor() {
-    editingListId = null;
-    blockedWebsitesStore.clear();
   }
 
   // Helper to check if a block list is active today
