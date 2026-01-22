@@ -211,7 +211,7 @@
       <svg
         class="icon icon-syncing"
         class:active={displayState() === 'syncing'}
-        width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+        width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
       >
         <circle class="spinner-track" cx="12" cy="12" r="9" stroke-opacity="0.2"/>
         <path class="spinner-arc" d="M21 12a9 9 0 1 1-6.219-8.56"/>

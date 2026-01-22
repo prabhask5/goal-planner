@@ -391,7 +391,7 @@
         <!-- Brand matches desktop: logo + "Stellar" text -->
         <a href="/" class="island-brand-link">
           <span class="island-brand">
-            <svg width="22" height="22" viewBox="0 0 100 100" fill="none">
+            <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
               <circle cx="50" cy="50" r="45" stroke="url(#islandGrad)" stroke-width="6" fill="none"/>
               <path d="M30 52 L45 67 L72 35" stroke="url(#islandCheck)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
               <defs>
@@ -625,18 +625,20 @@
   .island-header {
     display: none; /* Hidden by default, shown on mobile */
     position: fixed;
-    top: 0;
+    /* Extend into the top safe area to prevent black bar */
+    top: calc(-1 * env(safe-area-inset-top, 0px));
     left: 0;
     right: 0;
     z-index: 150;
-    /* Dynamic height based on safe area + extra padding for content */
-    height: calc(env(safe-area-inset-top, 47px) + 20px);
-    padding-top: env(safe-area-inset-top, 47px);
-    /* SOLID background that extends behind Dynamic Island - no black bars */
+    /* Height includes the safe area we extended into + content area */
+    height: calc(env(safe-area-inset-top, 47px) * 2 + 24px);
+    /* Push content below the Dynamic Island */
+    padding-top: calc(env(safe-area-inset-top, 47px) * 2);
+    /* Transparent gradient to show starfield behind Dynamic Island */
     background: linear-gradient(180deg,
-      #080810 0%,
-      #080810 60%,
-      rgba(8, 8, 16, 0.95) 80%,
+      rgba(5, 5, 16, 0.3) 0%,
+      rgba(5, 5, 16, 0.6) 40%,
+      rgba(8, 8, 16, 0.85) 70%,
       rgba(8, 8, 16, 0.7) 100%);
     pointer-events: none;
     /* Entry animation */
@@ -714,7 +716,7 @@
 
   /* Brand text - matches desktop brand-text style */
   .island-brand-text {
-    font-size: 1rem;
+    font-size: 1.125rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     /* Gradient text effect matching desktop */
@@ -776,11 +778,16 @@
     height: 24px;
   }
 
-  /* Synced and syncing icons are 24px */
-  .island-right :global(.sync-indicator .icon-synced),
-  .island-right :global(.sync-indicator .icon-syncing) {
+  /* Synced icon is 24px */
+  .island-right :global(.sync-indicator .icon-synced) {
     width: 24px;
     height: 24px;
+  }
+
+  /* Syncing icon is 20px */
+  .island-right :global(.sync-indicator .icon-syncing) {
+    width: 20px;
+    height: 20px;
   }
 
   /* Other icons are 16px */
