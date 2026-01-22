@@ -1157,13 +1157,14 @@
   .nav-mobile {
     display: none;
     position: fixed;
-    /* Use negative bottom to push nav INTO the safe area */
-    bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+    bottom: 0;
     left: 0;
     right: 0;
     z-index: 100;
-    /* Add padding to push content back up above safe area */
+    /* Padding for safe area - content above home indicator, background fills behind it */
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Background fills the entire area including safe area padding */
+    background: var(--color-void);
   }
 
   /* Glass morphism background - fills entire nav including safe area */

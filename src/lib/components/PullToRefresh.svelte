@@ -16,22 +16,16 @@
   let startY = 0;
   let currentY = 0;
 
-  // Physics constants
-  const PULL_THRESHOLD = 80;
-  const MAX_PULL = 150;
-  const RESISTANCE = 0.5;
+  // Physics constants - lowered threshold for easier activation
+  const PULL_THRESHOLD = 50;
+  const MAX_PULL = 120;
+  const RESISTANCE = 0.65;
 
-  // Subscribe to sync status to detect when sync completes
+  // Subscribe to sync status
   let syncStatus = $state<'idle' | 'syncing' | 'error'>('idle');
   $effect(() => {
     const unsub = syncStatusStore.subscribe((value) => {
       syncStatus = value.status;
-      if (isRefreshing && value.status === 'idle') {
-        // Sync completed, snap back
-        setTimeout(() => {
-          snapBack();
-        }, 300);
-      }
     });
     return unsub;
   });
@@ -93,11 +87,17 @@
   async function triggerRefresh() {
     isRefreshing = true;
     // Hold at refresh position
-    pullDistance = 70;
+    pullDistance = 50;
 
     try {
+      // Sync data first
       await performSync();
+      // Invalidate all SvelteKit data to refresh the page
       await invalidateAll();
+      // Small delay then snap back
+      setTimeout(() => {
+        snapBack();
+      }, 300);
     } catch (error) {
       console.error('Refresh failed:', error);
       snapBack();
