@@ -196,7 +196,7 @@
       <svg
         class="icon icon-offline"
         class:active={displayState() === 'offline'}
-        width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+        width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
       >
         <line x1="1" y1="1" x2="23" y2="23"/>
         <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
@@ -233,7 +233,7 @@
         class="icon icon-error"
         class:active={displayState() === 'error'}
         class:morph-in={isTransitioning && displayState() === 'error'}
-        width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+        width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
       >
         <circle class="error-circle" cx="12" cy="12" r="9"/>
         <line class="error-line" x1="12" y1="8" x2="12" y2="12"/>
@@ -244,7 +244,7 @@
       <svg
         class="icon icon-pending"
         class:active={displayState() === 'pending'}
-        width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+        width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
       >
         <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
       </svg>

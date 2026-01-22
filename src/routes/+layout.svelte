@@ -776,10 +776,19 @@
     height: 24px;
   }
 
-  /* All status icons are 24px */
-  .island-right :global(.sync-indicator .icon) {
+  /* Synced and syncing icons are 24px */
+  .island-right :global(.sync-indicator .icon-synced),
+  .island-right :global(.sync-indicator .icon-syncing) {
     width: 24px;
     height: 24px;
+  }
+
+  /* Other icons are 20px */
+  .island-right :global(.sync-indicator .icon-offline),
+  .island-right :global(.sync-indicator .icon-error),
+  .island-right :global(.sync-indicator .icon-pending) {
+    width: 20px;
+    height: 20px;
   }
 
   .island-right :global(.pending-badge) {
@@ -1161,8 +1170,8 @@
     left: 0;
     right: 0;
     z-index: 100;
-    /* Padding for safe area - content above home indicator, background fills behind it */
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Reduced safe area padding - moves icons closer to bottom */
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) * 0.6);
     /* Background fills the entire area including safe area padding */
     background: var(--color-void);
   }

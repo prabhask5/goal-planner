@@ -148,11 +148,11 @@
       <!-- Status text -->
       <span class="ptr-text">
         {#if isRefreshing}
-          Syncing...
+          Refreshing...
         {:else if isReady}
-          Release to sync
+          Release to refresh
         {:else}
-          Pull to sync
+          Pull to refresh
         {/if}
       </span>
     </div>

@@ -197,11 +197,10 @@ body {
 body::before {
   content: '';
   position: fixed;
-  /* Extend into safe areas on iOS PWA - use negative margins to go beyond viewport */
-  top: calc(-1 * env(safe-area-inset-top, 0px));
-  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
-  left: calc(-1 * env(safe-area-inset-left, 0px));
-  right: calc(-1 * env(safe-area-inset-right, 0px));
+  /* Fill entire viewport including safe areas */
+  inset: 0;
+  /* Extend into top safe area using the iOS PWA hack */
+  min-height: calc(100% + env(safe-area-inset-top, 0px));
   background:
     /* Distant star clusters */
     radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
@@ -943,19 +942,47 @@ html {
   text-size-adjust: 100%;
 }
 
-/* Smooth momentum scrolling for iOS */
+/* iOS PWA - Prevent ALL unwanted gestures (zoom, bounce, drag) */
+html, body {
+  /* Prevent overscroll/bounce */
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  /* Prevent pull-to-refresh browser default */
+  overflow: hidden;
+  /* Prevent text size adjustment */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Disable touch manipulation except for specific elements */
+  touch-action: none;
+}
+
+/* Allow vertical scrolling only on main content */
+body {
+  touch-action: pan-y;
+}
+
+/* Prevent zoom on double-tap and pinch */
 * {
-  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
 }
 
 /* Prevent callout on long-press for iOS */
 a, button, img {
   -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Disable tap highlight on mobile */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Allow text selection only in inputs and textareas */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Better focus states for touch devices */

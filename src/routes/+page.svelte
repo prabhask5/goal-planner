@@ -303,11 +303,10 @@
 
   .home-container {
     position: fixed;
-    /* Fill entire screen edge-to-edge */
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    /* Fill entire screen edge-to-edge including safe areas */
+    inset: 0;
+    /* Extend into top safe area */
+    min-height: calc(100% + env(safe-area-inset-top, 0px));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -316,6 +315,7 @@
       rgba(15, 15, 35, 1) 0%,
       rgba(5, 5, 16, 1) 50%,
       rgba(0, 0, 5, 1) 100%);
+    background-attachment: fixed;
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -904,9 +904,7 @@
 
   @media (max-width: 640px) {
     .home-container {
-      /* Mobile: fill entire screen, content is centered so no need for offsets */
-      top: 0;
-      bottom: 0;
+      /* Mobile: same as desktop - fill entire screen */
     }
   }
 
