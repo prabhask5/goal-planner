@@ -963,18 +963,29 @@ export function getPushErrors() {
   return pushErrors;
 }
 
-async function pushPendingOps(): Promise<void> {
+interface PushStats {
+  originalCount: number;
+  coalescedCount: number;
+  actualPushed: number;
+}
+
+async function pushPendingOps(): Promise<PushStats> {
   const maxIterations = 10; // Safety limit to prevent infinite loops
   let iterations = 0;
+  let actualPushed = 0;
 
   // Clear previous push errors
   pushErrors = [];
+
+  // Get original count before coalescing
+  const originalItems = await getPendingSync();
+  const originalCount = originalItems.length;
 
   // Coalesce multiple updates to the same entity before pushing
   // This merges e.g. 50 rapid increments into 1 update request
   const coalescedCount = await coalescePendingOps();
   if (coalescedCount > 0) {
-    console.log(`Coalesced ${coalescedCount} redundant sync operations`);
+    console.log(`[SYNC] Coalesced ${coalescedCount} redundant operations (${originalCount} → ${originalCount - coalescedCount})`);
   }
 
   while (iterations < maxIterations) {
@@ -990,6 +1001,7 @@ async function pushPendingOps(): Promise<void> {
         if (item.id) {
           await removeSyncItem(item.id);
           processedAny = true;
+          actualPushed++;
         }
       } catch (error) {
         console.error(`Failed to sync item ${item.id}:`, error);
@@ -1017,6 +1029,8 @@ async function pushPendingOps(): Promise<void> {
     // If we didn't process anything (all items in backoff), stop iterating
     if (!processedAny) break;
   }
+
+  return { originalCount, coalescedCount, actualPushed };
 }
 
 // Check if error is a duplicate key violation (item already exists)
@@ -1204,11 +1218,9 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
     }
 
     // Push first so local changes are persisted
-    // Note: pushPendingOps now coalesces before pushing, so the actual
-    // number of requests will be much lower than raw pending items
-    const beforePush = await getPendingSync();
-    pushedItems = beforePush.length;
-    await pushPendingOps();
+    // Note: pushPendingOps coalesces before pushing, so actual requests are lower
+    const pushStats = await pushPendingOps();
+    pushedItems = pushStats.actualPushed;
     pushSucceeded = true;
 
     if (!quiet) {
