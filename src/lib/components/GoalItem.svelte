@@ -148,12 +148,12 @@
             class="mini-progress-fill"
             class:celebrating={isCelebrating}
             style="width: {Math.min(100, progress)}%; background-color: {progressColor}"
-          ></div>
-
-          <!-- Shimmer overlay -->
-          {#if isCelebrating}
-            <div class="shimmer-overlay"></div>
-          {/if}
+          >
+            <!-- Shimmer overlay - inside fill to be clipped -->
+            {#if isCelebrating}
+              <div class="shimmer-overlay"></div>
+            {/if}
+          </div>
         </div>
 
         <!-- Starburst particles -->
@@ -502,6 +502,7 @@
     transition: width 0.5s var(--ease-out);
     box-shadow: 0 0 15px currentColor;
     position: relative;
+    overflow: hidden;
   }
 
   .mini-progress-fill::after {
@@ -548,7 +549,7 @@
 
   @keyframes shimmerSweep {
     0% { left: -100%; }
-    100% { left: 200%; }
+    100% { left: 100%; }
   }
 
   /* Pulse rings */

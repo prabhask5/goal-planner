@@ -58,6 +58,33 @@
   function getDayProgress(date: Date): DayProgress | undefined {
     return dayProgressMap.get(formatDate(date));
   }
+
+  function goToToday() {
+    if (isTransitioning) return;
+    const today = new Date();
+    const isCurrentMonth = currentDate.getMonth() === today.getMonth() &&
+                          currentDate.getFullYear() === today.getFullYear();
+    if (isCurrentMonth) return;
+
+    // Determine direction based on whether today is before or after current month
+    const todayTime = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+    const currentTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getTime();
+    transitionDirection = todayTime > currentTime ? 'left' : 'right';
+    isTransitioning = true;
+    setTimeout(() => {
+      onMonthChange(today);
+      setTimeout(() => {
+        isTransitioning = false;
+        transitionDirection = null;
+      }, 50);
+    }, 300);
+  }
+
+  const isViewingCurrentMonth = $derived(() => {
+    const today = new Date();
+    return currentDate.getMonth() === today.getMonth() &&
+           currentDate.getFullYear() === today.getFullYear();
+  });
 </script>
 
 <div class="calendar">
@@ -75,6 +102,11 @@
       >
         {formatMonthYear(currentDate)}
       </h2>
+      {#if !isViewingCurrentMonth()}
+        <button class="today-btn" onclick={goToToday} disabled={isTransitioning}>
+          Today
+        </button>
+      {/if}
     </div>
     <button class="nav-btn" onclick={goToNextMonth} aria-label="Next month" disabled={isTransitioning}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -235,11 +267,40 @@
   }
 
   .month-title-wrapper {
-    overflow: hidden;
+    overflow: visible;
     position: relative;
     flex: 1;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .today-btn {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 0.3rem 0.75rem;
+    background: rgba(108, 92, 231, 0.15);
+    border: 1px solid rgba(108, 92, 231, 0.3);
+    border-radius: var(--radius-full);
+    color: var(--color-primary-light);
+    cursor: pointer;
+    transition: all 0.3s var(--ease-spring);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .today-btn:hover:not(:disabled) {
+    background: var(--gradient-primary);
+    border-color: transparent;
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px var(--color-primary-glow);
+  }
+
+  .today-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .month-title {

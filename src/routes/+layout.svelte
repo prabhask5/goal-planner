@@ -768,8 +768,6 @@
     align-items: center;
     gap: 0.75rem;
     text-decoration: none;
-    flex: 1;
-    min-width: 0;
   }
 
   .brand-icon {

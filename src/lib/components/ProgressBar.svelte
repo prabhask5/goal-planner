@@ -232,6 +232,7 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
     animation: progressPulse 2s ease-in-out infinite;
     z-index: 1;
+    overflow: hidden;
   }
 
   .progress-fill.celebrating {

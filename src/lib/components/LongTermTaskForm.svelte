@@ -128,7 +128,6 @@
         type="date"
         bind:value={dueDate}
         class="field-input date-input"
-        min={getTodayString()}
       />
     </div>
 

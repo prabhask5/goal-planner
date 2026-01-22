@@ -32,6 +32,16 @@
     onMonthChange(addMonths(currentDate, 1));
   }
 
+  function goToToday() {
+    onMonthChange(new Date());
+  }
+
+  const isViewingCurrentMonth = $derived(() => {
+    const today = new Date();
+    return currentDate.getMonth() === today.getMonth() &&
+           currentDate.getFullYear() === today.getFullYear();
+  });
+
   function getTasksForDate(date: Date): LongTermTaskWithCategory[] {
     const dateStr = formatDate(date);
     return tasks.filter(t => t.due_date === dateStr && !t.completed);
@@ -51,7 +61,14 @@
         <polyline points="15 18 9 12 15 6" />
       </svg>
     </button>
-    <h2 class="month-title">{formatMonthYear(currentDate)}</h2>
+    <div class="month-title-wrapper">
+      <h2 class="month-title">{formatMonthYear(currentDate)}</h2>
+      {#if !isViewingCurrentMonth()}
+        <button class="today-btn" onclick={goToToday}>
+          Today
+        </button>
+      {/if}
+    </div>
     <button class="nav-btn" onclick={goToNextMonth} aria-label="Next month">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
         <polyline points="9 18 15 12 9 6" />
@@ -96,7 +113,7 @@
                 onclick={(e) => { e.stopPropagation(); onTaskClick(task); }}
                 title={task.name}
               >
-                {task.name.length > 8 ? task.name.slice(0, 8) + '...' : task.name}
+                {task.name}
               </button>
             {/each}
             {#if dayTasks.length > 2}
@@ -175,6 +192,13 @@
     color: white;
   }
 
+  .month-title-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
   .month-title {
     font-size: 1.375rem;
     font-weight: 700;
@@ -187,6 +211,28 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     letter-spacing: -0.02em;
+  }
+
+  .today-btn {
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.25rem 0.625rem;
+    background: rgba(108, 92, 231, 0.15);
+    border: 1px solid rgba(108, 92, 231, 0.3);
+    border-radius: var(--radius-full);
+    color: var(--color-primary-light);
+    cursor: pointer;
+    transition: all 0.3s var(--ease-spring);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .today-btn:hover {
+    background: var(--gradient-primary);
+    border-color: transparent;
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px var(--color-primary-glow);
   }
 
   .calendar-weekdays {
