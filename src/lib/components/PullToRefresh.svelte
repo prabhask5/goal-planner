@@ -16,10 +16,10 @@
   let startY = 0;
   let currentY = 0;
 
-  // Physics constants - very easy to activate
-  const PULL_THRESHOLD = 35;
-  const MAX_PULL = 100;
-  const RESISTANCE = 0.8;
+  // Physics constants - balanced sensitivity
+  const PULL_THRESHOLD = 55;
+  const MAX_PULL = 120;
+  const RESISTANCE = 0.6;
 
   // Subscribe to sync status
   let syncStatus = $state<'idle' | 'syncing' | 'error'>('idle');

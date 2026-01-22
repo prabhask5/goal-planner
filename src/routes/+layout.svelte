@@ -391,7 +391,7 @@
         <!-- Brand matches desktop: logo + "Stellar" text -->
         <a href="/" class="island-brand-link">
           <span class="island-brand">
-            <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
+            <svg class="island-logo" viewBox="0 0 100 100" fill="none">
               <circle cx="50" cy="50" r="45" stroke="url(#islandGrad)" stroke-width="6" fill="none"/>
               <path d="M30 52 L45 67 L72 35" stroke="url(#islandCheck)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
               <defs>
@@ -709,6 +709,11 @@
     animation: brandFloatMobile 4s ease-in-out infinite;
   }
 
+  .island-logo {
+    width: 38px;
+    height: 38px;
+  }
+
   @keyframes brandFloatMobile {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-2px); }
@@ -716,7 +721,7 @@
 
   /* Brand text - matches desktop brand-text style */
   .island-brand-text {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     /* Gradient text effect matching desktop */

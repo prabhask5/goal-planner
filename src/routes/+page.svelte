@@ -303,6 +303,14 @@
 
   .home-container {
     position: fixed;
+    /* Fill entire screen */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Extend into safe areas */
+    height: calc(100vh + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
     display: flex;
     align-items: center;
     justify-content: center;
