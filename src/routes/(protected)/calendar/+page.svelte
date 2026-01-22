@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { onMount, onDestroy, tick } from 'svelte';
+  import { goto, replaceState } from '$app/navigation';
   import { page } from '$app/stores';
   import { monthProgressStore, dailyRoutinesStore } from '$lib/stores/data';
   import { formatDate, formatDisplayDate, isPastDay, isTodayDate, isRoutineActiveOnDate } from '$lib/utils/dates';
@@ -89,6 +89,21 @@
 
   onMount(async () => {
     await Promise.all([loadCalendarData(), dailyRoutinesStore.load()]);
+
+    // Check if we should scroll to the routines section (coming back from edit page)
+    const section = $page.url.searchParams.get('section');
+    if (section === 'routines') {
+      // Wait for DOM to update
+      await tick();
+      const routinesSection = document.getElementById('manage-routines');
+      if (routinesSection) {
+        routinesSection.scrollIntoView({ behavior: 'instant' });
+      }
+      // Remove the query parameter from URL without triggering navigation
+      const url = new URL(window.location.href);
+      url.searchParams.delete('section');
+      replaceState(url.pathname, {});
+    }
   });
 
   onDestroy(() => {

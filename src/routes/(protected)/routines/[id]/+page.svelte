@@ -56,7 +56,7 @@
         end_date: data.endDate,
         active_days: data.activeDays
       });
-      goto('/calendar#manage-routines');
+      goto('/calendar?section=routines');
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to update routine';
       saving = false;
@@ -69,7 +69,7 @@
 
     try {
       await dailyRoutinesStore.delete(routine.id);
-      goto('/calendar#manage-routines');
+      goto('/calendar?section=routines');
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to delete routine';
     }
@@ -83,7 +83,7 @@
 <div class="container">
   <header class="page-header">
     <div class="header-left">
-      <button class="back-btn" onclick={() => goto('/calendar#manage-routines')} aria-label="Back to calendar">
+      <button class="back-btn" onclick={() => goto('/calendar?section=routines')} aria-label="Back to calendar">
         ← Back
       </button>
       <h1>Edit Routine</h1>
@@ -156,13 +156,13 @@
         activeDays={routine.active_days}
         submitLabel={saving ? 'Saving...' : 'Save Changes'}
         onSubmit={handleUpdateRoutine}
-        onCancel={() => goto('/calendar#manage-routines')}
+        onCancel={() => goto('/calendar?section=routines')}
       />
     </div>
   {:else}
     <div class="error-state">
       <p>Routine not found.</p>
-      <a href="/calendar#manage-routines" class="btn btn-primary">Back to Calendar</a>
+      <a href="/calendar?section=routines" class="btn btn-primary">Back to Calendar</a>
     </div>
   {/if}
 </div>
