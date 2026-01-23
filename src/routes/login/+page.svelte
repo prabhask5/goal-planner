@@ -517,11 +517,8 @@
     position: fixed;
     inset: 0;
     z-index: 200; /* Above navbar to prevent any flickering */
-    display: grid;
-    place-items: center;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: max(2rem, env(safe-area-inset-top, 0px)) 0 max(2rem, env(safe-area-inset-bottom, 0px));
     background: radial-gradient(ellipse at center,
       rgba(15, 15, 35, 1) 0%,
       rgba(5, 5, 16, 1) 50%,
@@ -808,10 +805,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2rem;
-    padding: 0 2rem;
+    padding: max(2rem, env(safe-area-inset-top, 0px)) 2rem max(2rem, env(safe-area-inset-bottom, 0px));
     width: 100%;
     max-width: 440px;
+    min-height: 100%; /* Fill the viewport */
+    margin: 0 auto; /* Center horizontally */
+    box-sizing: border-box;
     animation: contentReveal 1s ease-out forwards;
   }
 
@@ -1185,7 +1186,7 @@
 
   @media (max-width: 767px) {
     .login-content {
-      padding: 0 1.5rem;
+      padding: max(1.5rem, env(safe-area-inset-top, 0px)) 1.5rem max(1.5rem, env(safe-area-inset-bottom, 0px));
       gap: 1.5rem;
     }
 
@@ -1238,7 +1239,7 @@
   /* iPhone 16 Pro / 15 Pro / 14 Pro (393px width) */
   @media (min-width: 390px) and (max-width: 429px) {
     .login-content {
-      padding: 0 1.25rem;
+      padding: max(1.25rem, env(safe-area-inset-top, 0px)) 1.25rem max(1.25rem, env(safe-area-inset-bottom, 0px));
       gap: 1.75rem;
     }
 
@@ -1292,7 +1293,7 @@
   /* iPhone 16 Pro Max / 15 Pro Max (430px width) */
   @media (min-width: 430px) and (max-width: 480px) {
     .login-content {
-      padding: 0 1.5rem;
+      padding: max(1.5rem, env(safe-area-inset-top, 0px)) 1.5rem max(1.5rem, env(safe-area-inset-bottom, 0px));
       gap: 2rem;
     }
 
@@ -1323,7 +1324,7 @@
   /* Small devices (iPhone SE, older phones) */
   @media (max-width: 389px) {
     .login-content {
-      padding: 0 1rem;
+      padding: max(1rem, env(safe-area-inset-top, 0px)) 1rem max(1rem, env(safe-area-inset-bottom, 0px));
       gap: 1.25rem;
     }
 
