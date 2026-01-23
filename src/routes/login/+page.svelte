@@ -520,7 +520,8 @@
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: scroll; /* Always show scrollbar to prevent layout oscillation */
+    scrollbar-gutter: stable; /* Reserve space for scrollbar */
     background: radial-gradient(ellipse at center,
       rgba(15, 15, 35, 1) 0%,
       rgba(5, 5, 16, 1) 50%,
@@ -807,11 +808,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center; /* Center children vertically */
     gap: 2rem;
     padding: 2rem;
     width: 100%;
     max-width: 440px;
-    margin: auto; /* Centers in flex parent - equal space top/bottom/left/right */
+    margin: auto;
     animation: contentReveal 1s ease-out forwards;
   }
 
