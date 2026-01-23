@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { browser } from '$app/environment';
 import { getSession, isSessionExpired } from '$lib/supabase/auth';
-import { getValidOfflineSession, createOfflineSession } from '$lib/auth/offlineSession';
+import { getValidOfflineSession } from '$lib/auth/offlineSession';
 import { getOfflineCredentials } from '$lib/auth/offlineCredentials';
 import type { AuthMode, OfflineCredentials } from '$lib/types';
 import type { Session } from '@supabase/supabase-js';
@@ -27,12 +27,12 @@ export const load: LayoutLoad = async ({ url }): Promise<ProtectedLayoutData> =>
           console.log('[Auth] Supabase session expired');
 
           if (isOffline) {
-            // Offline with expired Supabase session → create/use offline session
-            console.log('[Auth] Offline with expired session - using offline mode');
-            const credentials = await getOfflineCredentials();
-            if (credentials) {
-              // Create offline session from cached credentials
-              await createOfflineSession(credentials.userId);
+            // Offline with expired Supabase session → check for existing offline session
+            // Don't create one here - let the user explicitly log in via the login page
+            console.log('[Auth] Offline with expired session - checking for offline session');
+            const offlineSession = await getValidOfflineSession();
+            if (offlineSession) {
+              const credentials = await getOfflineCredentials();
               return { session: null, authMode: 'offline', offlineProfile: credentials };
             }
           }
@@ -51,27 +51,18 @@ export const load: LayoutLoad = async ({ url }): Promise<ProtectedLayoutData> =>
       }
     }
 
-    // 2. If offline, check for valid offline session or create one from cached credentials
+    // 2. If offline, check for valid offline session (don't create - that's only done via login page)
     if (isOffline) {
       try {
-        // First check if we have a valid offline session
-        let offlineSession = await getValidOfflineSession();
-
-        if (!offlineSession) {
-          // No valid offline session - try to create one from cached credentials
-          const credentials = await getOfflineCredentials();
-          if (credentials) {
-            console.log('[Auth] Creating offline session from cached credentials');
-            offlineSession = await createOfflineSession(credentials.userId);
-          }
-        }
+        const offlineSession = await getValidOfflineSession();
 
         if (offlineSession) {
           const profile = await getOfflineCredentials();
           return { session: null, authMode: 'offline', offlineProfile: profile };
         }
+        // No valid offline session - will redirect to login where user can authenticate
       } catch (e) {
-        console.warn('[Auth] Offline session check/create failed:', e);
+        console.warn('[Auth] Offline session check failed:', e);
       }
     }
 

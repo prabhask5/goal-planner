@@ -33,6 +33,13 @@ export async function createOfflineSession(userId: string): Promise<OfflineSessi
   // Use put to insert or update the singleton record
   await db.offlineSession.put(session);
 
+  // Verify the session was persisted by reading it back
+  // This ensures IndexedDB has flushed the write before we return
+  const verified = await db.offlineSession.get(SESSION_ID);
+  if (!verified) {
+    throw new Error('Failed to persist offline session');
+  }
+
   return session;
 }
 

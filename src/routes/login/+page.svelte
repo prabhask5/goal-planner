@@ -164,12 +164,24 @@
       return;
     }
 
-    // Create offline session
-    await createOfflineSession(cachedCredentials.userId);
+    try {
+      // Create offline session (this now includes verification that it was persisted)
+      await createOfflineSession(cachedCredentials.userId);
 
-    // Use hard navigation to ensure layout load functions re-run
-    // (goto() may not properly re-evaluate auth state after offline session creation)
-    window.location.href = redirectUrl;
+      // Double-check the session is readable before navigating
+      // This prevents race conditions with layout load functions
+      const verifiedSession = await getValidOfflineSession();
+      if (!verifiedSession) {
+        error = 'Failed to create offline session. Please try again.';
+        return;
+      }
+
+      // Use hard navigation to ensure layout load functions re-run
+      window.location.href = redirectUrl;
+    } catch (e) {
+      console.error('[Offline Login] Failed to create session:', e);
+      error = 'Failed to create offline session. Please try again.';
+    }
   }
 
   function toggleMode() {
