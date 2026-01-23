@@ -511,13 +511,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center; /* Center content vertically */
     overflow-x: hidden;
     overflow-y: auto;
     background: radial-gradient(ellipse at center,
       rgba(15, 15, 35, 1) 0%,
       rgba(5, 5, 16, 1) 50%,
       rgba(0, 0, 5, 1) 100%);
+  }
+
+  /* Pseudo-elements for vertical centering that works with overflow */
+  .login-page::before,
+  .login-page::after {
+    content: '';
+    flex: 1;
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
