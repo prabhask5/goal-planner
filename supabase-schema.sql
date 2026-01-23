@@ -708,3 +708,20 @@ create trigger update_block_lists_updated_at
 create trigger update_blocked_websites_updated_at
   before update on blocked_websites
   for each row execute function update_updated_at_column();
+
+-- ============================================================
+-- REALTIME: Enable real-time subscriptions for all tables
+-- ============================================================
+
+alter publication supabase_realtime add table goal_lists;
+alter publication supabase_realtime add table goals;
+alter publication supabase_realtime add table daily_routine_goals;
+alter publication supabase_realtime add table daily_goal_progress;
+alter publication supabase_realtime add table task_categories;
+alter publication supabase_realtime add table commitments;
+alter publication supabase_realtime add table daily_tasks;
+alter publication supabase_realtime add table long_term_tasks;
+alter publication supabase_realtime add table focus_settings;
+alter publication supabase_realtime add table focus_sessions;
+alter publication supabase_realtime add table block_lists;
+alter publication supabase_realtime add table blocked_websites;

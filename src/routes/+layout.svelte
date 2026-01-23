@@ -109,6 +109,17 @@
     await clearOfflineSession();
     await clearOfflineCredentials();
 
+    // Sign out from Supabase (clears any existing session)
+    await signOut();
+
+    // Also clear Supabase localStorage as backup (in case signOut fails)
+    try {
+      const supabaseKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
+      supabaseKeys.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+      console.error('[Auth] Failed to clear Supabase localStorage:', e);
+    }
+
     // Update auth state
     authState.setNoAuth(message);
 
@@ -308,6 +319,15 @@
 
     // Sign out from Supabase
     await signOut();
+
+    // IMPORTANT: When offline, supabase.auth.signOut() doesn't clear localStorage
+    // Manually clear Supabase session storage to prevent stale session being found
+    try {
+      const supabaseKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
+      supabaseKeys.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+      console.error('[Auth] Failed to clear Supabase localStorage:', e);
+    }
 
     // Reset auth state
     authState.reset();
