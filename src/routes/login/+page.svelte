@@ -520,7 +520,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
     background: radial-gradient(ellipse at center,
       rgba(15, 15, 35, 1) 0%,
       rgba(5, 5, 16, 1) 50%,
