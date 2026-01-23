@@ -511,7 +511,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center; /* Center content vertically */
     overflow-x: hidden;
     overflow-y: auto;
     background: radial-gradient(ellipse at center,
@@ -806,7 +806,6 @@
     padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px));
     width: 100%;
     max-width: 440px;
-    margin: auto; /* Center vertically when content fits, push to edges when scrolling */
     min-height: min-content;
     animation: contentReveal 1s ease-out forwards;
   }

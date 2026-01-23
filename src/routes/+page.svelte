@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { onMount, onDestroy } from 'svelte';
   import { getSession, getUserProfile } from '$lib/supabase/auth';
+  import { getValidOfflineSession } from '$lib/auth/offlineSession';
   import { onSyncComplete } from '$lib/sync/engine';
   import { browser } from '$app/environment';
   import type { Session } from '@supabase/supabase-js';
@@ -128,7 +129,12 @@
     timeGreeting = getGreetingForPeriod(currentTimePeriod);
 
     const userSession = await getSession();
-    if (!userSession) {
+
+    // Check for offline session if no Supabase session
+    // This handles the case where user logged in offline
+    const offlineSession = !userSession ? await getValidOfflineSession() : null;
+
+    if (!userSession && !offlineSession) {
       goto('/login');
     } else {
       session = userSession;

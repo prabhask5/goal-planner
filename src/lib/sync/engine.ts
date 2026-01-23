@@ -1881,6 +1881,10 @@ export function startSyncEngine(): void {
     document.removeEventListener('visibilitychange', handleVisibilityChangeRef);
   }
 
+  // Reset sync status to clean state (clears any stale error from previous session)
+  // This prevents error flash when navigating back after a previous sync failure
+  syncStatusStore.reset();
+
   // Handle online event - run sync when connection restored (show indicator)
   handleOnlineRef = () => {
     runFullSync(false);
