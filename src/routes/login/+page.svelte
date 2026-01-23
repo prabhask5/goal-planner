@@ -188,15 +188,15 @@
 </svelte:head>
 
 <div class="login-page">
+  <!-- Starfield (fixed, always covers viewport even when scrolling) -->
+  <div class="starfield">
+    <div class="stars stars-small"></div>
+    <div class="stars stars-medium"></div>
+    <div class="stars stars-large"></div>
+  </div>
+
   <!-- Background Effects (clipped separately to allow content to grow) -->
   <div class="background-effects">
-    <!-- Animated Star Field -->
-    <div class="starfield">
-      <div class="stars stars-small"></div>
-      <div class="stars stars-medium"></div>
-      <div class="stars stars-large"></div>
-    </div>
-
     <!-- Nebula Effects -->
     <div class="nebula nebula-1"></div>
     <div class="nebula nebula-2"></div>
@@ -546,7 +546,7 @@
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
   .starfield {
-    position: absolute;
+    position: fixed;
     inset: 0;
     pointer-events: none;
   }
