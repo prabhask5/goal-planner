@@ -195,13 +195,13 @@
     <div class="stars stars-large"></div>
   </div>
 
+  <!-- Nebula Effects (fixed, always covers viewport even when scrolling) -->
+  <div class="nebula nebula-1"></div>
+  <div class="nebula nebula-2"></div>
+  <div class="nebula nebula-3"></div>
+
   <!-- Background Effects (clipped separately to allow content to grow) -->
   <div class="background-effects">
-    <!-- Nebula Effects -->
-    <div class="nebula nebula-1"></div>
-    <div class="nebula nebula-2"></div>
-    <div class="nebula nebula-3"></div>
-
     <!-- Orbital Rings -->
     <div class="orbital-system">
       <div class="orbit orbit-1"></div>
@@ -605,7 +605,7 @@
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
   .nebula {
-    position: absolute;
+    position: fixed;
     border-radius: 50%;
     filter: blur(80px);
     opacity: 0.5;
