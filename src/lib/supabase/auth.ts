@@ -2,6 +2,19 @@ import { supabase } from './client';
 import type { User, Session } from '@supabase/supabase-js';
 import { cacheOfflineCredentials, clearOfflineCredentials, updateOfflineCredentialsPassword, updateOfflineCredentialsProfile } from '$lib/auth/offlineCredentials';
 import { clearOfflineSession } from '$lib/auth/offlineSession';
+import { browser } from '$app/environment';
+
+/**
+ * Get the email confirmation redirect URL
+ * Points to /confirm page which handles the token verification
+ */
+function getConfirmRedirectUrl(): string {
+  if (browser) {
+    return `${window.location.origin}/confirm`;
+  }
+  // Fallback for SSR (shouldn't be called, but just in case)
+  return '/confirm';
+}
 
 export interface UserProfile {
   firstName: string;
@@ -47,6 +60,7 @@ export async function signUp(
     email,
     password,
     options: {
+      emailRedirectTo: getConfirmRedirectUrl(),
       data: {
         first_name: firstName,
         last_name: lastName
@@ -249,7 +263,10 @@ export async function changePassword(
 export async function resendConfirmationEmail(email: string): Promise<{ error: string | null }> {
   const { error } = await supabase.auth.resend({
     type: 'signup',
-    email
+    email,
+    options: {
+      emailRedirectTo: getConfirmRedirectUrl()
+    }
   });
 
   return { error: error?.message || null };

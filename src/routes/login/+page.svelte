@@ -327,7 +327,7 @@
           </div>
           <h2 class="card-title">Internet Required</h2>
           <p class="offline-description">
-            Please connect to the internet to sign in. Once you've signed in online first, you'll be able to sign offline in the future.
+            Please connect to the internet to sign in. Once you've signed in online first, you'll be able to sign in offline in the future.
           </p>
         </div>
       </div>

@@ -28,7 +28,15 @@
 
 				if (error) {
 					status = 'error';
-					errorMessage = error.message;
+					// Provide user-friendly error messages for common cases
+					const errorLower = error.message.toLowerCase();
+					if (errorLower.includes('already') || errorLower.includes('confirmed') || errorLower.includes('used')) {
+						errorMessage = 'This email has already been confirmed. You can sign in to your account.';
+					} else if (errorLower.includes('expired') || errorLower.includes('invalid')) {
+						errorMessage = 'This confirmation link has expired. Please request a new one from the login page.';
+					} else {
+						errorMessage = error.message;
+					}
 					return;
 				}
 
