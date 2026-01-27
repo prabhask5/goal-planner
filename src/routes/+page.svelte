@@ -1,11 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount, onDestroy } from 'svelte';
-  import { getSession } from '$lib/supabase/auth';
-  import { getValidOfflineSession } from '$lib/auth/offlineSession';
   import { onSyncComplete } from '$lib/sync/engine';
   import { browser } from '$app/environment';
-  import { userDisplayInfo } from '$lib/stores/authState';
+  import { authState, userDisplayInfo } from '$lib/stores/authState';
   import PWAInstallModal from '$lib/components/PWAInstallModal.svelte';
   let isLoading = $state(true);
   let selectedCompliment = $state('');
@@ -121,32 +119,31 @@
   // Use the auth store for user info - works for both online and offline modes
   const firstName = $derived($userDisplayInfo?.firstName || 'Explorer');
 
-  onMount(async () => {
+  onMount(() => {
     // Initialize greeting based on current time
     currentTimePeriod = getTimePeriod();
     timeGreeting = getGreetingForPeriod(currentTimePeriod);
 
-    const userSession = await getSession();
+    // Get message for display
+    const messageResult = getMessageForDisplay();
+    selectedCompliment = messageResult.message;
+    showPWAButton = messageResult.isPWAMessage;
 
-    // Check for offline session if no Supabase session
-    // This handles the case where user logged in offline
-    const offlineSession = !userSession ? await getValidOfflineSession() : null;
+    isLoading = false;
 
-    if (!userSession && !offlineSession) {
-      goto('/login');
-    } else {
-      // Get message after confirming user is authenticated
-      const messageResult = getMessageForDisplay();
-      selectedCompliment = messageResult.message;
-      showPWAButton = messageResult.isPWAMessage;
+    // Subscribe to sync completion - check if greeting needs update
+    // This handles the case where the page is open overnight
+    unsubscribeSyncComplete = onSyncComplete(() => {
+      updateGreetingIfNeeded();
+    });
+  });
 
-      isLoading = false;
-
-      // Subscribe to sync completion - check if greeting needs update
-      // This handles the case where the page is open overnight
-      unsubscribeSyncComplete = onSyncComplete(() => {
-        updateGreetingIfNeeded();
-      });
+  // Use reactive effect to handle auth redirects
+  // This uses the authState from the layout instead of re-checking
+  $effect(() => {
+    if (!$authState.isLoading && $authState.mode === 'none') {
+      // Include redirect param so login page knows this was a redirect, not direct navigation
+      goto('/login?redirect=%2F', { replaceState: true });
     }
   });
 
@@ -305,14 +302,11 @@
 
   .home-container {
     position: fixed;
-    /* Fill entire screen */
+    /* Fill entire screen below the navbar */
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    /* Extend into safe areas */
-    height: calc(100vh + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
-    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -322,6 +316,16 @@
       rgba(5, 5, 16, 1) 50%,
       rgba(0, 0, 5, 1) 100%);
     background-attachment: fixed;
+    /* Offset upward to account for navbar (64px desktop) and appear truly centered */
+    padding-bottom: 64px;
+  }
+
+  /* Mobile: account for bottom navbar instead */
+  @media (max-width: 768px) {
+    .home-container {
+      padding-bottom: 0;
+      /* Mobile has top island header + bottom nav, roughly balanced */
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════

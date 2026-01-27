@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import { signIn, signUp, getSession, resendConfirmationEmail, isSessionExpired } from '$lib/supabase/auth';
   import { getOfflineCredentials, verifyOfflineCredentials } from '$lib/auth/offlineCredentials';
@@ -36,27 +36,36 @@
   const AUTH_CHANNEL_NAME = 'stellar-auth-channel';
   let authChannel: BroadcastChannel | null = null;
 
-  // Check for cached credentials and existing auth on mount
+  // Check for cached credentials on mount
   onMount(async () => {
     const cached = await getOfflineCredentials();
     cachedCredentials = cached;
 
-    // Check if user is already authenticated
-    const session = await getSession();
-    if (session && !isSessionExpired(session)) {
-      // Use hard navigation to ensure full page reload with proper auth state
-      window.location.href = redirectUrl;
-      return;
-    }
+    // DON'T redirect here - the layout load function handles auth redirects
+    // Re-checking here causes redirect loops when:
+    // 1. Protected layout redirects to login (no valid session)
+    // 2. Login page checks session and finds one (race condition)
+    // 3. Redirects back to protected page
+    // 4. Loop!
 
-    // ONLY check offline session when actually offline
-    // When online, user must authenticate via Supabase
-    if (!navigator.onLine) {
-      const offlineSession = await getValidOfflineSession();
-      if (offlineSession) {
-        // Already authenticated offline - redirect to intended destination
-        window.location.href = redirectUrl;
+    // Only redirect if user manually navigated to /login while authenticated
+    // (i.e., no redirect parameter was set by the protected layout)
+    const hasRedirectParam = $page.url.searchParams.has('redirect');
+    if (!hasRedirectParam) {
+      // User navigated directly to /login - check if they're already authenticated
+      const session = await getSession();
+      if (session && !isSessionExpired(session)) {
+        goto('/', { replaceState: true });
         return;
+      }
+
+      // Check offline session only when offline
+      if (!navigator.onLine) {
+        const offlineSession = await getValidOfflineSession();
+        if (offlineSession && cached && offlineSession.userId === cached.userId) {
+          goto('/', { replaceState: true });
+          return;
+        }
       }
     }
 
@@ -216,8 +225,9 @@
         return;
       }
 
-      // Use hard navigation to ensure layout load functions re-run
-      window.location.href = redirectUrl;
+      // Navigate using SvelteKit and invalidate to re-run load functions
+      await invalidateAll();
+      goto(redirectUrl, { replaceState: true });
     } catch (e) {
       console.error('[Offline Login] Failed to create session:', e);
       error = 'Failed to create offline session. Please try again.';
