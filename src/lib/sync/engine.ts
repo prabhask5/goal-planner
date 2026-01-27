@@ -1870,7 +1870,7 @@ if (typeof window !== 'undefined') {
 export function startSyncEngine(): void {
   if (typeof window === 'undefined') return;
 
-  // Clean up any existing listeners first (prevents duplicates if called multiple times)
+  // Clean up any existing listeners and intervals first (prevents duplicates if called multiple times)
   if (handleOnlineRef) {
     window.removeEventListener('online', handleOnlineRef);
   }
@@ -1880,10 +1880,29 @@ export function startSyncEngine(): void {
   if (handleVisibilityChangeRef) {
     document.removeEventListener('visibilitychange', handleVisibilityChangeRef);
   }
+  if (syncInterval) {
+    clearInterval(syncInterval);
+    syncInterval = null;
+  }
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+    syncTimeout = null;
+  }
+  if (visibilityDebounceTimeout) {
+    clearTimeout(visibilityDebounceTimeout);
+    visibilityDebounceTimeout = null;
+  }
 
   // Reset sync status to clean state (clears any stale error from previous session)
   // This prevents error flash when navigating back after a previous sync failure
   syncStatusStore.reset();
+
+  // IMPORTANT: If starting while offline, mark that auth validation is needed
+  // This ensures we don't attempt to sync until credentials are validated on reconnect
+  // Fixes race condition where sync engine's 'online' handler fires before auth check
+  if (!navigator.onLine) {
+    markOffline();
+  }
 
   // Handle online event - run sync when connection restored (show indicator)
   handleOnlineRef = () => {

@@ -1,7 +1,8 @@
 import { writable, type Readable } from 'svelte/store';
 import { browser } from '$app/environment';
 
-type NetworkCallback = () => void;
+// Callbacks can be sync or async
+type NetworkCallback = () => void | Promise<void>;
 
 function createNetworkStore(): Readable<boolean> & {
   init: () => void;
@@ -18,6 +19,18 @@ function createNetworkStore(): Readable<boolean> & {
     if (value !== currentValue) {
       currentValue = value;
       set(value);
+    }
+  }
+
+  // Run callbacks sequentially, properly awaiting async ones
+  // This ensures auth validation completes before sync is triggered
+  async function runCallbacksSequentially(callbacks: Set<NetworkCallback>, label: string): Promise<void> {
+    for (const callback of callbacks) {
+      try {
+        await callback();
+      } catch (e) {
+        console.error(`[Network] ${label} callback error:`, e);
+      }
     }
   }
 
@@ -38,13 +51,7 @@ function createNetworkStore(): Readable<boolean> & {
 
       // If we were online, trigger disconnect callbacks
       if (wasOnline) {
-        disconnectCallbacks.forEach((callback) => {
-          try {
-            callback();
-          } catch (e) {
-            console.error('[Network] Disconnect callback error:', e);
-          }
-        });
+        runCallbacksSequentially(disconnectCallbacks, 'Disconnect');
       }
     });
 
@@ -57,13 +64,7 @@ function createNetworkStore(): Readable<boolean> & {
         wasOffline = false;
         // Small delay to ensure network is stable
         setTimeout(() => {
-          reconnectCallbacks.forEach((callback) => {
-            try {
-              callback();
-            } catch (e) {
-              console.error('[Network] Reconnect callback error:', e);
-            }
-          });
+          runCallbacksSequentially(reconnectCallbacks, 'Reconnect');
         }, 500);
       }
     });
@@ -78,13 +79,7 @@ function createNetworkStore(): Readable<boolean> & {
         if (nowOnline && wasOffline) {
           wasOffline = false;
           setTimeout(() => {
-            reconnectCallbacks.forEach((callback) => {
-              try {
-                callback();
-              } catch (e) {
-                console.error('[Network] Reconnect callback error:', e);
-              }
-            });
+            runCallbacksSequentially(reconnectCallbacks, 'Reconnect');
           }, 500);
         }
       } else {
