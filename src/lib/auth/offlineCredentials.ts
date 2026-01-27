@@ -19,6 +19,12 @@ export async function cacheOfflineCredentials(
   user: User,
   _session: Session
 ): Promise<void> {
+  // Validate inputs to prevent storing incomplete credentials
+  if (!email || !password) {
+    console.error('[Auth] Cannot cache credentials: email or password is empty');
+    throw new Error('Cannot cache credentials: email or password is empty');
+  }
+
   const credentials: OfflineCredentials = {
     id: CREDENTIALS_ID,
     userId: user.id,
@@ -31,15 +37,36 @@ export async function cacheOfflineCredentials(
 
   // Use put to insert or update the singleton record
   await db.offlineCredentials.put(credentials);
+
+  // Verify the credentials were stored correctly (paranoid check)
+  const stored = await db.offlineCredentials.get(CREDENTIALS_ID);
+  if (!stored || !stored.password) {
+    console.error('[Auth] Credentials were not stored correctly - password missing');
+    throw new Error('Failed to store credentials: password not persisted');
+  }
 }
 
 /**
  * Get cached offline credentials
- * Returns null if no credentials are cached
+ * Returns null if no credentials are cached or if credentials are in old format
  */
 export async function getOfflineCredentials(): Promise<OfflineCredentials | null> {
   const credentials = await db.offlineCredentials.get(CREDENTIALS_ID);
-  return credentials || null;
+  if (!credentials) {
+    return null;
+  }
+
+  // MIGRATION: Detect old-format credentials that used password hashing
+  // Old format had 'passwordHash' and 'salt' fields instead of 'password'
+  // These cannot be migrated (can't unhash), so we clear them and force re-login
+  const legacyCredentials = credentials as Record<string, unknown>;
+  if (legacyCredentials.passwordHash || legacyCredentials.salt || !credentials.password) {
+    console.warn('[Auth] Detected old-format credentials (hashed password) - clearing and requiring fresh login');
+    await db.offlineCredentials.delete(CREDENTIALS_ID);
+    return null;
+  }
+
+  return credentials;
 }
 
 /**
@@ -47,34 +74,41 @@ export async function getOfflineCredentials(): Promise<OfflineCredentials | null
  * @param email - The email to verify
  * @param password - The password to verify
  * @param expectedUserId - The userId that the credentials should belong to
- * @returns true if credentials exist, belong to the expected user, and email/password match
+ * @returns Object with valid boolean and optional reason for failure
  */
 export async function verifyOfflineCredentials(
   email: string,
   password: string,
   expectedUserId: string
-): Promise<boolean> {
+): Promise<{ valid: boolean; reason?: string }> {
   const credentials = await getOfflineCredentials();
   if (!credentials) {
-    return false;
+    console.warn('[Auth] No credentials found in database');
+    return { valid: false, reason: 'no_credentials' };
   }
 
   // SECURITY: Verify all fields match
   if (credentials.userId !== expectedUserId) {
-    console.warn('[Auth] Credential userId mismatch');
-    return false;
+    console.warn('[Auth] Credential userId mismatch:', credentials.userId, '!==', expectedUserId);
+    return { valid: false, reason: 'user_mismatch' };
   }
 
   if (credentials.email !== email) {
-    console.warn('[Auth] Credential email mismatch');
-    return false;
+    console.warn('[Auth] Credential email mismatch:', credentials.email, '!==', email);
+    return { valid: false, reason: 'email_mismatch' };
+  }
+
+  if (!credentials.password) {
+    console.warn('[Auth] No password stored in credentials');
+    return { valid: false, reason: 'no_stored_password' };
   }
 
   if (credentials.password !== password) {
-    return false;
+    console.warn('[Auth] Password mismatch (stored length:', credentials.password.length, ', entered length:', password.length, ')');
+    return { valid: false, reason: 'password_mismatch' };
   }
 
-  return true;
+  return { valid: true };
 }
 
 /**

@@ -177,13 +177,30 @@
     }
 
     // Verify email AND password against cached credentials
-    const valid = await verifyOfflineCredentials(
+    const result = await verifyOfflineCredentials(
       cachedCredentials.email,
       password,
       cachedCredentials.userId
     );
-    if (!valid) {
-      error = 'Invalid password';
+    if (!result.valid) {
+      // Provide specific error messages based on failure reason
+      switch (result.reason) {
+        case 'no_credentials':
+          error = 'No saved credentials found. Please connect to the internet to sign in.';
+          break;
+        case 'no_stored_password':
+          error = 'Saved credentials are incomplete. Please connect to the internet to sign in again.';
+          break;
+        case 'user_mismatch':
+        case 'email_mismatch':
+          error = 'Credentials have changed. Please refresh the page.';
+          cachedCredentials = await getOfflineCredentials();
+          break;
+        case 'password_mismatch':
+        default:
+          error = 'Invalid password';
+          break;
+      }
       return;
     }
 
