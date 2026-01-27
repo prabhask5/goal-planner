@@ -114,18 +114,41 @@ export async function stopFocusSession(id: string, currentFocusElapsedMinutes?: 
   const session = await db.focusSessions.get(id);
   if (!session) return undefined;
 
-  const updates: Partial<Pick<FocusSession, 'phase' | 'status' | 'current_cycle' | 'phase_started_at' | 'phase_remaining_ms' | 'ended_at' | 'elapsed_duration'>> = {
-    status: 'stopped',
-    ended_at: timestamp,
-    phase: 'idle'
-  };
-
-  // If stopping during a focus phase, add the elapsed time
+  // Calculate final elapsed duration
+  let elapsedDuration = session.elapsed_duration || 0;
   if (currentFocusElapsedMinutes !== undefined) {
-    updates.elapsed_duration = (session.elapsed_duration || 0) + currentFocusElapsedMinutes;
+    elapsedDuration += currentFocusElapsedMinutes;
   }
 
-  return updateFocusSession(id, updates);
+  // Mark as stopped AND deleted so tombstone cleanup will eventually remove it
+  let updated: FocusSession | undefined;
+  await db.transaction('rw', [db.focusSessions, db.syncQueue], async () => {
+    await db.focusSessions.update(id, {
+      status: 'stopped',
+      ended_at: timestamp,
+      phase: 'idle',
+      elapsed_duration: elapsedDuration,
+      deleted: true,
+      updated_at: timestamp
+    });
+    updated = await db.focusSessions.get(id);
+    if (updated) {
+      await queueSyncDirect('focus_sessions', 'update', id, {
+        status: 'stopped',
+        ended_at: timestamp,
+        phase: 'idle',
+        elapsed_duration: elapsedDuration,
+        deleted: true,
+        updated_at: timestamp
+      });
+    }
+  });
+
+  if (updated) {
+    scheduleSyncPush();
+  }
+
+  return updated;
 }
 
 export async function advancePhase(
@@ -167,9 +190,10 @@ export async function getTodayFocusTime(userId: string): Promise<number> {
     .toArray();
 
   // Sum up focus time from sessions today using elapsed_duration
+  // Note: We include deleted (stopped) sessions since they still count for today's focus time
+  // The date filter handles excluding old sessions
   let totalMs = 0;
   for (const session of sessions) {
-    if (session.deleted) continue;
     if (session.started_at < localMidnightISO) continue;
 
     // Use elapsed_duration (actual time spent in focus phases)
