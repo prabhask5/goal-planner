@@ -85,21 +85,21 @@
     }
   }
 
-  function isOverdue(): boolean {
-    if (!task) return false;
+  const isOverdue = $derived.by(() => {
+    if (!dueDate) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const taskDueDate = parseDateString(task.due_date);
+    const taskDueDate = parseDateString(dueDate);
     return taskDueDate < today && !completed;
-  }
+  });
 
-  function isDueToday(): boolean {
-    if (!task) return false;
+  const isDueToday = $derived.by(() => {
+    if (!dueDate) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const taskDueDate = parseDateString(task.due_date);
+    const taskDueDate = parseDateString(dueDate);
     return taskDueDate.getTime() === today.getTime() && !completed;
-  }
+  });
 
   function formatDisplayDate(dateStr: string): string {
     const date = parseDateString(dateStr);
@@ -125,7 +125,7 @@
           />
         {:else}
           <button class="field-value editable" onclick={() => editingName = true}>
-            {task.name}
+            {name}
           </button>
         {/if}
       </div>
@@ -138,9 +138,9 @@
           class="field-input date-input"
           onchange={handleDueDateChange}
         />
-        {#if isOverdue()}
+        {#if isOverdue}
           <span class="overdue-badge">Overdue</span>
-        {:else if isDueToday()}
+        {:else if isDueToday}
           <span class="due-today-badge">Due Today</span>
         {/if}
       </div>

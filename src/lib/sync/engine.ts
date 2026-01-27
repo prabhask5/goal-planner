@@ -3,7 +3,7 @@ import { db } from '$lib/db/client';
 import { getPendingSync, removeSyncItem, incrementRetry, getPendingEntityIds, cleanupFailedItems, coalescePendingOps } from './queue';
 import type { SyncQueueItem, Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress, TaskCategory, Commitment, DailyTask, LongTermTask, LongTermTaskWithCategory, FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
 import { syncStatusStore } from '$lib/stores/sync';
-import { calculateGoalProgress } from '$lib/utils/colors';
+import { calculateGoalProgressCapped } from '$lib/utils/colors';
 import { isRoutineActiveOnDate } from '$lib/utils/dates';
 
 // ============================================================
@@ -329,7 +329,7 @@ function calculateListProgress(goals: Goal[]): { totalGoals: number; completedGo
   const activeGoals = goals.filter(g => !g.deleted);
   const totalGoals = activeGoals.length;
   const completedProgress = activeGoals.reduce((sum: number, goal: Goal) => {
-    return sum + calculateGoalProgress(goal.type, goal.completed, goal.current_value, goal.target_value);
+    return sum + calculateGoalProgressCapped(goal.type, goal.completed, goal.current_value, goal.target_value);
   }, 0);
   const completionPercentage = totalGoals > 0 ? completedProgress / totalGoals : 0;
 

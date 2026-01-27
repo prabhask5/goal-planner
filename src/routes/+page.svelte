@@ -317,13 +317,13 @@
       rgba(0, 0, 5, 1) 100%);
     background-attachment: fixed;
     /* Offset upward to account for navbar (64px desktop) and appear truly centered */
-    padding-bottom: 64px;
+    padding-top: 64px;
   }
 
   /* Mobile: account for bottom navbar instead */
   @media (max-width: 768px) {
     .home-container {
-      padding-bottom: 0;
+      padding-top: 0;
       /* Mobile has top island header + bottom nav, roughly balanced */
     }
   }

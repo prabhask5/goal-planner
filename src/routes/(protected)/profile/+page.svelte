@@ -41,12 +41,13 @@
     return $page.data.session?.user?.email || '';
   });
 
-  // Check if in offline mode
+  // Check if changes should be disabled (offline mode OR network offline)
   const isOfflineMode = $derived($authState.mode === 'offline');
+  const changesDisabled = $derived(isOfflineMode || !$isOnline);
 
   async function handleProfileSubmit(e: Event) {
     e.preventDefault();
-    if (isOfflineMode) {
+    if (changesDisabled) {
       profileError = 'Profile changes require an internet connection';
       return;
     }
@@ -71,7 +72,7 @@
 
   async function handlePasswordSubmit(e: Event) {
     e.preventDefault();
-    if (isOfflineMode) {
+    if (changesDisabled) {
       passwordError = 'Password changes require an internet connection';
       return;
     }
@@ -184,7 +185,7 @@
             type="text"
             id="firstName"
             bind:value={firstName}
-            disabled={profileLoading || isOfflineMode}
+            disabled={profileLoading || changesDisabled}
             required
             placeholder="John"
           />
@@ -196,7 +197,7 @@
             type="text"
             id="lastName"
             bind:value={lastName}
-            disabled={profileLoading || isOfflineMode}
+            disabled={profileLoading || changesDisabled}
             placeholder="Doe"
           />
         </div>
@@ -213,7 +214,7 @@
       <button
         type="submit"
         class="btn btn-primary"
-        disabled={profileLoading || isOfflineMode}
+        disabled={profileLoading || changesDisabled}
       >
         {#if profileLoading}
           <span class="loading-spinner"></span>
@@ -240,7 +241,7 @@
             type={showCurrentPassword ? 'text' : 'password'}
             id="currentPassword"
             bind:value={currentPassword}
-            disabled={passwordLoading || isOfflineMode}
+            disabled={passwordLoading || changesDisabled}
             required
             autocomplete="current-password"
           />
@@ -272,7 +273,7 @@
             type={showNewPassword ? 'text' : 'password'}
             id="newPassword"
             bind:value={newPassword}
-            disabled={passwordLoading || isOfflineMode}
+            disabled={passwordLoading || changesDisabled}
             required
             minlength="6"
             autocomplete="new-password"
@@ -306,7 +307,7 @@
             type={showConfirmPassword ? 'text' : 'password'}
             id="confirmPassword"
             bind:value={confirmPassword}
-            disabled={passwordLoading || isOfflineMode}
+            disabled={passwordLoading || changesDisabled}
             required
             autocomplete="new-password"
           />
@@ -342,7 +343,7 @@
       <button
         type="submit"
         class="btn btn-secondary"
-        disabled={passwordLoading || isOfflineMode}
+        disabled={passwordLoading || changesDisabled}
       >
         {#if passwordLoading}
           <span class="loading-spinner"></span>

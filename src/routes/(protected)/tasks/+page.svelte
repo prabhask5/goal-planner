@@ -158,6 +158,12 @@
 
   async function handleUpdateCategory(id: string, updates: { name?: string; color?: string }) {
     await taskCategoriesStore.update(id, updates);
+    // Immediately update tasks in UI to reflect the category changes
+    longTermTasks = longTermTasks.map(task =>
+      task.category_id === id && task.category
+        ? { ...task, category: { ...task.category, ...updates } }
+        : task
+    );
   }
 
   async function handleDeleteCategory(id: string) {
