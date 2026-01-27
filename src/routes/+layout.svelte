@@ -300,8 +300,15 @@
 
   // Check if user is authenticated (either mode)
   // Hide navbar on login page (it has its own full-screen layout)
+  // Also hide during initial loading to prevent flicker
   const isOnLoginPage = $derived($page.url.pathname.startsWith('/login'));
-  const isAuthenticated = $derived(data.authMode !== 'none' && !isOnLoginPage);
+  const isOnConfirmPage = $derived($page.url.pathname.startsWith('/confirm'));
+  const isAuthPage = $derived(isOnLoginPage || isOnConfirmPage);
+  const isAuthenticated = $derived(
+    data.authMode !== 'none' &&
+    !isAuthPage &&
+    !$authState.isLoading
+  );
 
   const navItems = [
     { href: '/tasks', label: 'Tasks', icon: 'tasks', mobileLabel: 'Tasks' },
@@ -361,7 +368,14 @@
   }
 </script>
 
-<div class="app" class:authenticated={isAuthenticated}>
+<div class="app" class:authenticated={isAuthenticated} class:loading={$authState.isLoading}>
+  <!-- Initial Loading State - prevents flash during auth check -->
+  {#if $authState.isLoading && !isAuthPage}
+    <div class="auth-loading-overlay">
+      <div class="auth-loading-spinner"></div>
+    </div>
+  {/if}
+
   <!-- Sign Out Overlay - covers everything during sign out -->
   {#if isSigningOut}
     <div class="signout-overlay" transition:fade={{ duration: 200 }}>
@@ -539,7 +553,7 @@
         </div>
       </div>
     </nav>
-  {:else if !$page.url.pathname.startsWith('/login') && !isSigningOut}
+  {:else if !isAuthPage && !isSigningOut && !$authState.isLoading}
     <!-- Unauthenticated header (hidden on login page and during sign out) -->
     <nav class="nav-desktop nav-simple">
       <div class="nav-inner">
@@ -651,6 +665,34 @@
     min-height: 100dvh; /* Dynamic viewport height for mobile */
     display: flex;
     flex-direction: column;
+  }
+
+  /* Hide content during initial auth check to prevent flicker */
+  .app.loading > :not(.auth-loading-overlay) {
+    visibility: hidden;
+  }
+
+  .auth-loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-primary, #0f0f1a);
+  }
+
+  .auth-loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(108, 92, 231, 0.2);
+    border-top-color: #6c5ce7;
+    border-radius: 50%;
+    animation: auth-spin 0.8s linear infinite;
+  }
+
+  @keyframes auth-spin {
+    to { transform: rotate(360deg); }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
