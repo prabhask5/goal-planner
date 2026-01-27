@@ -5,13 +5,14 @@
 
 import { db } from '$lib/db/schema';
 import type { OfflineSession } from '$lib/types';
-import { generateToken } from './crypto';
 
 const SESSION_ID = 'current_session';
 
-// Session duration in milliseconds (matches typical Supabase session: 1 hour)
-// This can be adjusted based on Supabase configuration
-const SESSION_DURATION_MS = 60 * 60 * 1000; // 1 hour
+// Offline sessions do NOT expire automatically (like Supabase refresh tokens)
+// They are only revoked when:
+// 1. User comes back online and re-authenticates successfully
+// 2. User signs out while offline
+// Security: All offline changes require re-auth before syncing to server
 
 /**
  * Create a new offline session
@@ -20,14 +21,12 @@ const SESSION_DURATION_MS = 60 * 60 * 1000; // 1 hour
  */
 export async function createOfflineSession(userId: string): Promise<OfflineSession> {
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + SESSION_DURATION_MS);
 
   const session: OfflineSession = {
     id: SESSION_ID,
     userId: userId,
-    offlineToken: generateToken(),
-    createdAt: now.toISOString(),
-    expiresAt: expiresAt.toISOString()
+    offlineToken: crypto.randomUUID(),
+    createdAt: now.toISOString()
   };
 
   // Use put to insert or update the singleton record
@@ -53,26 +52,12 @@ export async function getOfflineSession(): Promise<OfflineSession | null> {
 }
 
 /**
- * Get a valid (non-expired) offline session
- * Returns null if no valid session exists
+ * Get a valid offline session
+ * Returns null if no session exists
+ * Note: Sessions don't expire - they're only revoked on re-auth or logout
  */
 export async function getValidOfflineSession(): Promise<OfflineSession | null> {
-  const session = await getOfflineSession();
-  if (!session) {
-    return null;
-  }
-
-  // Check if session is expired
-  const now = new Date();
-  const expiresAt = new Date(session.expiresAt);
-
-  if (now >= expiresAt) {
-    // Session expired - clear it
-    await clearOfflineSession();
-    return null;
-  }
-
-  return session;
+  return await getOfflineSession();
 }
 
 /**
@@ -81,23 +66,6 @@ export async function getValidOfflineSession(): Promise<OfflineSession | null> {
 export async function hasValidOfflineSession(): Promise<boolean> {
   const session = await getValidOfflineSession();
   return session !== null;
-}
-
-/**
- * Extend the offline session (refresh expiration)
- * Called when user is actively using the app offline
- */
-export async function extendOfflineSession(): Promise<void> {
-  const session = await getOfflineSession();
-  if (!session) {
-    return;
-  }
-
-  const newExpiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-
-  await db.offlineSession.update(SESSION_ID, {
-    expiresAt: newExpiresAt.toISOString()
-  });
 }
 
 /**
@@ -114,22 +82,14 @@ export async function clearOfflineSession(): Promise<void> {
 export async function getOfflineSessionInfo(): Promise<{
   userId: string;
   createdAt: Date;
-  expiresAt: Date;
-  remainingMs: number;
 } | null> {
   const session = await getValidOfflineSession();
   if (!session) {
     return null;
   }
 
-  const now = new Date();
-  const expiresAt = new Date(session.expiresAt);
-  const remainingMs = expiresAt.getTime() - now.getTime();
-
   return {
     userId: session.userId,
-    createdAt: new Date(session.createdAt),
-    expiresAt,
-    remainingMs
+    createdAt: new Date(session.createdAt)
   };
 }

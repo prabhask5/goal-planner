@@ -2,8 +2,8 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { signIn, signUp, getSession, resendConfirmationEmail } from '$lib/supabase/auth';
-  import { getOfflineCredentials, verifyOfflinePassword } from '$lib/auth/offlineCredentials';
+  import { signIn, signUp, getSession, resendConfirmationEmail, isSessionExpired } from '$lib/supabase/auth';
+  import { getOfflineCredentials, verifyOfflineCredentials } from '$lib/auth/offlineCredentials';
   import { createOfflineSession, getValidOfflineSession } from '$lib/auth/offlineSession';
   import { isOnline } from '$lib/stores/network';
   import type { OfflineCredentials } from '$lib/types';
@@ -41,20 +41,23 @@
     const cached = await getOfflineCredentials();
     cachedCredentials = cached;
 
-    // Check if user is already authenticated (Supabase session or offline session)
+    // Check if user is already authenticated
     const session = await getSession();
-    if (session) {
+    if (session && !isSessionExpired(session)) {
       // Use hard navigation to ensure full page reload with proper auth state
       window.location.href = redirectUrl;
       return;
     }
 
-    // Also check for valid offline session - user might already be logged in offline
-    const offlineSession = await getValidOfflineSession();
-    if (offlineSession) {
-      // Already authenticated offline - redirect to intended destination
-      window.location.href = redirectUrl;
-      return;
+    // ONLY check offline session when actually offline
+    // When online, user must authenticate via Supabase
+    if (!navigator.onLine) {
+      const offlineSession = await getValidOfflineSession();
+      if (offlineSession) {
+        // Already authenticated offline - redirect to intended destination
+        window.location.href = redirectUrl;
+        return;
+      }
     }
 
     // Listen for auth confirmation from other tabs
@@ -83,6 +86,10 @@
 
   async function handleSubmit(e: Event) {
     e.preventDefault();
+
+    // Prevent double-submit
+    if (loading) return;
+
     loading = true;
     error = null;
     success = null;
@@ -158,7 +165,23 @@
   async function handleOfflineLogin() {
     if (!cachedCredentials) return;
 
-    const valid = await verifyOfflinePassword(password);
+    // Re-fetch credentials to ensure they haven't changed since page load
+    // (e.g., another tab might have logged in as different user)
+    const currentCredentials = await getOfflineCredentials();
+
+    // SECURITY: Verify credentials still exist and match what was displayed
+    if (!currentCredentials || currentCredentials.userId !== cachedCredentials.userId) {
+      error = 'Credentials have changed. Please refresh the page.';
+      cachedCredentials = currentCredentials; // Update displayed info
+      return;
+    }
+
+    // Verify email AND password against cached credentials
+    const valid = await verifyOfflineCredentials(
+      cachedCredentials.email,
+      password,
+      cachedCredentials.userId
+    );
     if (!valid) {
       error = 'Invalid password';
       return;

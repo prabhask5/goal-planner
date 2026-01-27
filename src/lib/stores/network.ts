@@ -1,14 +1,16 @@
 import { writable, type Readable } from 'svelte/store';
 import { browser } from '$app/environment';
 
-type OnlineCallback = () => void;
+type NetworkCallback = () => void;
 
 function createNetworkStore(): Readable<boolean> & {
   init: () => void;
-  onReconnect: (callback: OnlineCallback) => () => void;
+  onReconnect: (callback: NetworkCallback) => () => void;
+  onDisconnect: (callback: NetworkCallback) => () => void;
 } {
   const { subscribe, set } = writable<boolean>(true);
-  const reconnectCallbacks: Set<OnlineCallback> = new Set();
+  const reconnectCallbacks: Set<NetworkCallback> = new Set();
+  const disconnectCallbacks: Set<NetworkCallback> = new Set();
   let wasOffline = false;
   let currentValue = true; // Track current value to prevent redundant updates
 
@@ -30,8 +32,20 @@ function createNetworkStore(): Readable<boolean> & {
 
     // Listen for going offline
     window.addEventListener('offline', () => {
+      const wasOnline = currentValue;
       wasOffline = true;
       setIfChanged(false);
+
+      // If we were online, trigger disconnect callbacks
+      if (wasOnline) {
+        disconnectCallbacks.forEach((callback) => {
+          try {
+            callback();
+          } catch (e) {
+            console.error('[Network] Disconnect callback error:', e);
+          }
+        });
+      }
     });
 
     // Listen for coming back online
@@ -80,15 +94,21 @@ function createNetworkStore(): Readable<boolean> & {
     });
   }
 
-  function onReconnect(callback: OnlineCallback): () => void {
+  function onReconnect(callback: NetworkCallback): () => void {
     reconnectCallbacks.add(callback);
     return () => reconnectCallbacks.delete(callback);
+  }
+
+  function onDisconnect(callback: NetworkCallback): () => void {
+    disconnectCallbacks.add(callback);
+    return () => disconnectCallbacks.delete(callback);
   }
 
   return {
     subscribe,
     init,
-    onReconnect
+    onReconnect,
+    onDisconnect
   };
 }
 

@@ -166,29 +166,6 @@ export function isSessionExpired(session: Session | null): boolean {
   return Date.now() / 1000 > expiresAt;
 }
 
-/**
- * Validate credentials against Supabase (for reconnection auth check)
- * Returns the new session if valid, null if invalid
- */
-export async function validateCredentials(email: string, password: string): Promise<Session | null> {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error || !data.session) {
-      console.error('[Auth] Credential validation failed:', error?.message);
-      return null;
-    }
-
-    return data.session;
-  } catch (e) {
-    console.error('[Auth] Credential validation error:', e);
-    return null;
-  }
-}
-
 export function getUserProfile(user: User | null): UserProfile {
   return {
     firstName: user?.user_metadata?.first_name || '',

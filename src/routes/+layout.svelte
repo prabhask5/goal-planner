@@ -4,7 +4,7 @@
   import { fade } from 'svelte/transition';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { signOut, getUserProfile, getSession, validateCredentials } from '$lib/supabase/auth';
+  import { signOut, getUserProfile, getSession, signIn } from '$lib/supabase/auth';
   import { stopSyncEngine, clearLocalCache, clearPendingSyncQueue, markAuthValidated, runFullSync } from '$lib/sync/engine';
   import { getOfflineCredentials, clearOfflineCredentials } from '$lib/auth/offlineCredentials';
   import { syncStatusStore } from '$lib/stores/sync';
@@ -46,8 +46,8 @@
   });
 
   // Handle reconnection - validate auth BEFORE allowing sync
-  // SECURITY: This is critical - we must verify cached credentials are still valid
-  // before allowing any pending changes to sync to the database
+  // SECURITY: This is critical - we must verify cached credentials (email AND password)
+  // are still valid with Supabase before allowing any pending changes to sync to the database
   async function handleReconnectAuthCheck(): Promise<void> {
     const currentState = $authState;
 
@@ -70,28 +70,40 @@
         return;
       }
 
-      // CRITICAL: Validate credentials with Supabase BEFORE allowing sync
-      // This prevents syncing data from a compromised/expired offline session
-      console.log('[Auth] Validating cached credentials with Supabase...');
-      const session = await validateCredentials(credentials.email, credentials.email);
+      if (!credentials.email || !credentials.password) {
+        console.error('[Auth] Cached credentials missing email or password');
+        await handleInvalidAuth('Invalid cached credentials. Please sign in again.');
+        return;
+      }
 
-      // If validateCredentials returns null, we need to try with the actual password
-      // But we don't store plaintext password - only hash. So we try to refresh session.
-      const refreshedSession = await getSession();
+      // SECURITY: Actually re-authenticate with Supabase using cached email and password
+      // This ensures the password hasn't been changed while the user was offline
+      console.log('[Auth] Re-authenticating with Supabase using cached credentials...');
 
-      if (refreshedSession) {
-        // SUCCESS: Credentials are valid
-        console.log('[Auth] Credentials validated - allowing sync');
+      // Add timeout to prevent hanging on flaky network
+      const SESSION_TIMEOUT_MS = 15000;
+      const authResult = await Promise.race([
+        signIn(credentials.email, credentials.password),
+        new Promise<{ session: null; error: string }>((resolve) => setTimeout(() => {
+          console.warn('[Auth] Re-authentication timed out');
+          resolve({ session: null, error: 'timeout' });
+        }, SESSION_TIMEOUT_MS))
+      ]);
+
+      if (authResult.session) {
+        // SUCCESS: Email and password are still valid with Supabase
+        console.log('[Auth] Credentials validated with Supabase - allowing sync');
         await clearOfflineSession();
-        authState.setSupabaseAuth(refreshedSession);
+        authState.setSupabaseAuth(authResult.session);
         markAuthValidated();
 
         // Now trigger the sync that was waiting
         runFullSync(false);
       } else {
-        // FAILURE: Credentials are invalid - cancel all pending syncs
-        console.error('[Auth] Credential validation failed - canceling pending syncs');
-        await handleInvalidAuth('Your session has expired. Please sign in again.');
+        // FAILURE: Credentials are invalid (password may have been changed)
+        // SECURITY: Cancel all pending syncs to prevent unauthorized data modification
+        console.error('[Auth] Credential validation failed:', authResult.error);
+        await handleInvalidAuth('Your credentials may have changed while you are offline. Please sign in again.');
       }
     } catch (e) {
       console.error('[Auth] Error validating credentials on reconnect:', e);
@@ -309,6 +321,7 @@
 
     // Do cleanup in background (user sees overlay)
     stopSyncEngine();
+    await clearPendingSyncQueue(); // Clear any pending sync operations
     await clearLocalCache();
     localStorage.removeItem('lastSyncTimestamp');
     syncStatusStore.reset();

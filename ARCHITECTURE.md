@@ -291,31 +291,63 @@ Remote Change Received
 
 ### Credential Caching
 
-On successful online login, credentials are securely cached for offline access:
+On successful online login, credentials are cached locally for offline access:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    CREDENTIAL CACHING                            │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  On Successful Login:                                            │
+│  On Successful Login (signIn):                                   │
 │                                                                  │
-│  Password ──▶ PBKDF2-SHA256 ──▶ Hash                            │
-│                    │                                             │
-│                    ├── 100,000 iterations                        │
-│                    ├── 256-bit key length                        │
-│                    └── 16-byte random salt                       │
-│                                                                  │
-│  Stored in IndexedDB:                                            │
+│  Stored in IndexedDB (offlineCredentials table):                 │
 │  {                                                               │
-│    email,                                                        │
-│    passwordHash,  // derived key, not plaintext                  │
-│    salt,          // unique per user                             │
-│    userId,                                                       │
-│    firstName,                                                    │
-│    lastName,                                                     │
-│    cachedAt                                                      │
+│    id: 'current_user',     // singleton                          │
+│    email,                  // user's email                       │
+│    password,               // stored for offline re-auth         │
+│    userId,                 // Supabase user ID                   │
+│    firstName,              // from user_metadata                 │
+│    lastName,               // from user_metadata                 │
+│    cachedAt                // ISO timestamp                      │
 │  }                                                               │
+│                                                                  │
+│  Note: Password is stored to enable re-authentication with       │
+│  Supabase when transitioning from offline to online mode.        │
+│  This ensures pending offline changes can only sync if the       │
+│  password is still valid (hasn't been changed on another device).│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Offline Session Management
+
+Offline sessions are lightweight markers that track offline authentication state:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    OFFLINE SESSIONS                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Session Creation Triggers:                                      │
+│  1. Going offline while authenticated (automatic)                │
+│  2. Offline login with cached credentials (manual)               │
+│                                                                  │
+│  Stored in IndexedDB (offlineSession table):                     │
+│  {                                                               │
+│    id: 'current_session',  // singleton                          │
+│    userId,                 // must match credentials.userId      │
+│    offlineToken,           // random UUID (for tracking)         │
+│    createdAt               // ISO timestamp                      │
+│  }                                                               │
+│                                                                  │
+│  Session Properties:                                             │
+│  • Sessions do NOT auto-expire                                   │
+│  • Only cleared on:                                              │
+│    1. Successful re-auth when coming back online                 │
+│    2. User signs out                                             │
+│    3. Credential userId mismatch (different user logged in)      │
+│                                                                  │
+│  Security: All offline changes require re-auth before syncing    │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -327,67 +359,72 @@ User Offline + Has Cached Credentials
          │
          ▼
 ┌────────────────────────┐
+│ Display cached user    │
+│ (firstName, email)     │
+└───────────┬────────────┘
+            │
+            ▼
+┌────────────────────────┐
 │ User enters password   │
 └───────────┬────────────┘
             │
             ▼
 ┌────────────────────────┐
-│ Retrieve cached creds  │
-│ from IndexedDB         │
+│ verifyOfflineCredentials():       │
+│ • Check email matches  │
+│ • Check password matches│
+│ • Check userId matches │
 └───────────┬────────────┘
             │
-            ▼
-┌────────────────────────┐
-│ Hash input password    │
-│ with stored salt       │
-└───────────┬────────────┘
+      Match?│
             │
-            ▼
+     ┌──────┴──────┐
+     │             │
+    Yes           No
+     │             │
+     ▼             ▼
+┌────────────┐   ┌────────────┐
+│ Create     │   │ Show error │
+│ offline    │   │ "Invalid   │
+│ session    │   │ password"  │
+└─────┬──────┘   └────────────┘
+      │
+      ▼
 ┌────────────────────────┐
-│ Timing-safe compare    │──No──▶ Reject
-│ against stored hash    │
-└───────────┬────────────┘
-            │ Match
-            ▼
-┌────────────────────────┐
-│ Create offline session │
-│ (1 hour expiry)        │
-│ Extended on activity   │
-└───────────┬────────────┘
-            │
-            ▼
-       Grant Access
+│ Start sync engine      │
+│ Navigate to app        │
+└────────────────────────┘
 ```
-
-### Security Properties
-
-- Password never stored in plaintext
-- PBKDF2 with 100k iterations resists brute-force attacks
-- Unique salt per user prevents rainbow table attacks
-- Timing-safe comparison prevents timing attacks
-- 1-hour session expiry limits exposure window
 
 ### Reconnection Auth Validation
 
-When transitioning from offline to online mode, credentials are validated BEFORE allowing sync:
+When transitioning from offline to online mode, credentials are validated with Supabase BEFORE allowing sync:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                RECONNECTION AUTH FLOW                            │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  Network Reconnects                                              │
+│  Network Reconnects (online event)                               │
 │         │                                                        │
 │         ▼                                                        │
 │  ┌────────────────────────┐                                      │
-│  │ Was user in offline    │──No──▶ Allow sync immediately        │
-│  │ mode?                  │                                      │
+│  │ Was user in offline    │──No──▶ markAuthValidated()           │
+│  │ mode? (authState.mode) │        Allow sync immediately        │
 │  └───────────┬────────────┘                                      │
 │              │ Yes                                               │
 │              ▼                                                   │
 │  ┌────────────────────────┐                                      │
-│  │ Try Supabase session   │                                      │
-│  │ refresh (getSession)   │                                      │
+│  │ Get cached credentials │                                      │
+│  │ (email + password)     │                                      │
+│  └───────────┬────────────┘                                      │
+│              │                                                   │
+│              ▼                                                   │
+│  ┌────────────────────────┐                                      │
+│  │ RE-AUTHENTICATE with   │  ◀── This is the key security step  │
+│  │ Supabase using cached  │      Password may have changed       │
+│  │ email + password       │      while user was offline          │
+│  │ (signIn with 15s timeout)│                                    │
 │  └───────────┬────────────┘                                      │
 │              │                                                   │
 │     ┌────────┴────────┐                                          │
@@ -395,19 +432,229 @@ When transitioning from offline to online mode, credentials are validated BEFORE
 │  Success           Failure                                       │
 │     │                 │                                          │
 │     ▼                 ▼                                          │
-│  ┌─────────┐   ┌──────────────────────┐                         │
-│  │ Allow   │   │ Clear sync queue     │                         │
-│  │ sync    │   │ Clear offline session│                         │
-│  │         │   │ Redirect to login    │                         │
-│  └─────────┘   └──────────────────────┘                         │
+│  ┌─────────────┐   ┌──────────────────────┐                     │
+│  │ Clear       │   │ clearPendingSyncQueue│  SECURITY:          │
+│  │ offline     │   │ clearOfflineSession  │  Prevents           │
+│  │ session     │   │ clearOfflineCredentials│ unauthorized      │
+│  │             │   │ signOut()            │  data from          │
+│  │ markAuth-   │   │ Redirect to login    │  syncing            │
+│  │ Validated() │   │ Show error toast     │                     │
+│  │             │   └──────────────────────┘                     │
+│  │ runFullSync │                                                │
+│  └─────────────┘                                                │
 │                                                                  │
-│  SECURITY: Pending sync queue is cleared on auth failure        │
-│  to prevent unauthorized data from syncing to server.           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Security Properties
+
+- Credentials cached locally for offline login capability
+- Password stored to enable Supabase re-authentication on reconnect
+- UserId verification prevents credential confusion across users
+- Sync queue cleared on auth failure (prevents unauthorized data sync)
+- Re-authentication with Supabase detects password changes made elsewhere
+
+### Automatic Offline Session Creation
+
+When going offline while authenticated, an offline session is automatically created:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│            AUTOMATIC OFFLINE SESSION (on disconnect)             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  isOnline.onDisconnect() callback in +layout.ts:                 │
+│                                                                  │
+│  1. Get current Supabase session                                 │
+│     └── If no session, skip (user not logged in)                 │
+│                                                                  │
+│  2. Get cached credentials                                       │
+│     └── If none, skip (can't verify user)                        │
+│                                                                  │
+│  3. SECURITY CHECK:                                              │
+│     • credentials.userId === session.user.id                     │
+│     • credentials.email === session.user.email                   │
+│     └── If mismatch, skip (different user)                       │
+│                                                                  │
+│  4. Check if offline session already exists                      │
+│     └── If exists, skip (already have session)                   │
+│                                                                  │
+│  5. createOfflineSession(userId)                                 │
+│     └── Creates new offline session for seamless offline access  │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 This prevents a compromised offline session from syncing malicious data to the server.
+
+### Complete Auth Flow Matrix
+
+The following table shows all possible authentication scenarios and their outcomes:
+
+| # | Network | Supabase Session | Session Expired | Offline Session | Offline Credentials Match | Result | Sync Engine |
+|---|---------|-----------------|-----------------|-----------------|---------------------------|--------|-------------|
+| 1 | Online | Valid | No | - | - | `supabase` mode | Started |
+| 2 | Online | Valid | Yes | - | - | `none` → login | Not started |
+| 3 | Online | None | - | Exists | - | `none` → login | Not started |
+| 4 | Online | None | - | None | - | `none` → login | Not started |
+| 5 | Offline | Valid (cached) | No | - | - | `supabase` mode | Started |
+| 6 | Offline | Valid (cached) | Yes | Valid | Yes | `offline` mode | Started |
+| 7 | Offline | None | - | Valid | Yes | `offline` mode | Started |
+| 8 | Offline | None | - | Valid | No | `none` (mismatch) | Not started |
+| 9 | Offline | None | - | None | - | `none` → login | Not started |
+
+**Key Points:**
+- When online, only Supabase auth is accepted (no fallback to offline session)
+- When offline, first try cached Supabase session, then offline session
+- Sync engine is started for ALL authenticated states (including offline mode)
+- UserId mismatch between offline session and credentials clears the session
+
+### Auth Initialization Flow (Root Layout)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    +layout.ts LOAD FUNCTION                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  if (!browser) return { session: null, authMode: 'none' }        │
+│                                                                  │
+│  isOffline = !navigator.onLine                                   │
+│         │                                                        │
+│    ┌────┴────┐                                                   │
+│    │         │                                                   │
+│  ONLINE    OFFLINE                                               │
+│    │         │                                                   │
+│    ▼         │                                                   │
+│  getSession()│                                                   │
+│    │         │                                                   │
+│    ▼         │                                                   │
+│  Valid &     │                                                   │
+│  not expired?│                                                   │
+│    │         │                                                   │
+│  ┌─┴─┐       │                                                   │
+│ Yes  No      │                                                   │
+│  │    │      │                                                   │
+│  │    ▼      │                                                   │
+│  │  return   │                                                   │
+│  │  'none'   │                                                   │
+│  │           │                                                   │
+│  ▼           ▼                                                   │
+│ startSync  getSession() (from localStorage)                      │
+│ return     │                                                     │
+│ 'supabase' │                                                     │
+│            ▼                                                     │
+│          Valid & not expired?                                    │
+│            │                                                     │
+│          ┌─┴─┐                                                   │
+│         Yes  No                                                  │
+│          │    │                                                  │
+│          ▼    ▼                                                  │
+│       startSync  getValidOfflineSession()                        │
+│       return     │                                               │
+│       'supabase' ▼                                               │
+│                Exists?                                           │
+│                  │                                               │
+│                ┌─┴─┐                                             │
+│               Yes  No                                            │
+│                │    │                                            │
+│                ▼    ▼                                            │
+│            Match    return 'none'                                │
+│            creds?                                                │
+│              │                                                   │
+│            ┌─┴─┐                                                 │
+│           Yes  No                                                │
+│            │    │                                                │
+│            ▼    ▼                                                │
+│        startSync  clearOfflineSession()                          │
+│        return     return 'none'                                  │
+│        'offline'                                                 │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Protected Routes Layout
+
+The `(protected)/+layout.ts` adds redirect-to-login behavior for unauthenticated users:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│            (PROTECTED)/+layout.ts LOAD FUNCTION                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Same auth checks as root layout, but:                           │
+│                                                                  │
+│  • Does NOT start sync engine (root layout handles that)         │
+│  • Throws redirect(302, '/login?redirect=...') on auth failure   │
+│  • Preserves return URL for post-login navigation                │
+│                                                                  │
+│  Note: This is a nested layout - runs AFTER root layout          │
+│  Root layout starts sync engine, this just guards access         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Login Page Flows
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    LOGIN PAGE SCENARIOS                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  SCENARIO 1: Online + No Cached Credentials                      │
+│  • Show email/password form                                      │
+│  • signIn() → caches credentials → goto(redirect)                │
+│  • Root layout runs, starts sync engine                          │
+│                                                                  │
+│  SCENARIO 2: Online + Has Cached Credentials                     │
+│  • Show email/password form (same as above)                      │
+│  • Different user can log in, replaces cached credentials        │
+│                                                                  │
+│  SCENARIO 3: Offline + Has Cached Credentials                    │
+│  • Show "Continue as {firstName}" with password only             │
+│  • verifyOfflineCredentials() → createOfflineSession()           │
+│  • window.location.href = redirect (hard nav)                    │
+│  • Root layout runs, starts sync engine in offline mode          │
+│                                                                  │
+│  SCENARIO 4: Offline + No Cached Credentials                     │
+│  • Show "Internet Required" message                              │
+│  • Cannot proceed until online                                   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Sign Out Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       SIGN OUT FLOW                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  handleSignOut() in +layout.svelte:                              │
+│                                                                  │
+│  1. Show full-screen overlay (isSigningOut = true)               │
+│  2. stopSyncEngine() - removes event listeners                   │
+│  3. clearPendingSyncQueue() - discards pending changes           │
+│  4. clearLocalCache() - clears all IndexedDB data                │
+│  5. localStorage.removeItem('lastSyncTimestamp')                 │
+│  6. syncStatusStore.reset()                                      │
+│  7. clearOfflineSession()                                        │
+│                                                                  │
+│  8. If ONLINE:                                                   │
+│     • clearOfflineCredentials()                                  │
+│     • signOut({ preserveOfflineCredentials: false })             │
+│     Else (OFFLINE):                                              │
+│     • KEEP offline credentials (for re-login)                    │
+│     • signOut({ preserveOfflineCredentials: true })              │
+│                                                                  │
+│  9. Clear Supabase localStorage manually (backup)                │
+│ 10. authState.reset()                                            │
+│ 11. window.location.href = '/login' (hard nav)                   │
+│                                                                  │
+│  Note: When signing out OFFLINE, credentials are preserved       │
+│  so user can sign back in without internet.                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 

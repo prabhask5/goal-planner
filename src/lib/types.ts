@@ -143,8 +143,7 @@ export interface OfflineCredentials {
   id: string;              // 'current_user' - singleton pattern
   userId: string;          // Supabase user ID
   email: string;
-  passwordHash: string;    // PBKDF2-SHA256 hash
-  salt: string;            // Salt for password hashing
+  password: string;        // Plaintext password (user's own password, stored locally)
   firstName: string;
   lastName: string;
   cachedAt: string;        // ISO timestamp when credentials were cached
@@ -155,7 +154,8 @@ export interface OfflineSession {
   userId: string;          // Supabase user ID
   offlineToken: string;    // UUID token for offline session
   createdAt: string;       // ISO timestamp
-  expiresAt: string;       // ISO timestamp - same duration as Supabase session
+  // Note: No expiresAt - sessions don't expire automatically
+  // They are only revoked on: (1) successful online re-auth, (2) logout
 }
 
 export type AuthMode = 'supabase' | 'offline' | 'none';

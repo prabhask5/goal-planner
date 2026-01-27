@@ -6,7 +6,6 @@
 import { db } from '$lib/db/schema';
 import type { OfflineCredentials } from '$lib/types';
 import type { User, Session } from '@supabase/supabase-js';
-import { hashPassword, generateSalt, verifyPassword } from './crypto';
 
 const CREDENTIALS_ID = 'current_user';
 
@@ -18,17 +17,13 @@ export async function cacheOfflineCredentials(
   email: string,
   password: string,
   user: User,
-  session: Session
+  _session: Session
 ): Promise<void> {
-  const salt = generateSalt();
-  const passwordHash = await hashPassword(password, salt);
-
   const credentials: OfflineCredentials = {
     id: CREDENTIALS_ID,
     userId: user.id,
     email: email,
-    passwordHash: passwordHash,
-    salt: salt,
+    password: password,
     firstName: user.user_metadata?.first_name || '',
     lastName: user.user_metadata?.last_name || '',
     cachedAt: new Date().toISOString()
@@ -48,21 +43,43 @@ export async function getOfflineCredentials(): Promise<OfflineCredentials | null
 }
 
 /**
- * Verify a password against cached credentials
- * @returns true if password matches the cached hash
+ * Verify email and password against cached credentials
+ * @param email - The email to verify
+ * @param password - The password to verify
+ * @param expectedUserId - The userId that the credentials should belong to
+ * @returns true if credentials exist, belong to the expected user, and email/password match
  */
-export async function verifyOfflinePassword(password: string): Promise<boolean> {
+export async function verifyOfflineCredentials(
+  email: string,
+  password: string,
+  expectedUserId: string
+): Promise<boolean> {
   const credentials = await getOfflineCredentials();
   if (!credentials) {
     return false;
   }
 
-  return verifyPassword(password, credentials.salt, credentials.passwordHash);
+  // SECURITY: Verify all fields match
+  if (credentials.userId !== expectedUserId) {
+    console.warn('[Auth] Credential userId mismatch');
+    return false;
+  }
+
+  if (credentials.email !== email) {
+    console.warn('[Auth] Credential email mismatch');
+    return false;
+  }
+
+  if (credentials.password !== password) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
- * Update the cached password hash (after online password change)
- * @param newPassword - The new plaintext password to hash and cache
+ * Update the cached password (after online password change)
+ * @param newPassword - The new password to cache
  */
 export async function updateOfflineCredentialsPassword(newPassword: string): Promise<void> {
   const credentials = await getOfflineCredentials();
@@ -70,12 +87,8 @@ export async function updateOfflineCredentialsPassword(newPassword: string): Pro
     return;
   }
 
-  const newSalt = generateSalt();
-  const newHash = await hashPassword(newPassword, newSalt);
-
   await db.offlineCredentials.update(CREDENTIALS_ID, {
-    passwordHash: newHash,
-    salt: newSalt,
+    password: newPassword,
     cachedAt: new Date().toISOString()
   });
 }
