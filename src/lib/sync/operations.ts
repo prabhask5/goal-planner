@@ -105,8 +105,7 @@ export function inferOperationType(
     return 'increment';
   }
 
-  // For now, all non-increment operations are 'set'
-  // Future phases may add more sophisticated inference
+  // All non-increment operations are 'set'
   return 'set';
 }
 

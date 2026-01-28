@@ -365,6 +365,14 @@ When both local and remote have changes, the engine applies field-level conflict
 | **delete_wins** | One side has delete operation | Delete takes precedence |
 | **last_write** | All other cases | Newer timestamp wins; deviceId tiebreaker |
 
+### Device ID Tiebreaker
+
+When two changes have exactly equal timestamps (rare but possible), the system uses `device_id` as a deterministic tiebreaker:
+- Every entity record includes a `device_id` field set on write
+- Lower device_id wins (arbitrary but consistent across all devices)
+- Same conflict always resolves the same way regardless of which device processes it
+- Device IDs are UUIDs generated per browser and stored in localStorage
+
 ### Conflict History
 
 All conflict resolutions are logged to the `conflictHistory` table in IndexedDB:

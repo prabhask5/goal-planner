@@ -13,6 +13,7 @@ export interface Goal {
   updated_at: string;
   deleted?: boolean; // Tombstone flag
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 export interface GoalList {
@@ -23,6 +24,7 @@ export interface GoalList {
   updated_at: string;
   deleted?: boolean; // Tombstone flag
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
   goals?: Goal[];
 }
 
@@ -43,6 +45,7 @@ export interface DailyRoutineGoal {
   updated_at: string;
   deleted?: boolean; // Tombstone flag
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 export interface DailyGoalProgress {
@@ -54,6 +57,7 @@ export interface DailyGoalProgress {
   updated_at: string;
   deleted?: boolean; // Tombstone flag
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 // Sync-related types - re-export from dedicated module
@@ -112,6 +116,7 @@ export interface TaskCategory {
   updated_at: string;
   deleted?: boolean; // Tombstone flag
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 export interface Commitment {
@@ -124,6 +129,7 @@ export interface Commitment {
   updated_at: string;
   deleted?: boolean; // Tombstone flag
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 export interface DailyTask {
@@ -136,6 +142,7 @@ export interface DailyTask {
   updated_at: string;
   deleted?: boolean; // Tombstone flag
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 export interface LongTermTask {
@@ -149,6 +156,7 @@ export interface LongTermTask {
   updated_at: string;
   deleted?: boolean; // Tombstone flag
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 export interface LongTermTaskWithCategory extends LongTermTask {
@@ -200,6 +208,7 @@ export interface FocusSettings {
   updated_at: string;
   deleted?: boolean;
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 export interface FocusSession {
@@ -220,6 +229,7 @@ export interface FocusSession {
   updated_at: string;
   deleted?: boolean;
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 // ============================================================
@@ -237,6 +247,7 @@ export interface BlockList {
   updated_at: string;
   deleted?: boolean;
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }
 
 export interface BlockedWebsite {
@@ -247,4 +258,5 @@ export interface BlockedWebsite {
   updated_at: string;
   deleted?: boolean;
   _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
 }

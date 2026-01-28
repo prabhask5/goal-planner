@@ -148,7 +148,7 @@ export async function resolveConflicts(
   }
 
   // If remote is deleted but local has pending edits, delete still wins
-  // (This prevents resurrection - see Phase 5 tombstone handling)
+  // (This prevents resurrection of deleted entities)
   if (remote.deleted && !hasPendingDelete) {
     // Remote delete wins - entity should stay deleted
     return {
@@ -202,10 +202,9 @@ export async function resolveConflicts(
       };
       mergedEntity[field] = localValue;
     } else if (NUMERIC_MERGE_FIELDS.has(field) && canNumericMerge(local, remote, field)) {
-      // Tier 3b: Numeric field that can be merged
-      // This is only applicable if both sides made changes to a numeric field
-      // For now, use last-write-wins since we don't have the increment deltas
-      // (Full numeric merge requires Phase 7 inbox with operation-level sync)
+      // Tier 3b: Numeric field that could theoretically be merged
+      // For now, use last-write-wins since we only have final values, not operation deltas
+      // True numeric merge (e.g., +50 + +30 = +80) would require an operation inbox system
       resolution = resolveByTimestamp(field, local, remote, localUpdatedAt, remoteUpdatedAt, deviceId);
       mergedEntity[field] = resolution.resolvedValue;
     } else {
@@ -243,7 +242,7 @@ export async function resolveConflicts(
 
 /**
  * Resolve a field conflict using last-write-wins strategy.
- * Uses deviceId as tiebreaker when timestamps are equal.
+ * Uses deviceId as deterministic tiebreaker when timestamps are equal.
  */
 function resolveByTimestamp(
   field: string,
@@ -271,11 +270,20 @@ function resolveByTimestamp(
     resolvedValue = remoteValue;
   } else {
     // Timestamps are equal - use deviceId as deterministic tiebreaker
-    // Lower deviceId wins (arbitrary but consistent)
-    // Note: Remote device ID isn't available, so we assume remote wins ties
-    // In a full implementation, device_id would be stored with each record
-    winner = 'remote';
-    resolvedValue = remoteValue;
+    // Lower deviceId wins (arbitrary but consistent across all devices)
+    const remoteDeviceId = (remote.device_id as string) || '';
+
+    if (remoteDeviceId && localDeviceId < remoteDeviceId) {
+      winner = 'local';
+      resolvedValue = localValue;
+    } else if (remoteDeviceId && localDeviceId > remoteDeviceId) {
+      winner = 'remote';
+      resolvedValue = remoteValue;
+    } else {
+      // Same device or no remote device_id - local wins (it's the more recent action)
+      winner = 'local';
+      resolvedValue = localValue;
+    }
   }
 
   return {

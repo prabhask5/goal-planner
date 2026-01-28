@@ -414,7 +414,7 @@ export async function getPendingEntityIds(): Promise<Set<string>> {
  * Queue a sync operation using the intent-based format.
  *
  * This preserves the operation's intent (e.g., "increment by 1" vs "set to 50"),
- * enabling proper multi-device conflict resolution in future phases.
+ * enabling efficient local coalescing and pending operation protection.
  *
  * @param item The sync operation item (without id, timestamp, and retries)
  */

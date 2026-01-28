@@ -745,6 +745,24 @@ alter table block_lists add column if not exists _version integer default 1 not 
 alter table blocked_websites add column if not exists _version integer default 1 not null;
 
 -- ============================================================
+-- DEVICE ID: Track which device last modified each record
+-- Enables deterministic tiebreaking when timestamps are equal
+-- ============================================================
+
+alter table goal_lists add column if not exists device_id text;
+alter table goals add column if not exists device_id text;
+alter table daily_routine_goals add column if not exists device_id text;
+alter table daily_goal_progress add column if not exists device_id text;
+alter table task_categories add column if not exists device_id text;
+alter table commitments add column if not exists device_id text;
+alter table daily_tasks add column if not exists device_id text;
+alter table long_term_tasks add column if not exists device_id text;
+alter table focus_settings add column if not exists device_id text;
+alter table focus_sessions add column if not exists device_id text;
+alter table block_lists add column if not exists device_id text;
+alter table blocked_websites add column if not exists device_id text;
+
+-- ============================================================
 -- SYNC OPERATIONS LOG: Track all sync operations for conflict resolution
 -- This enables proper multi-device conflict resolution and auditing
 -- ============================================================

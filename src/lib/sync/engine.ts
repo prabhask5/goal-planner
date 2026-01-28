@@ -1,6 +1,7 @@
 import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/db/client';
 import { getPendingSync, removeSyncItem, incrementRetry, getPendingEntityIds, cleanupFailedItems, coalescePendingOps } from './queue';
+import { getDeviceId } from './deviceId';
 import type { Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress, TaskCategory, Commitment, DailyTask, LongTermTask, LongTermTaskWithCategory, FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
 import type { SyncOperationItem } from './types';
 import { syncStatusStore } from '$lib/stores/sync';
@@ -222,18 +223,18 @@ if (typeof window !== 'undefined') {
 
 // Column definitions for each table (explicit to reduce egress vs select('*'))
 const COLUMNS = {
-  goal_lists: 'id,user_id,name,created_at,updated_at,deleted,_version',
-  goals: 'id,goal_list_id,name,type,target_value,current_value,completed,order,created_at,updated_at,deleted,_version',
-  daily_routine_goals: 'id,user_id,name,type,target_value,start_date,end_date,active_days,order,created_at,updated_at,deleted,_version',
-  daily_goal_progress: 'id,daily_routine_goal_id,date,current_value,completed,updated_at,deleted,_version',
-  task_categories: 'id,user_id,name,color,order,created_at,updated_at,deleted,_version',
-  commitments: 'id,user_id,name,section,order,created_at,updated_at,deleted,_version',
-  daily_tasks: 'id,user_id,name,order,completed,created_at,updated_at,deleted,_version',
-  long_term_tasks: 'id,user_id,name,due_date,category_id,completed,created_at,updated_at,deleted,_version',
-  focus_settings: 'id,user_id,focus_duration,break_duration,long_break_duration,cycles_before_long_break,auto_start_breaks,auto_start_focus,created_at,updated_at,deleted,_version',
-  focus_sessions: 'id,user_id,started_at,ended_at,phase,status,current_cycle,total_cycles,focus_duration,break_duration,phase_started_at,phase_remaining_ms,elapsed_duration,created_at,updated_at,deleted,_version',
-  block_lists: 'id,user_id,name,active_days,is_enabled,order,created_at,updated_at,deleted,_version',
-  blocked_websites: 'id,block_list_id,domain,created_at,updated_at,deleted,_version'
+  goal_lists: 'id,user_id,name,created_at,updated_at,deleted,_version,device_id',
+  goals: 'id,goal_list_id,name,type,target_value,current_value,completed,order,created_at,updated_at,deleted,_version,device_id',
+  daily_routine_goals: 'id,user_id,name,type,target_value,start_date,end_date,active_days,order,created_at,updated_at,deleted,_version,device_id',
+  daily_goal_progress: 'id,daily_routine_goal_id,date,current_value,completed,updated_at,deleted,_version,device_id',
+  task_categories: 'id,user_id,name,color,order,created_at,updated_at,deleted,_version,device_id',
+  commitments: 'id,user_id,name,section,order,created_at,updated_at,deleted,_version,device_id',
+  daily_tasks: 'id,user_id,name,order,completed,created_at,updated_at,deleted,_version,device_id',
+  long_term_tasks: 'id,user_id,name,due_date,category_id,completed,created_at,updated_at,deleted,_version,device_id',
+  focus_settings: 'id,user_id,focus_duration,break_duration,long_break_duration,cycles_before_long_break,auto_start_breaks,auto_start_focus,created_at,updated_at,deleted,_version,device_id',
+  focus_sessions: 'id,user_id,started_at,ended_at,phase,status,current_cycle,total_cycles,focus_duration,break_duration,phase_started_at,phase_remaining_ms,elapsed_duration,created_at,updated_at,deleted,_version,device_id',
+  block_lists: 'id,user_id,name,active_days,is_enabled,order,created_at,updated_at,deleted,_version,device_id',
+  blocked_websites: 'id,block_list_id,domain,created_at,updated_at,deleted,_version,device_id'
 } as const;
 
 let syncTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -1066,14 +1067,15 @@ function isTransientError(error: unknown): boolean {
 // Process a single sync item (intent-based operation format)
 async function processSyncItem(item: SyncOperationItem): Promise<void> {
   const { table, entityId, operationType, field, value, timestamp } = item;
+  const deviceId = getDeviceId();
 
   switch (operationType) {
     case 'create': {
-      // Create: insert the full payload
+      // Create: insert the full payload with device_id
       const payload = value as Record<string, unknown>;
       const { error } = await supabase
         .from(table)
-        .insert({ id: entityId, ...payload });
+        .insert({ id: entityId, ...payload, device_id: deviceId });
       // Ignore duplicate key errors (item already synced from another device)
       if (error && !isDuplicateKeyError(error)) {
         throw error;
@@ -1082,10 +1084,10 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
     }
 
     case 'delete': {
-      // Delete: soft delete with tombstone
+      // Delete: soft delete with tombstone and device_id
       const { error } = await supabase
         .from(table)
-        .update({ deleted: true, updated_at: timestamp })
+        .update({ deleted: true, updated_at: timestamp, device_id: deviceId })
         .eq('id', entityId);
       // Ignore "not found" errors - item may already be deleted
       if (error && !isNotFoundError(error)) {
@@ -1115,6 +1117,7 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
       const updatePayload: Record<string, unknown> = {
         [field]: currentValue,
         updated_at: timestamp,
+        device_id: deviceId,
       };
 
       // Also sync completed status if this is a goal/progress increment
@@ -1131,7 +1134,7 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
     }
 
     case 'set': {
-      // Set: update the field(s) with the new value(s)
+      // Set: update the field(s) with the new value(s) and device_id
       let updatePayload: Record<string, unknown>;
 
       if (field) {
@@ -1139,12 +1142,14 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
         updatePayload = {
           [field]: value,
           updated_at: timestamp,
+          device_id: deviceId,
         };
       } else {
         // Multi-field set (value is the full payload)
         updatePayload = {
           ...(value as Record<string, unknown>),
           updated_at: timestamp,
+          device_id: deviceId,
         };
       }
 

@@ -5,11 +5,12 @@
  * rather than just final state (e.g., "current_value: 50").
  *
  * Benefits:
- * - Rapid increments are coalesced (50 +1s → single +50)
- * - Proper conflict resolution in future phases:
- *   - Device A increments 50 times → intent preserved as +50
- *   - Device B increments 30 times → intent preserved as +30
- *   - Merge result: +80 (not overwrite with one device's value)
+ * - Rapid increments are coalesced locally (50 +1s → single +50) reducing sync traffic
+ * - Pending operations are protected during conflict resolution
+ *
+ * Note: True numeric merge across devices (e.g., +50 + +30 = +80) is not implemented.
+ * Operations are converted to final values before pushing to Supabase, so conflicts
+ * use last-write-wins. Full numeric merge would require an operation inbox system.
  */
 
 /**
