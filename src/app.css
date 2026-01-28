@@ -105,9 +105,18 @@
   /* Cosmic Gradients */
   --gradient-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
   --gradient-success: linear-gradient(135deg, var(--color-success) 0%, var(--color-cyan) 100%);
-  --gradient-nebula: linear-gradient(135deg, rgba(108, 92, 231, 0.2) 0%, rgba(255, 121, 198, 0.1) 50%, rgba(38, 222, 129, 0.1) 100%);
+  --gradient-nebula: linear-gradient(
+    135deg,
+    rgba(108, 92, 231, 0.2) 0%,
+    rgba(255, 121, 198, 0.1) 50%,
+    rgba(38, 222, 129, 0.1) 100%
+  );
   --gradient-dark: linear-gradient(180deg, var(--color-bg-secondary) 0%, var(--color-bg) 100%);
-  --gradient-glow: radial-gradient(ellipse at center, var(--color-primary-glow) 0%, transparent 70%);
+  --gradient-glow: radial-gradient(
+    ellipse at center,
+    var(--color-primary-glow) 0%,
+    transparent 70%
+  );
   --gradient-star: radial-gradient(circle, #fff 0%, var(--color-primary) 30%, transparent 70%);
 
   /* ═══════════════════════════════════════════════════════════════════════════════
@@ -121,7 +130,7 @@
   --duration-orbital: 800ms;
   --duration-stellar: 1200ms;
 
-  --ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -133,8 +142,10 @@
      TYPOGRAPHY — Carved from starlight
      ═══════════════════════════════════════════════════════════════════════════════ */
 
-  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-sans:
+    'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display:
+    'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
 
@@ -148,7 +159,9 @@
    FOUNDATIONS — The fabric of space-time
    ═══════════════════════════════════════════════════════════════════════════════════ */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -167,7 +180,8 @@ html {
   background: var(--color-void);
 }
 
-html, body {
+html,
+body {
   height: 100%;
   height: 100dvh;
   width: 100%;
@@ -228,8 +242,13 @@ body::before {
 }
 
 @keyframes starTwinkle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
 }
 
 /* Orbital ring that slowly rotates - extends into safe areas */
@@ -242,16 +261,16 @@ body::after {
   width: 200vmax;
   height: 200vmax;
   transform: translate(-50%, -50%);
-  background:
-    conic-gradient(from 0deg at 50% 50%,
-      transparent 0deg,
-      rgba(108, 92, 231, 0.03) 60deg,
-      transparent 120deg,
-      rgba(38, 222, 129, 0.02) 180deg,
-      transparent 240deg,
-      rgba(255, 121, 198, 0.02) 300deg,
-      transparent 360deg
-    );
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(108, 92, 231, 0.03) 60deg,
+    transparent 120deg,
+    rgba(38, 222, 129, 0.02) 180deg,
+    transparent 240deg,
+    rgba(255, 121, 198, 0.02) 300deg,
+    transparent 360deg
+  );
   border-radius: 50%;
   animation: cosmicRotation 120s linear infinite;
   pointer-events: none;
@@ -259,8 +278,12 @@ body::after {
 }
 
 @keyframes cosmicRotation {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -297,7 +320,12 @@ body::after {
    TYPOGRAPHY — Words written in starlight
    ═══════════════════════════════════════════════════════════════════════════════════ */
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: var(--tracking-tight);
@@ -308,7 +336,12 @@ h1, h2, h3, h4, h5, h6 {
 h1 {
   font-size: 2.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary-light) 50%, var(--color-text) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-text) 0%,
+    var(--color-primary-light) 50%,
+    var(--color-text) 100%
+  );
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -317,8 +350,12 @@ h1 {
 }
 
 @keyframes textShimmer {
-  0% { background-position: 0% center; }
-  100% { background-position: 200% center; }
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 
 a {
@@ -331,7 +368,9 @@ a {
    FORM ELEMENTS — Control panels
    ═══════════════════════════════════════════════════════════════════════════════════ */
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
   font-size: 1rem;
   color: var(--color-text);
@@ -347,12 +386,16 @@ input, textarea, select {
     transform var(--duration-fast) var(--ease-out);
 }
 
-input:hover, textarea:hover, select:hover {
+input:hover,
+textarea:hover,
+select:hover {
   border-color: var(--color-border-strong);
   background: rgba(26, 26, 46, 0.8);
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--color-primary);
   background: rgba(34, 34, 64, 0.9);
@@ -400,7 +443,7 @@ button {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
   opacity: 0;
   transition: opacity var(--duration-fast);
 }
@@ -414,7 +457,7 @@ button {
   color: white;
   box-shadow:
     var(--shadow-md),
-    0 0 0 1px rgba(255,255,255,0.1) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
     0 0 30px var(--color-primary-glow);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
@@ -423,13 +466,15 @@ button {
   transform: translateY(-2px) scale(1.02);
   box-shadow:
     var(--shadow-lg),
-    0 0 0 1px rgba(255,255,255,0.2) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset,
     var(--glow-primary-strong);
 }
 
 .btn-primary:active {
   transform: translateY(0) scale(0.98);
-  box-shadow: var(--shadow-sm), 0 0 20px var(--color-primary-glow);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 20px var(--color-primary-glow);
 }
 
 .btn-secondary {
@@ -442,19 +487,25 @@ button {
 .btn-secondary:hover {
   background: rgba(34, 34, 64, 1);
   border-color: var(--color-border-strong);
-  box-shadow: var(--shadow-md), 0 0 20px rgba(108, 92, 231, 0.2);
+  box-shadow:
+    var(--shadow-md),
+    0 0 20px rgba(108, 92, 231, 0.2);
   transform: translateY(-1px);
 }
 
 .btn-danger {
   background: linear-gradient(135deg, var(--color-red) 0%, #ff8787 100%);
   color: white;
-  box-shadow: var(--shadow-md), 0 0 20px var(--color-red-glow);
+  box-shadow:
+    var(--shadow-md),
+    0 0 20px var(--color-red-glow);
 }
 
 .btn-danger:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg), 0 0 40px var(--color-red-glow);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 40px var(--color-red-glow);
 }
 
 .btn-sm {
@@ -479,9 +530,7 @@ button {
    ═══════════════════════════════════════════════════════════════════════════════════ */
 
 .card {
-  background: linear-gradient(145deg,
-    rgba(15, 15, 26, 0.9) 0%,
-    rgba(26, 26, 46, 0.8) 100%);
+  background: linear-gradient(145deg, rgba(15, 15, 26, 0.9) 0%, rgba(26, 26, 46, 0.8) 100%);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 1.75rem;
@@ -501,12 +550,14 @@ button {
   left: 20%;
   right: 20%;
   height: 1px;
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     transparent,
     rgba(108, 92, 231, 0.5),
     rgba(255, 255, 255, 0.3),
     rgba(108, 92, 231, 0.5),
-    transparent);
+    transparent
+  );
   border-radius: var(--radius-full);
 }
 
@@ -517,13 +568,19 @@ button {
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg,
+  background: linear-gradient(
+    135deg,
     rgba(108, 92, 231, 0.3) 0%,
     transparent 30%,
     transparent 70%,
-    rgba(38, 222, 129, 0.2) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    rgba(38, 222, 129, 0.2) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -568,8 +625,12 @@ button {
    ═══════════════════════════════════════════════════════════════════════════════════ */
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeInUp {
@@ -595,7 +656,8 @@ button {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -606,28 +668,40 @@ button {
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 20px var(--color-primary-glow);
     filter: brightness(1);
   }
   50% {
-    box-shadow: 0 0 50px var(--color-primary-glow), 0 0 80px var(--color-accent-glow);
+    box-shadow:
+      0 0 50px var(--color-primary-glow),
+      0 0 80px var(--color-accent-glow);
     filter: brightness(1.1);
   }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes ringPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 var(--color-primary-glow);
   }
   50% {
@@ -701,14 +775,30 @@ button {
   animation: staggerFadeIn 0.4s var(--ease-out) backwards;
 }
 
-.stagger-item:nth-child(1) { animation-delay: 0.05s; }
-.stagger-item:nth-child(2) { animation-delay: 0.1s; }
-.stagger-item:nth-child(3) { animation-delay: 0.15s; }
-.stagger-item:nth-child(4) { animation-delay: 0.2s; }
-.stagger-item:nth-child(5) { animation-delay: 0.25s; }
-.stagger-item:nth-child(6) { animation-delay: 0.3s; }
-.stagger-item:nth-child(7) { animation-delay: 0.35s; }
-.stagger-item:nth-child(8) { animation-delay: 0.4s; }
+.stagger-item:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.stagger-item:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.stagger-item:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.stagger-item:nth-child(4) {
+  animation-delay: 0.2s;
+}
+.stagger-item:nth-child(5) {
+  animation-delay: 0.25s;
+}
+.stagger-item:nth-child(6) {
+  animation-delay: 0.3s;
+}
+.stagger-item:nth-child(7) {
+  animation-delay: 0.35s;
+}
+.stagger-item:nth-child(8) {
+  animation-delay: 0.4s;
+}
 
 /* Modal/Sheet cinematic enter */
 @keyframes modalEnterCinematic {
@@ -779,24 +869,36 @@ button {
 
 /* Cosmic glow that scales with intensity (uses CSS custom properties for dynamic values) */
 @keyframes cosmicGlow {
-  0%, 100% {
-    filter: brightness(1) drop-shadow(0 0 var(--glow-size, 10px) var(--glow-color, var(--color-cyan)));
+  0%,
+  100% {
+    filter: brightness(1)
+      drop-shadow(0 0 var(--glow-size, 10px) var(--glow-color, var(--color-cyan)));
   }
   50% {
-    filter: brightness(calc(1 + var(--glow-brightness, 0.1))) drop-shadow(0 0 calc(var(--glow-size, 10px) * 1.5) var(--glow-color, var(--color-cyan)));
+    filter: brightness(calc(1 + var(--glow-brightness, 0.1)))
+      drop-shadow(0 0 calc(var(--glow-size, 10px) * 1.5) var(--glow-color, var(--color-cyan)));
   }
 }
 
 /* Fast shimmer for supernova effect */
 @keyframes supernovaShimmer {
-  0% { left: -100%; opacity: 0.5; }
-  50% { opacity: 1; }
-  100% { left: 100%; opacity: 0.5; }
+  0% {
+    left: -100%;
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0.5;
+  }
 }
 
 /* Nebula breathing effect */
 @keyframes nebulaBreath {
-  0%, 100% {
+  0%,
+  100% {
     opacity: var(--nebula-min, 0.1);
     transform: scale(1);
   }
@@ -818,7 +920,8 @@ button {
 
 /* Star twinkle for celebration particles */
 @keyframes celebrationTwinkle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: var(--twinkle-min, 0.3);
     transform: scale(1);
   }
@@ -841,11 +944,13 @@ button {
    ═══════════════════════════════════════════════════════════════════════════════════ */
 
 .gradient-text {
-  background: linear-gradient(135deg,
+  background: linear-gradient(
+    135deg,
     var(--color-primary-light) 0%,
     var(--color-text) 30%,
     var(--color-success) 70%,
-    var(--color-primary-light) 100%);
+    var(--color-primary-light) 100%
+  );
   background-size: 300% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -854,10 +959,12 @@ button {
 }
 
 .loading-shimmer {
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     var(--color-bg-tertiary) 0%,
     var(--color-bg-elevated) 50%,
-    var(--color-bg-tertiary) 100%);
+    var(--color-bg-tertiary) 100%
+  );
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
   border-radius: var(--radius-md);
@@ -868,9 +975,15 @@ button {
    ═══════════════════════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.5rem; }
-  h3 { font-size: 1.25rem; }
+  h1 {
+    font-size: 2rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+  }
+  h3 {
+    font-size: 1.25rem;
+  }
 }
 
 @media (max-width: 640px) {
@@ -878,7 +991,9 @@ button {
     font-size: 15px;
   }
 
-  h1 { font-size: 1.75rem; }
+  h1 {
+    font-size: 1.75rem;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -915,9 +1030,9 @@ body {
 @media (max-width: 768px) {
   button,
   a,
-  [role="button"],
-  input[type="checkbox"],
-  input[type="radio"] {
+  [role='button'],
+  input[type='checkbox'],
+  input[type='radio'] {
     min-height: 44px;
     min-width: 44px;
   }
@@ -935,7 +1050,7 @@ body {
   }
 
   /* Exception for styled checkboxes within labels - the label provides the touch target */
-  .checkbox-label input[type="checkbox"] {
+  .checkbox-label input[type='checkbox'] {
     min-height: auto;
     min-width: auto;
   }
@@ -948,14 +1063,17 @@ html {
 }
 
 /* Prevent overscroll bounce */
-html, body {
+html,
+body {
   overscroll-behavior: none;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
 /* Prevent callout on long-press for iOS */
-a, button, img {
+a,
+button,
+img {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
@@ -967,7 +1085,8 @@ a, button, img {
 }
 
 /* Allow text selection only in inputs and textareas */
-input, textarea {
+input,
+textarea {
   -webkit-user-select: text;
   user-select: text;
 }
@@ -1110,7 +1229,9 @@ input, textarea {
 
 @media (max-width: 640px) {
   /* Larger form elements on mobile for better touch */
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     font-size: 16px; /* Prevents iOS zoom on focus */
     padding: 1rem;
   }
@@ -1195,7 +1316,9 @@ input, textarea {
 @keyframes itemChangeHighlight {
   0% {
     background-color: rgba(16, 185, 129, 0.15);
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3), inset 0 0 20px rgba(16, 185, 129, 0.1);
+    box-shadow:
+      0 0 0 2px rgba(16, 185, 129, 0.3),
+      inset 0 0 20px rgba(16, 185, 129, 0.1);
   }
   100% {
     background-color: transparent;
@@ -1312,7 +1435,8 @@ input, textarea {
 }
 
 @keyframes deferredChangesPulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -1414,8 +1538,12 @@ input, textarea {
 }
 
 @keyframes deleteFade {
-  0% { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* === CHECKBOX TOGGLE — Satisfying completion animation === */
@@ -1510,8 +1638,12 @@ input, textarea {
   z-index: 100;
   cursor: grabbing !important;
   transform: scale(1.03);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px var(--color-primary-glow);
-  transition: transform 0.15s var(--ease-spring), box-shadow 0.15s var(--ease-out);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 30px var(--color-primary-glow);
+  transition:
+    transform 0.15s var(--ease-spring),
+    box-shadow 0.15s var(--ease-out);
 }
 
 .item-drag-over {
@@ -1654,7 +1786,9 @@ input, textarea {
 
 /* Progress bar fill animation */
 .progress-animating {
-  transition: width 0.5s var(--ease-spring), background 0.3s var(--ease-out);
+  transition:
+    width 0.5s var(--ease-spring),
+    background 0.3s var(--ease-out);
 }
 
 .progress-complete {
@@ -1733,11 +1867,14 @@ input, textarea {
 }
 
 @keyframes focusRingPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 2px var(--color-primary-glow);
   }
   50% {
-    box-shadow: 0 0 0 4px var(--color-primary-glow), 0 0 20px var(--color-primary-glow);
+    box-shadow:
+      0 0 0 4px var(--color-primary-glow),
+      0 0 20px var(--color-primary-glow);
   }
 }
 

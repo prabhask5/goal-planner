@@ -32,11 +32,11 @@
   const isBreak = $derived(session?.phase === 'break');
   const isLongBreak = $derived(
     session?.phase === 'break' &&
-    settings &&
-    session.current_cycle >= settings.cycles_before_long_break
+      settings &&
+      session.current_cycle >= settings.cycles_before_long_break
   );
   const phaseText = $derived(
-    session ? getPhaseText(session.phase, isLongBreak) : 'Ready to Focus'
+    session ? getPhaseText(session.phase, isLongBreak ?? false) : 'Ready to Focus'
   );
 
   // SVG circle calculations
@@ -131,6 +131,20 @@
   </div>
 </div>
 
+<!-- SVG gradient definitions (hidden) -->
+<svg width="0" height="0" style="position: absolute;">
+  <defs>
+    <linearGradient id="focusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6c5ce7" />
+      <stop offset="100%" stop-color="#ff79c6" />
+    </linearGradient>
+    <linearGradient id="breakGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#26de81" />
+      <stop offset="100%" stop-color="#00d4ff" />
+    </linearGradient>
+  </defs>
+</svg>
+
 <style>
   .timer-container {
     position: relative;
@@ -199,8 +213,13 @@
   }
 
   @keyframes twinkle {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.9; }
+    0%,
+    100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 0.9;
+    }
   }
 
   /* Nebula Background */
@@ -224,8 +243,15 @@
   }
 
   @keyframes nebulaPulse {
-    0%, 100% { opacity: 0.7; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.08); }
+    0%,
+    100% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
   }
 
   /* Orbital Rings */
@@ -267,8 +293,12 @@
   }
 
   @keyframes orbitRotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* Break phase orbital styling */
@@ -308,16 +338,12 @@
   }
 
   .progress-ring.running {
-    filter:
-      drop-shadow(0 0 4px var(--color-primary))
-      drop-shadow(0 0 8px var(--color-primary-glow))
+    filter: drop-shadow(0 0 4px var(--color-primary)) drop-shadow(0 0 8px var(--color-primary-glow))
       drop-shadow(0 0 16px var(--color-primary-glow));
   }
 
   .progress-ring.running.break {
-    filter:
-      drop-shadow(0 0 4px #26de81)
-      drop-shadow(0 0 8px rgba(38, 222, 129, 0.5))
+    filter: drop-shadow(0 0 4px #26de81) drop-shadow(0 0 8px rgba(38, 222, 129, 0.5))
       drop-shadow(0 0 16px rgba(38, 222, 129, 0.3));
   }
 
@@ -351,7 +377,9 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
     color: var(--color-text);
-    transition: text-shadow 0.5s ease, color 0.5s ease;
+    transition:
+      text-shadow 0.5s ease,
+      color 0.5s ease;
   }
 
   .time-display.running {
@@ -393,17 +421,3 @@
     }
   }
 </style>
-
-<!-- SVG gradient definitions (hidden) -->
-<svg width="0" height="0" style="position: absolute;">
-  <defs>
-    <linearGradient id="focusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6c5ce7"/>
-      <stop offset="100%" stop-color="#ff79c6"/>
-    </linearGradient>
-    <linearGradient id="breakGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#26de81"/>
-      <stop offset="100%" stop-color="#00d4ff"/>
-    </linearGradient>
-  </defs>
-</svg>

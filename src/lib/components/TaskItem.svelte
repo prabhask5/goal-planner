@@ -27,7 +27,14 @@
 >
   {#if dragHandleProps}
     <button class="drag-handle" {...dragHandleProps} aria-label="Drag to reorder">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
         <circle cx="9" cy="6" r="1.5" fill="currentColor" />
         <circle cx="15" cy="6" r="1.5" fill="currentColor" />
         <circle cx="9" cy="12" r="1.5" fill="currentColor" />
@@ -62,9 +69,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.875rem 1rem;
-    background: linear-gradient(135deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(108, 92, 231, 0.15);
@@ -87,12 +92,14 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent 0%,
       rgba(108, 92, 231, 0.3) 30%,
       rgba(255, 255, 255, 0.15) 50%,
       rgba(108, 92, 231, 0.3) 70%,
-      transparent 100%);
+      transparent 100%
+    );
   }
 
   .task-item:hover {

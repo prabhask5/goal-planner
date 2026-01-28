@@ -29,7 +29,10 @@ export function calculateRemainingMs(session: FocusSession): number {
 }
 
 // Determine next phase after current phase completes
-export function getNextPhase(session: FocusSession, settings: FocusSettings): {
+export function getNextPhase(
+  session: FocusSession,
+  settings: FocusSettings
+): {
   phase: FocusPhase;
   cycle: number;
   durationMs: number;
@@ -151,9 +154,10 @@ export function generateSchedule(
   const phases: SchedulePhase[] = [];
 
   for (let i = 1; i <= session.total_cycles; i++) {
-    const focusComplete = session.phase === 'break' && session.current_cycle >= i ||
-                          session.phase === 'focus' && session.current_cycle > i ||
-                          session.phase === 'idle';
+    const focusComplete =
+      (session.phase === 'break' && session.current_cycle >= i) ||
+      (session.phase === 'focus' && session.current_cycle > i) ||
+      session.phase === 'idle';
     const focusCurrent = session.phase === 'focus' && session.current_cycle === i;
 
     phases.push({
@@ -166,8 +170,8 @@ export function generateSchedule(
 
     const isLastCycle = i === session.total_cycles;
     const breakType = isLastCycle ? 'long_break' : 'break';
-    const breakComplete = session.current_cycle > i ||
-                          (session.phase === 'idle' && session.current_cycle >= i);
+    const breakComplete =
+      session.current_cycle > i || (session.phase === 'idle' && session.current_cycle >= i);
     const breakCurrent = session.phase === 'break' && session.current_cycle === i;
 
     phases.push({

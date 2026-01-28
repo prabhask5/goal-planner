@@ -6,13 +6,13 @@
     onClose: () => void;
   }
 
-  let { open, onClose }: Props = $props();
+  let { open = $bindable(), onClose }: Props = $props();
 
   type Platform = 'android' | 'ios';
   let selectedPlatform = $state<Platform>('android');
 </script>
 
-<Modal {open} title="Install Stellar" onClose={onClose}>
+<Modal {open} title="Install Stellar" {onClose}>
   <div class="pwa-install-content">
     <p class="intro">
       Add Stellar to your home screen for quick access and an app-like experience.
@@ -23,21 +23,27 @@
       <button
         class="platform-tab"
         class:active={selectedPlatform === 'android'}
-        onclick={() => selectedPlatform = 'android'}
+        onclick={() => (selectedPlatform = 'android')}
       >
         <svg class="platform-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.523 2.047a.5.5 0 0 0-.866.5l.857 1.485c-1.396.615-2.479 1.643-3.014 2.968h-5c-.535-1.325-1.618-2.353-3.014-2.968l.857-1.485a.5.5 0 0 0-.866-.5l-.97 1.68C4.195 4.715 3.5 6.062 3.5 7.5V8h17v-.5c0-1.438-.695-2.785-2.007-3.773l-.97-1.68zM8 6a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm10 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-          <path d="M3.5 9v10.5A1.5 1.5 0 0 0 5 21h1V9H3.5zm15.5 0v12h1a1.5 1.5 0 0 0 1.5-1.5V9H19zm-11 0v12h8V9H8z"/>
+          <path
+            d="M17.523 2.047a.5.5 0 0 0-.866.5l.857 1.485c-1.396.615-2.479 1.643-3.014 2.968h-5c-.535-1.325-1.618-2.353-3.014-2.968l.857-1.485a.5.5 0 0 0-.866-.5l-.97 1.68C4.195 4.715 3.5 6.062 3.5 7.5V8h17v-.5c0-1.438-.695-2.785-2.007-3.773l-.97-1.68zM8 6a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm10 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"
+          />
+          <path
+            d="M3.5 9v10.5A1.5 1.5 0 0 0 5 21h1V9H3.5zm15.5 0v12h1a1.5 1.5 0 0 0 1.5-1.5V9H19zm-11 0v12h8V9H8z"
+          />
         </svg>
         <span>Android</span>
       </button>
       <button
         class="platform-tab"
         class:active={selectedPlatform === 'ios'}
-        onclick={() => selectedPlatform = 'ios'}
+        onclick={() => (selectedPlatform = 'ios')}
       >
         <svg class="platform-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+          <path
+            d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
+          />
         </svg>
         <span>iOS</span>
       </button>
@@ -57,7 +63,9 @@
           <div class="step-number">2</div>
           <div class="step-content">
             <p class="step-title">Open menu</p>
-            <p class="step-desc">Tap the <strong>three-dot menu</strong> in the upper-right corner.</p>
+            <p class="step-desc">
+              Tap the <strong>three-dot menu</strong> in the upper-right corner.
+            </p>
           </div>
         </div>
         <div class="instruction-card">
@@ -71,7 +79,9 @@
           <div class="step-number">4</div>
           <div class="step-content">
             <p class="step-title">Confirm</p>
-            <p class="step-desc">Tap <strong>"Add"</strong> in the pop-up to place Stellar on your home screen.</p>
+            <p class="step-desc">
+              Tap <strong>"Add"</strong> in the pop-up to place Stellar on your home screen.
+            </p>
           </div>
         </div>
       {:else}
@@ -79,14 +89,18 @@
           <div class="step-number">1</div>
           <div class="step-content">
             <p class="step-title">Open in Safari</p>
-            <p class="step-desc">Open this website in Safari (or Chrome/Edge/Firefox on iOS 16.4+).</p>
+            <p class="step-desc">
+              Open this website in Safari (or Chrome/Edge/Firefox on iOS 16.4+).
+            </p>
           </div>
         </div>
         <div class="instruction-card">
           <div class="step-number">2</div>
           <div class="step-content">
             <p class="step-title">Tap Share</p>
-            <p class="step-desc">Tap the <strong>Share button</strong> (square with an upward arrow) at the bottom.</p>
+            <p class="step-desc">
+              Tap the <strong>Share button</strong> (square with an upward arrow) at the bottom.
+            </p>
           </div>
         </div>
         <div class="instruction-card">
@@ -161,9 +175,7 @@
   }
 
   .platform-tab.active {
-    background: linear-gradient(135deg,
-      rgba(108, 92, 231, 0.3) 0%,
-      rgba(108, 92, 231, 0.15) 100%);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.3) 0%, rgba(108, 92, 231, 0.15) 100%);
     border-color: rgba(108, 92, 231, 0.4);
     color: var(--color-text);
     box-shadow:
@@ -193,9 +205,7 @@
     align-items: flex-start;
     gap: 1rem;
     padding: 1rem 1.25rem;
-    background: linear-gradient(135deg,
-      rgba(108, 92, 231, 0.08) 0%,
-      rgba(108, 92, 231, 0.02) 100%);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.08) 0%, rgba(108, 92, 231, 0.02) 100%);
     border: 1px solid rgba(108, 92, 231, 0.12);
     border-radius: var(--radius-lg);
     transition: all 0.3s ease;
@@ -203,9 +213,7 @@
 
   .instruction-card:hover {
     border-color: rgba(108, 92, 231, 0.25);
-    background: linear-gradient(135deg,
-      rgba(108, 92, 231, 0.12) 0%,
-      rgba(108, 92, 231, 0.04) 100%);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.12) 0%, rgba(108, 92, 231, 0.04) 100%);
     transform: translateX(4px);
   }
 
@@ -216,9 +224,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg,
-      var(--color-primary) 0%,
-      var(--color-primary-dark) 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
     border-radius: 50%;
     font-size: 0.85rem;
     font-weight: 700;
@@ -260,9 +266,7 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.875rem 1rem;
-    background: linear-gradient(135deg,
-      rgba(38, 222, 129, 0.1) 0%,
-      rgba(38, 222, 129, 0.03) 100%);
+    background: linear-gradient(135deg, rgba(38, 222, 129, 0.1) 0%, rgba(38, 222, 129, 0.03) 100%);
     border: 1px solid rgba(38, 222, 129, 0.2);
     border-radius: var(--radius-lg);
     font-size: 0.85rem;
@@ -279,8 +283,15 @@
   }
 
   @keyframes dotPulse {
-    0%, 100% { opacity: 0.6; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.2); }
+    0%,
+    100% {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
   }
 
   /* Mobile Adjustments */

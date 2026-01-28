@@ -20,8 +20,8 @@
         style="
           --delay: {i * 0.5}s;
           --duration: {8 + (i % 4) * 3}s;
-          --x: {5 + (i * 8) % 90}%;
-          --y: {10 + (i * 7) % 80}%;
+          --x: {5 + ((i * 8) % 90)}%;
+          --y: {10 + ((i * 7) % 80)}%;
           --size: {2 + (i % 3)}px;
         "
       ></span>
@@ -77,8 +77,13 @@
   }
 
   @keyframes twinkle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   /* Nebula accents */
@@ -95,10 +100,12 @@
     height: 400px;
     top: -150px;
     right: -100px;
-    background: radial-gradient(ellipse,
+    background: radial-gradient(
+      ellipse,
       rgba(108, 92, 231, 0.5) 0%,
       rgba(255, 121, 198, 0.2) 50%,
-      transparent 70%);
+      transparent 70%
+    );
   }
 
   .nebula-bottom {
@@ -106,15 +113,18 @@
     height: 350px;
     bottom: -100px;
     left: -100px;
-    background: radial-gradient(ellipse,
+    background: radial-gradient(
+      ellipse,
       rgba(38, 222, 129, 0.4) 0%,
       rgba(0, 212, 255, 0.2) 50%,
-      transparent 70%);
+      transparent 70%
+    );
     animation-delay: -6s;
   }
 
   @keyframes nebulaPulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.2;
       transform: scale(1);
     }
@@ -143,7 +153,8 @@
   }
 
   @keyframes particleFloat {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateY(0) translateX(0);
       opacity: 0.4;
     }

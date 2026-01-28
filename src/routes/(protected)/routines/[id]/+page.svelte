@@ -11,7 +11,7 @@
   let error = $state<string | null>(null);
   let saving = $state(false);
 
-  const routineId = $derived($page.params.id);
+  const routineId = $derived($page.params.id!);
 
   // Subscribe to store
   $effect(() => {
@@ -83,14 +83,16 @@
 <div class="container">
   <header class="page-header">
     <div class="header-left">
-      <button class="back-btn" onclick={() => goto('/calendar#manage-routines')} aria-label="Back to calendar">
+      <button
+        class="back-btn"
+        onclick={() => goto('/calendar#manage-routines')}
+        aria-label="Back to calendar"
+      >
         ← Back
       </button>
       <h1>Edit Routine</h1>
     </div>
-    <button class="btn btn-danger" onclick={handleDeleteRoutine}>
-      Delete Routine
-    </button>
+    <button class="btn btn-danger" onclick={handleDeleteRoutine}> Delete Routine </button>
   </header>
 
   {#if error}
@@ -193,9 +195,7 @@
     white-space: nowrap;
     border: 1px solid rgba(108, 92, 231, 0.15);
     font-weight: 600;
-    background: linear-gradient(135deg,
-      rgba(15, 15, 30, 0.8) 0%,
-      rgba(20, 20, 40, 0.7) 100%);
+    background: linear-gradient(135deg, rgba(15, 15, 30, 0.8) 0%, rgba(20, 20, 40, 0.7) 100%);
   }
 
   .back-btn:hover {
@@ -209,10 +209,12 @@
   .page-header h1 {
     font-size: 2rem;
     font-weight: 800;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -222,12 +224,20 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .error-banner {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.18) 0%, rgba(255, 107, 107, 0.06) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.18) 0%,
+      rgba(255, 107, 107, 0.06) 100%
+    );
     border: 1px solid rgba(255, 107, 107, 0.4);
     border-radius: var(--radius-xl);
     padding: 1.25rem 1.5rem;
@@ -257,9 +267,7 @@
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
   .form-skeleton {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
     padding: 2.5rem;
@@ -279,12 +287,14 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.4),
       rgba(255, 255, 255, 0.2),
       rgba(108, 92, 231, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   .form-skeleton-group {
@@ -403,19 +413,26 @@
   }
 
   @keyframes skeletonPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 200%; }
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 200%;
+    }
   }
 
   .form-card {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     backdrop-filter: blur(24px);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
@@ -433,12 +450,14 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.4),
       rgba(255, 255, 255, 0.2),
       rgba(108, 92, 231, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   /* Nebula glow effect */
@@ -456,9 +475,7 @@
   .error-state {
     text-align: center;
     padding: 5rem 2rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
     position: relative;

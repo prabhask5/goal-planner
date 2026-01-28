@@ -37,9 +37,7 @@
   let dropTargetId = $state<string | null>(null);
 
   function getCommitmentsForSection(section: CommitmentSection): Commitment[] {
-    return commitments
-      .filter(c => c.section === section)
-      .sort((a, b) => a.order - b.order);
+    return commitments.filter((c) => c.section === section).sort((a, b) => a.order - b.order);
   }
 
   function handleAddClick(section: CommitmentSection) {
@@ -101,8 +99,8 @@
   function handleDragEnd() {
     if (draggedId && dropTargetId && draggedId !== dropTargetId) {
       const sectionItems = getCommitmentsForSection(draggedSection!);
-      const draggedIndex = sectionItems.findIndex(c => c.id === draggedId);
-      const targetIndex = sectionItems.findIndex(c => c.id === dropTargetId);
+      const draggedIndex = sectionItems.findIndex((c) => c.id === draggedId);
+      const targetIndex = sectionItems.findIndex((c) => c.id === dropTargetId);
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
         // Calculate new order between target's neighbors
@@ -127,14 +125,25 @@
   }
 </script>
 
-<Modal {open} title="Commitments" onClose={onClose}>
+<Modal {open} title="Commitments" {onClose}>
   <div class="commitments-content">
     {#each sections as section}
       <div class="section">
         <div class="section-header">
           <h3 class="section-title">{section.label}</h3>
-          <button class="add-section-btn" onclick={() => handleAddClick(section.key)} aria-label="Add commitment">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <button
+            class="add-section-btn"
+            onclick={() => handleAddClick(section.key)}
+            aria-label="Add commitment"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -151,13 +160,41 @@
               onkeydown={(e) => handleAddKeydown(e, section.key)}
               use:focus
             />
-            <button class="confirm-btn" onclick={() => handleAddSubmit(section.key)} disabled={!newName.trim()} aria-label="Confirm">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <button
+              class="confirm-btn"
+              onclick={() => handleAddSubmit(section.key)}
+              disabled={!newName.trim()}
+              aria-label="Confirm"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                aria-hidden="true"
+              >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </button>
-            <button class="cancel-btn" onclick={() => { addingTo = null; newName = ''; }} aria-label="Cancel">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <button
+              class="cancel-btn"
+              onclick={() => {
+                addingTo = null;
+                newName = '';
+              }}
+              aria-label="Cancel"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                aria-hidden="true"
+              >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -203,8 +240,19 @@
                 </span>
               {/if}
 
-              <button class="delete-btn" onclick={() => onDelete(commitment.id)} aria-label="Delete commitment">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button
+                class="delete-btn"
+                onclick={() => onDelete(commitment.id)}
+                aria-label="Delete commitment"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -279,7 +327,8 @@
     border: 1px solid rgba(108, 92, 231, 0.2);
   }
 
-  .add-input, .edit-input {
+  .add-input,
+  .edit-input {
     flex: 1;
     padding: 0.5rem 0.75rem;
     background: rgba(10, 10, 20, 0.8);
@@ -289,13 +338,15 @@
     font-size: 0.875rem;
   }
 
-  .add-input:focus, .edit-input:focus {
+  .add-input:focus,
+  .edit-input:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 15px var(--color-primary-glow);
   }
 
-  .confirm-btn, .cancel-btn {
+  .confirm-btn,
+  .cancel-btn {
     width: 32px;
     height: 32px;
     border-radius: var(--radius-md);

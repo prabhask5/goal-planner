@@ -24,7 +24,10 @@ function createNetworkStore(): Readable<boolean> & {
 
   // Run callbacks sequentially, properly awaiting async ones
   // This ensures auth validation completes before sync is triggered
-  async function runCallbacksSequentially(callbacks: Set<NetworkCallback>, label: string): Promise<void> {
+  async function runCallbacksSequentially(
+    callbacks: Set<NetworkCallback>,
+    label: string
+  ): Promise<void> {
     for (const callback of callbacks) {
       try {
         await callback();

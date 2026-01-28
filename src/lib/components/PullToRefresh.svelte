@@ -22,7 +22,7 @@
   const RESISTANCE = 0.6;
 
   // Subscribe to sync status
-  let syncStatus = $state<'idle' | 'syncing' | 'error'>('idle');
+  let syncStatus = $state<'idle' | 'syncing' | 'error' | 'offline'>('idle');
   $effect(() => {
     const unsub = syncStatusStore.subscribe((value) => {
       syncStatus = value.status;
@@ -135,12 +135,32 @@
       <div class="ptr-icon" style="transform: rotate({isRefreshing ? 0 : rotation}deg)">
         {#if isRefreshing}
           <svg class="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2.5" stroke-opacity="0.2"/>
-            <path d="M22 12a10 10 0 1 1-7-9.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-opacity="0.2"
+            />
+            <path
+              d="M22 12a10 10 0 1 1-7-9.5"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
           </svg>
         {:else}
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <path d="M12 3v12M5 10l7-7 7 7"/>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          >
+            <path d="M12 3v12M5 10l7-7 7 7" />
           </svg>
         {/if}
       </div>
@@ -181,9 +201,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 20px;
-    background: linear-gradient(145deg,
-      rgba(20, 20, 40, 0.95) 0%,
-      rgba(12, 12, 28, 0.98) 100%);
+    background: linear-gradient(145deg, rgba(20, 20, 40, 0.95) 0%, rgba(12, 12, 28, 0.98) 100%);
     border: 1.5px solid rgba(108, 92, 231, 0.3);
     border-radius: 50px;
     backdrop-filter: blur(20px);
@@ -192,7 +210,10 @@
       0 4px 20px rgba(0, 0, 0, 0.4),
       0 0 0 1px rgba(255, 255, 255, 0.05) inset;
     transform: scale(calc(0.8 + var(--progress) * 0.2));
-    transition: transform 0.2s ease-out, border-color 0.2s, box-shadow 0.2s;
+    transition:
+      transform 0.2s ease-out,
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
 
   .ready .ptr-indicator {
@@ -218,7 +239,9 @@
     align-items: center;
     justify-content: center;
     color: var(--color-primary-light);
-    transition: transform 0.1s ease-out, color 0.2s;
+    transition:
+      transform 0.1s ease-out,
+      color 0.2s;
   }
 
   .ready .ptr-icon {
@@ -235,8 +258,12 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .ptr-text {

@@ -62,8 +62,9 @@
   function goToToday() {
     if (isTransitioning) return;
     const today = new Date();
-    const isCurrentMonth = currentDate.getMonth() === today.getMonth() &&
-                          currentDate.getFullYear() === today.getFullYear();
+    const isCurrentMonth =
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getFullYear() === today.getFullYear();
     if (isCurrentMonth) return;
 
     // Determine direction based on whether today is before or after current month
@@ -82,15 +83,30 @@
 
   const isViewingCurrentMonth = $derived(() => {
     const today = new Date();
-    return currentDate.getMonth() === today.getMonth() &&
-           currentDate.getFullYear() === today.getFullYear();
+    return (
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getFullYear() === today.getFullYear()
+    );
   });
 </script>
 
 <div class="calendar">
   <div class="calendar-header">
-    <button class="nav-btn" onclick={goToPreviousMonth} aria-label="Previous month" disabled={isTransitioning}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+    <button
+      class="nav-btn"
+      onclick={goToPreviousMonth}
+      aria-label="Previous month"
+      disabled={isTransitioning}
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+      >
         <polyline points="15 18 9 12 15 6" />
       </svg>
     </button>
@@ -103,13 +119,24 @@
         {formatMonthYear(currentDate)}
       </h2>
       {#if !isViewingCurrentMonth()}
-        <button class="today-btn" onclick={goToToday} disabled={isTransitioning}>
-          Today
-        </button>
+        <button class="today-btn" onclick={goToToday} disabled={isTransitioning}> Today </button>
       {/if}
     </div>
-    <button class="nav-btn" onclick={goToNextMonth} aria-label="Next month" disabled={isTransitioning}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+    <button
+      class="nav-btn"
+      onclick={goToNextMonth}
+      aria-label="Next month"
+      disabled={isTransitioning}
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+      >
         <polyline points="9 18 15 12 9 6" />
       </svg>
     </button>
@@ -138,7 +165,8 @@
       {@const isToday = isTodayDate(day)}
       {@const hasGoals = progress && progress.totalGoals > 0}
       {@const percentage = progress?.completionPercentage ?? 0}
-      {@const bgColor = (isPast || isToday) && hasGoals ? getProgressColor(percentage) : 'transparent'}
+      {@const bgColor =
+        (isPast || isToday) && hasGoals ? getProgressColor(percentage) : 'transparent'}
 
       <button
         class="day-cell"
@@ -160,10 +188,12 @@
 
 <style>
   .calendar {
-    background: linear-gradient(165deg,
+    background: linear-gradient(
+      165deg,
       rgba(15, 15, 30, 0.95) 0%,
       rgba(10, 10, 22, 0.98) 50%,
-      rgba(15, 15, 30, 0.95) 100%);
+      rgba(15, 15, 30, 0.95) 100%
+    );
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(108, 92, 231, 0.25);
@@ -185,19 +215,26 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.5),
       rgba(255, 255, 255, 0.3),
       rgba(255, 121, 198, 0.4),
       rgba(38, 222, 129, 0.3),
-      transparent);
+      transparent
+    );
     animation: calendarGlow 4s ease-in-out infinite;
   }
 
   @keyframes calendarGlow {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; }
+    0%,
+    100% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
   }
 
   /* Nebula background effect */
@@ -306,10 +343,12 @@
   .month-title {
     font-size: 1.75rem;
     font-weight: 800;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -354,8 +393,12 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .calendar-weekdays {
@@ -438,9 +481,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
-    background: linear-gradient(145deg,
-      rgba(20, 20, 40, 0.95) 0%,
-      rgba(15, 15, 32, 0.9) 100%);
+    background: linear-gradient(145deg, rgba(20, 20, 40, 0.95) 0%, rgba(15, 15, 32, 0.9) 100%);
     position: relative;
     transition: all 0.35s var(--ease-out);
     min-height: 70px;
@@ -488,7 +529,8 @@
   }
 
   @keyframes todayPulse {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow:
         0 0 0 2px rgba(108, 92, 231, 0.3),
         0 0 30px var(--color-primary-glow),
@@ -513,20 +555,24 @@
   /* Past days and today with goals - ignited stars */
   .day-cell.past.has-goals,
   .day-cell.today.has-goals {
-    background: linear-gradient(145deg,
+    background: linear-gradient(
+      145deg,
       color-mix(in srgb, var(--day-bg) 90%, white) 0%,
       var(--day-bg) 50%,
-      color-mix(in srgb, var(--day-bg) 70%, black) 100%);
+      color-mix(in srgb, var(--day-bg) 70%, black) 100%
+    );
     border-color: color-mix(in srgb, var(--day-bg) 60%, transparent);
     box-shadow: 0 0 20px color-mix(in srgb, var(--day-bg) 40%, transparent);
   }
 
   .day-cell.past.has-goals::before,
   .day-cell.today.has-goals::before {
-    background: linear-gradient(180deg,
+    background: linear-gradient(
+      180deg,
       rgba(255, 255, 255, 0.2) 0%,
       rgba(255, 255, 255, 0.05) 30%,
-      transparent 60%);
+      transparent 60%
+    );
     opacity: 1;
   }
 

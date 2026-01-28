@@ -37,8 +37,13 @@ if (browser) {
       }
 
       // SECURITY: Only create offline session if credentials match current user (both userId and email)
-      if (credentials.userId !== currentSession.user.id || credentials.email !== currentSession.user.email) {
-        console.warn('[App] Cached credentials do not match current user - skipping offline session creation');
+      if (
+        credentials.userId !== currentSession.user.id ||
+        credentials.email !== currentSession.user.email
+      ) {
+        console.warn(
+          '[App] Cached credentials do not match current user - skipping offline session creation'
+        );
         return;
       }
 
@@ -118,22 +123,23 @@ export const load: LayoutLoad = async (): Promise<LayoutData> => {
         }
         // Mismatch: credentials changed after session created (e.g., different user logged in)
         // Clear the stale offline session
-        console.warn('[Layout] Offline session userId does not match credentials - clearing session');
+        console.warn(
+          '[Layout] Offline session userId does not match credentials - clearing session'
+        );
         const { clearOfflineSession } = await import('$lib/auth/offlineSession');
         await clearOfflineSession();
       }
 
       // No valid session while offline
       return { session: null, authMode: 'none', offlineProfile: null };
-
     } catch (e) {
       // If session retrieval fails completely (corrupted auth state),
       // clear all Supabase auth data and return no session
       console.error('[Layout] Failed to get session, clearing auth state:', e);
       try {
         // Clear all Supabase auth storage
-        const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
-        keys.forEach(k => localStorage.removeItem(k));
+        const keys = Object.keys(localStorage).filter((k) => k.startsWith('sb-'));
+        keys.forEach((k) => localStorage.removeItem(k));
       } catch {
         // Ignore storage errors
       }

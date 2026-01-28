@@ -1,5 +1,18 @@
 import { writable, type Writable } from 'svelte/store';
-import type { GoalListWithProgress, Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, DayProgress, TaskCategory, Commitment, CommitmentSection, DailyTask, LongTermTask, LongTermTaskWithCategory } from '$lib/types';
+import type {
+  GoalListWithProgress,
+  Goal,
+  GoalList,
+  DailyRoutineGoal,
+  DailyGoalProgress,
+  DayProgress,
+  TaskCategory,
+  Commitment,
+  CommitmentSection,
+  DailyTask,
+  LongTermTask,
+  LongTermTaskWithCategory
+} from '$lib/types';
 import * as repo from '$lib/db/repositories';
 import * as sync from '$lib/sync/engine';
 import { calculateGoalProgressCapped } from '$lib/utils/colors';
@@ -18,7 +31,7 @@ import { remoteChangesStore } from '$lib/stores/remoteChanges';
 // Goal Lists Store
 function createGoalListsStore() {
   const { subscribe, set, update }: Writable<GoalListWithProgress[]> = writable([]);
-  let loading = writable(true);
+  const loading = writable(true);
   let unsubscribe: (() => void) | null = null;
 
   return {
@@ -47,7 +60,7 @@ function createGoalListsStore() {
       const newList = await repo.createGoalList(name, userId);
       // Record for animation before updating store (so element mounts with animation)
       remoteChangesStore.recordLocalChange(newList.id, 'goal_lists', 'create');
-      update(lists => [
+      update((lists) => [
         { ...newList, totalGoals: 0, completedGoals: 0, completionPercentage: 0 },
         ...lists
       ]);
@@ -56,13 +69,13 @@ function createGoalListsStore() {
     update: async (id: string, name: string) => {
       const updated = await repo.updateGoalList(id, name);
       if (updated) {
-        update(lists => lists.map(l => l.id === id ? { ...l, name } : l));
+        update((lists) => lists.map((l) => (l.id === id ? { ...l, name } : l)));
       }
       return updated;
     },
     delete: async (id: string) => {
       await repo.deleteGoalList(id);
-      update(lists => lists.filter(l => l.id !== id));
+      update((lists) => lists.filter((l) => l.id !== id));
     },
     refresh: async () => {
       const lists = await sync.getGoalLists();
@@ -75,8 +88,9 @@ export const goalListsStore = createGoalListsStore();
 
 // Single Goal List with Goals Store
 function createGoalListStore() {
-  const { subscribe, set, update }: Writable<(GoalList & { goals: Goal[] }) | null> = writable(null);
-  let loading = writable(true);
+  const { subscribe, set, update }: Writable<(GoalList & { goals: Goal[] }) | null> =
+    writable(null);
+  const loading = writable(true);
   let currentId: string | null = null;
   let unsubscribe: (() => void) | null = null;
 
@@ -106,49 +120,69 @@ function createGoalListStore() {
     },
     updateName: async (id: string, name: string) => {
       await repo.updateGoalList(id, name);
-      update(list => list ? { ...list, name } : null);
+      update((list) => (list ? { ...list, name } : null));
     },
-    addGoal: async (goalListId: string, name: string, type: 'completion' | 'incremental', targetValue: number | null) => {
+    addGoal: async (
+      goalListId: string,
+      name: string,
+      type: 'completion' | 'incremental',
+      targetValue: number | null
+    ) => {
       const newGoal = await repo.createGoal(goalListId, name, type, targetValue);
       // Record for animation before updating store
       remoteChangesStore.recordLocalChange(newGoal.id, 'goals', 'create');
       // Prepend to top (new items have lower order values)
-      update(list => list ? { ...list, goals: [newGoal, ...list.goals] } : null);
+      update((list) => (list ? { ...list, goals: [newGoal, ...list.goals] } : null));
       return newGoal;
     },
-    updateGoal: async (goalId: string, updates: Partial<Pick<Goal, 'name' | 'type' | 'completed' | 'current_value' | 'target_value'>>) => {
+    updateGoal: async (
+      goalId: string,
+      updates: Partial<Pick<Goal, 'name' | 'type' | 'completed' | 'current_value' | 'target_value'>>
+    ) => {
       const updated = await repo.updateGoal(goalId, updates);
       if (updated) {
-        update(list => list ? {
-          ...list,
-          goals: list.goals.map(g => g.id === goalId ? updated : g)
-        } : null);
+        update((list) =>
+          list
+            ? {
+                ...list,
+                goals: list.goals.map((g) => (g.id === goalId ? updated : g))
+              }
+            : null
+        );
       }
       return updated;
     },
     deleteGoal: async (goalId: string) => {
       await repo.deleteGoal(goalId);
-      update(list => list ? {
-        ...list,
-        goals: list.goals.filter(g => g.id !== goalId)
-      } : null);
+      update((list) =>
+        list
+          ? {
+              ...list,
+              goals: list.goals.filter((g) => g.id !== goalId)
+            }
+          : null
+      );
     },
     incrementGoal: async (goalId: string, amount: number = 1) => {
       const updated = await repo.incrementGoal(goalId, amount);
       if (updated) {
-        update(list => list ? {
-          ...list,
-          goals: list.goals.map(g => g.id === goalId ? updated : g)
-        } : null);
+        update((list) =>
+          list
+            ? {
+                ...list,
+                goals: list.goals.map((g) => (g.id === goalId ? updated : g))
+              }
+            : null
+        );
       }
       return updated;
     },
     reorderGoal: async (goalId: string, newOrder: number) => {
       const updated = await repo.reorderGoal(goalId, newOrder);
       if (updated) {
-        update(list => {
+        update((list) => {
           if (!list) return null;
-          const updatedGoals = list.goals.map(g => g.id === goalId ? updated : g);
+          const updatedGoals = list.goals.map((g) => (g.id === goalId ? updated : g));
           // Re-sort by order
           updatedGoals.sort((a, b) => a.order - b.order);
           return { ...list, goals: updatedGoals };
@@ -168,7 +202,7 @@ export const goalListStore = createGoalListStore();
 // Daily Routines Store
 function createDailyRoutinesStore() {
   const { subscribe, set, update }: Writable<DailyRoutineGoal[]> = writable([]);
-  let loading = writable(true);
+  const loading = writable(true);
   let unsubscribe: (() => void) | null = null;
 
   return {
@@ -201,28 +235,44 @@ function createDailyRoutinesStore() {
       userId: string,
       activeDays: DailyRoutineGoal['active_days'] = null
     ) => {
-      const newRoutine = await repo.createDailyRoutineGoal(name, type, targetValue, startDate, endDate, userId, activeDays);
+      const newRoutine = await repo.createDailyRoutineGoal(
+        name,
+        type,
+        targetValue,
+        startDate,
+        endDate,
+        userId,
+        activeDays
+      );
       // Record for animation before updating store
       remoteChangesStore.recordLocalChange(newRoutine.id, 'daily_routine_goals', 'create');
-      update(routines => [newRoutine, ...routines]);
+      update((routines) => [newRoutine, ...routines]);
       return newRoutine;
     },
-    update: async (id: string, updates: Partial<Pick<DailyRoutineGoal, 'name' | 'type' | 'target_value' | 'start_date' | 'end_date' | 'active_days'>>) => {
+    update: async (
+      id: string,
+      updates: Partial<
+        Pick<
+          DailyRoutineGoal,
+          'name' | 'type' | 'target_value' | 'start_date' | 'end_date' | 'active_days'
+        >
+      >
+    ) => {
       const updated = await repo.updateDailyRoutineGoal(id, updates);
       if (updated) {
-        update(routines => routines.map(r => r.id === id ? updated : r));
+        update((routines) => routines.map((r) => (r.id === id ? updated : r)));
       }
       return updated;
     },
     delete: async (id: string) => {
       await repo.deleteDailyRoutineGoal(id);
-      update(routines => routines.filter(r => r.id !== id));
+      update((routines) => routines.filter((r) => r.id !== id));
     },
     reorder: async (id: string, newOrder: number) => {
       const updated = await repo.reorderDailyRoutineGoal(id, newOrder);
       if (updated) {
-        update(routines => {
-          const updatedRoutines = routines.map(r => r.id === id ? updated : r);
+        update((routines) => {
+          const updatedRoutines = routines.map((r) => (r.id === id ? updated : r));
           // Re-sort by order
           updatedRoutines.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
           return updatedRoutines;
@@ -242,7 +292,7 @@ export const dailyRoutinesStore = createDailyRoutinesStore();
 // Single Routine Store
 function createRoutineStore() {
   const { subscribe, set }: Writable<DailyRoutineGoal | null> = writable(null);
-  let loading = writable(true);
+  const loading = writable(true);
   let currentId: string | null = null;
   let unsubscribe: (() => void) | null = null;
 
@@ -270,7 +320,15 @@ function createRoutineStore() {
         loading.set(false);
       }
     },
-    update: async (id: string, updates: Partial<Pick<DailyRoutineGoal, 'name' | 'type' | 'target_value' | 'start_date' | 'end_date' | 'active_days'>>) => {
+    update: async (
+      id: string,
+      updates: Partial<
+        Pick<
+          DailyRoutineGoal,
+          'name' | 'type' | 'target_value' | 'start_date' | 'end_date' | 'active_days'
+        >
+      >
+    ) => {
       const updated = await repo.updateDailyRoutineGoal(id, updates);
       if (updated) {
         set(updated);
@@ -295,7 +353,7 @@ interface DailyProgressState {
 
 function createDailyProgressStore() {
   const { subscribe, set, update }: Writable<DailyProgressState | null> = writable(null);
-  let loading = writable(true);
+  const loading = writable(true);
   let currentDate: string | null = null;
   let unsubscribe: (() => void) | null = null;
 
@@ -341,15 +399,23 @@ function createDailyProgressStore() {
     },
     toggleComplete: async (routineId: string, date: string) => {
       let state: DailyProgressState | null = null;
-      update(s => { state = s; return s; });
+      update((s) => {
+        state = s;
+        return s;
+      });
 
       if (!state) return;
       const current = (state as DailyProgressState).progress.get(routineId);
       const newCompleted = !current?.completed;
 
-      const updated = await repo.upsertDailyProgress(routineId, date, current?.current_value || 0, newCompleted);
+      const updated = await repo.upsertDailyProgress(
+        routineId,
+        date,
+        current?.current_value || 0,
+        newCompleted
+      );
 
-      update(s => {
+      update((s) => {
         if (!s) return s;
         const newProgress = new Map(s.progress);
         newProgress.set(routineId, updated);
@@ -358,13 +424,16 @@ function createDailyProgressStore() {
     },
     increment: async (routineId: string, date: string, targetValue: number, amount: number = 1) => {
       let state: DailyProgressState | null = null;
-      update(s => { state = s; return s; });
+      update((s) => {
+        state = s;
+        return s;
+      });
 
       if (!state) return;
 
       const updated = await repo.incrementDailyProgress(routineId, date, targetValue, amount);
 
-      update(s => {
+      update((s) => {
         if (!s) return s;
         const newProgress = new Map(s.progress);
         newProgress.set(routineId, updated);
@@ -373,7 +442,10 @@ function createDailyProgressStore() {
     },
     setValue: async (routineId: string, date: string, targetValue: number, value: number) => {
       let state: DailyProgressState | null = null;
-      update(s => { state = s; return s; });
+      update((s) => {
+        state = s;
+        return s;
+      });
 
       if (!state) return;
 
@@ -383,7 +455,7 @@ function createDailyProgressStore() {
 
       const updated = await repo.upsertDailyProgress(routineId, date, clamped, completed);
 
-      update(s => {
+      update((s) => {
         if (!s) return s;
         const newProgress = new Map(s.progress);
         newProgress.set(routineId, updated);
@@ -408,7 +480,7 @@ interface MonthProgressState {
 
 function createMonthProgressStore() {
   const { subscribe, set }: Writable<MonthProgressState | null> = writable(null);
-  let loading = writable(true);
+  const loading = writable(true);
   let currentYear: number | null = null;
   let currentMonth: number | null = null;
   let unsubscribe: (() => void) | null = null;
@@ -436,7 +508,7 @@ function createMonthProgressStore() {
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
       // Get active routines for this date (checks both date range AND active days)
-      const activeRoutines = routines.filter(r => isRoutineActiveOnDate(r, dateStr));
+      const activeRoutines = routines.filter((r) => isRoutineActiveOnDate(r, dateStr));
 
       if (activeRoutines.length === 0) continue;
 
@@ -462,7 +534,9 @@ function createMonthProgressStore() {
         );
         completedProgress += progressPercent;
 
-        if (routine.type === 'completion' ? isCompleted : currentValue >= (routine.target_value || 0)) {
+        if (
+          routine.type === 'completion' ? isCompleted : currentValue >= (routine.target_value || 0)
+        ) {
           completedGoals++;
         }
       }
@@ -519,7 +593,7 @@ export const monthProgressStore = createMonthProgressStore();
 // Task Categories Store
 function createTaskCategoriesStore() {
   const { subscribe, set, update }: Writable<TaskCategory[]> = writable([]);
-  let loading = writable(true);
+  const loading = writable(true);
   let unsubscribe: (() => void) | null = null;
 
   return {
@@ -545,25 +619,25 @@ function createTaskCategoriesStore() {
       const newCategory = await repo.createTaskCategory(name, color, userId);
       // Record for animation before updating store
       remoteChangesStore.recordLocalChange(newCategory.id, 'task_categories', 'create');
-      update(categories => [newCategory, ...categories]);
+      update((categories) => [newCategory, ...categories]);
       return newCategory;
     },
     update: async (id: string, updates: Partial<Pick<TaskCategory, 'name' | 'color'>>) => {
       const updated = await repo.updateTaskCategory(id, updates);
       if (updated) {
-        update(categories => categories.map(c => c.id === id ? updated : c));
+        update((categories) => categories.map((c) => (c.id === id ? updated : c)));
       }
       return updated;
     },
     delete: async (id: string) => {
       await repo.deleteTaskCategory(id);
-      update(categories => categories.filter(c => c.id !== id));
+      update((categories) => categories.filter((c) => c.id !== id));
     },
     reorder: async (id: string, newOrder: number) => {
       const updated = await repo.reorderTaskCategory(id, newOrder);
       if (updated) {
-        update(categories => {
-          const updatedCategories = categories.map(c => c.id === id ? updated : c);
+        update((categories) => {
+          const updatedCategories = categories.map((c) => (c.id === id ? updated : c));
           updatedCategories.sort((a, b) => a.order - b.order);
           return updatedCategories;
         });
@@ -582,7 +656,7 @@ export const taskCategoriesStore = createTaskCategoriesStore();
 // Commitments Store
 function createCommitmentsStore() {
   const { subscribe, set, update }: Writable<Commitment[]> = writable([]);
-  let loading = writable(true);
+  const loading = writable(true);
   let unsubscribe: (() => void) | null = null;
 
   return {
@@ -608,25 +682,25 @@ function createCommitmentsStore() {
       const newCommitment = await repo.createCommitment(name, section, userId);
       // Record for animation before updating store
       remoteChangesStore.recordLocalChange(newCommitment.id, 'commitments', 'create');
-      update(commitments => [newCommitment, ...commitments]);
+      update((commitments) => [newCommitment, ...commitments]);
       return newCommitment;
     },
     update: async (id: string, updates: Partial<Pick<Commitment, 'name' | 'section'>>) => {
       const updated = await repo.updateCommitment(id, updates);
       if (updated) {
-        update(commitments => commitments.map(c => c.id === id ? updated : c));
+        update((commitments) => commitments.map((c) => (c.id === id ? updated : c)));
       }
       return updated;
     },
     delete: async (id: string) => {
       await repo.deleteCommitment(id);
-      update(commitments => commitments.filter(c => c.id !== id));
+      update((commitments) => commitments.filter((c) => c.id !== id));
     },
     reorder: async (id: string, newOrder: number) => {
       const updated = await repo.reorderCommitment(id, newOrder);
       if (updated) {
-        update(commitments => {
-          const updatedCommitments = commitments.map(c => c.id === id ? updated : c);
+        update((commitments) => {
+          const updatedCommitments = commitments.map((c) => (c.id === id ? updated : c));
           updatedCommitments.sort((a, b) => a.order - b.order);
           return updatedCommitments;
         });
@@ -645,7 +719,7 @@ export const commitmentsStore = createCommitmentsStore();
 // Daily Tasks Store
 function createDailyTasksStore() {
   const { subscribe, set, update }: Writable<DailyTask[]> = writable([]);
-  let loading = writable(true);
+  const loading = writable(true);
   let unsubscribe: (() => void) | null = null;
 
   return {
@@ -672,32 +746,32 @@ function createDailyTasksStore() {
       // Record for animation before updating store
       remoteChangesStore.recordLocalChange(newTask.id, 'daily_tasks', 'create');
       // Prepend to top (new items have lower order values)
-      update(tasks => [newTask, ...tasks]);
+      update((tasks) => [newTask, ...tasks]);
       return newTask;
     },
     update: async (id: string, updates: Partial<Pick<DailyTask, 'name' | 'completed'>>) => {
       const updated = await repo.updateDailyTask(id, updates);
       if (updated) {
-        update(tasks => tasks.map(t => t.id === id ? updated : t));
+        update((tasks) => tasks.map((t) => (t.id === id ? updated : t)));
       }
       return updated;
     },
     toggle: async (id: string) => {
       const updated = await repo.toggleDailyTaskComplete(id);
       if (updated) {
-        update(tasks => tasks.map(t => t.id === id ? updated : t));
+        update((tasks) => tasks.map((t) => (t.id === id ? updated : t)));
       }
       return updated;
     },
     delete: async (id: string) => {
       await repo.deleteDailyTask(id);
-      update(tasks => tasks.filter(t => t.id !== id));
+      update((tasks) => tasks.filter((t) => t.id !== id));
     },
     reorder: async (id: string, newOrder: number) => {
       const updated = await repo.reorderDailyTask(id, newOrder);
       if (updated) {
-        update(tasks => {
-          const updatedTasks = tasks.map(t => t.id === id ? updated : t);
+        update((tasks) => {
+          const updatedTasks = tasks.map((t) => (t.id === id ? updated : t));
           updatedTasks.sort((a, b) => a.order - b.order);
           return updatedTasks;
         });
@@ -706,7 +780,7 @@ function createDailyTasksStore() {
     },
     clearCompleted: async (userId: string) => {
       await repo.clearCompletedDailyTasks(userId);
-      update(tasks => tasks.filter(t => !t.completed));
+      update((tasks) => tasks.filter((t) => !t.completed));
     },
     refresh: async () => {
       const tasks = await sync.getDailyTasks();
@@ -720,7 +794,7 @@ export const dailyTasksStore = createDailyTasksStore();
 // Long Term Tasks Store
 function createLongTermTasksStore() {
   const { subscribe, set, update }: Writable<LongTermTaskWithCategory[]> = writable([]);
-  let loading = writable(true);
+  const loading = writable(true);
   let unsubscribe: (() => void) | null = null;
 
   return {
@@ -749,17 +823,20 @@ function createLongTermTasksStore() {
       // Fetch the task with category for the store
       const taskWithCategory = await sync.getLongTermTask(newTask.id);
       if (taskWithCategory) {
-        update(tasks => [...tasks, taskWithCategory]);
+        update((tasks) => [...tasks, taskWithCategory]);
       }
       return newTask;
     },
-    update: async (id: string, updates: Partial<Pick<LongTermTask, 'name' | 'due_date' | 'category_id' | 'completed'>>) => {
+    update: async (
+      id: string,
+      updates: Partial<Pick<LongTermTask, 'name' | 'due_date' | 'category_id' | 'completed'>>
+    ) => {
       const updated = await repo.updateLongTermTask(id, updates);
       if (updated) {
         // Fetch the updated task with category
         const taskWithCategory = await sync.getLongTermTask(updated.id);
         if (taskWithCategory) {
-          update(tasks => tasks.map(t => t.id === id ? taskWithCategory : t));
+          update((tasks) => tasks.map((t) => (t.id === id ? taskWithCategory : t)));
         }
       }
       return updated;
@@ -769,14 +846,14 @@ function createLongTermTasksStore() {
       if (updated) {
         const taskWithCategory = await sync.getLongTermTask(updated.id);
         if (taskWithCategory) {
-          update(tasks => tasks.map(t => t.id === id ? taskWithCategory : t));
+          update((tasks) => tasks.map((t) => (t.id === id ? taskWithCategory : t)));
         }
       }
       return updated;
     },
     delete: async (id: string) => {
       await repo.deleteLongTermTask(id);
-      update(tasks => tasks.filter(t => t.id !== id));
+      update((tasks) => tasks.filter((t) => t.id !== id));
     },
     refresh: async () => {
       const tasks = await sync.getLongTermTasks();

@@ -4,13 +4,10 @@ import { queueCreateOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush, markEntityModified } from '$lib/sync/engine';
 
 export async function getActiveSession(userId: string): Promise<FocusSession | null> {
-  const sessions = await db.focusSessions
-    .where('user_id')
-    .equals(userId)
-    .toArray();
+  const sessions = await db.focusSessions.where('user_id').equals(userId).toArray();
 
   // Find active session (not deleted and not ended)
-  const active = sessions.find(s => !s.deleted && !s.ended_at && s.status !== 'stopped');
+  const active = sessions.find((s) => !s.deleted && !s.ended_at && s.status !== 'stopped');
   return active || null;
 }
 
@@ -74,7 +71,18 @@ export async function createFocusSession(
 
 export async function updateFocusSession(
   id: string,
-  updates: Partial<Pick<FocusSession, 'phase' | 'status' | 'current_cycle' | 'phase_started_at' | 'phase_remaining_ms' | 'ended_at' | 'elapsed_duration'>>
+  updates: Partial<
+    Pick<
+      FocusSession,
+      | 'phase'
+      | 'status'
+      | 'current_cycle'
+      | 'phase_started_at'
+      | 'phase_remaining_ms'
+      | 'ended_at'
+      | 'elapsed_duration'
+    >
+  >
 ): Promise<FocusSession | undefined> {
   const timestamp = now();
 
@@ -101,7 +109,10 @@ export async function updateFocusSession(
   return updated;
 }
 
-export async function pauseFocusSession(id: string, remainingMs: number): Promise<FocusSession | undefined> {
+export async function pauseFocusSession(
+  id: string,
+  remainingMs: number
+): Promise<FocusSession | undefined> {
   return updateFocusSession(id, {
     status: 'paused',
     phase_remaining_ms: remainingMs
@@ -116,7 +127,10 @@ export async function resumeFocusSession(id: string): Promise<FocusSession | und
   });
 }
 
-export async function stopFocusSession(id: string, currentFocusElapsedMinutes?: number): Promise<FocusSession | undefined> {
+export async function stopFocusSession(
+  id: string,
+  currentFocusElapsedMinutes?: number
+): Promise<FocusSession | undefined> {
   const timestamp = now();
   const session = await db.focusSessions.get(id);
   if (!session) return undefined;
@@ -176,7 +190,18 @@ export async function advancePhase(
   if (!session) return undefined;
 
   // If we're advancing from a focus phase, add the elapsed time
-  const updates: Partial<Pick<FocusSession, 'phase' | 'status' | 'current_cycle' | 'phase_started_at' | 'phase_remaining_ms' | 'ended_at' | 'elapsed_duration'>> = {
+  const updates: Partial<
+    Pick<
+      FocusSession,
+      | 'phase'
+      | 'status'
+      | 'current_cycle'
+      | 'phase_started_at'
+      | 'phase_remaining_ms'
+      | 'ended_at'
+      | 'elapsed_duration'
+    >
+  > = {
     phase: newPhase,
     current_cycle: newCycle,
     phase_started_at: timestamp,
@@ -195,12 +220,11 @@ export async function getTodayFocusTime(userId: string): Promise<number> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   // Convert local midnight to ISO by accounting for timezone offset
-  const localMidnightISO = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString();
+  const localMidnightISO = new Date(
+    today.getTime() - today.getTimezoneOffset() * 60000
+  ).toISOString();
 
-  const sessions = await db.focusSessions
-    .where('user_id')
-    .equals(userId)
-    .toArray();
+  const sessions = await db.focusSessions.where('user_id').equals(userId).toArray();
 
   // Sum up focus time from sessions today using elapsed_duration
   // Note: We include deleted (stopped) sessions since they still count for today's focus time

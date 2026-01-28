@@ -70,11 +70,14 @@
     });
 
     // Check for updates periodically (every 2 minutes)
-    setInterval(() => {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.update();
-      });
-    }, 2 * 60 * 1000);
+    setInterval(
+      () => {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.update();
+        });
+      },
+      2 * 60 * 1000
+    );
 
     // Force an update check on page load
     navigator.serviceWorker.ready.then((registration) => {
@@ -89,9 +92,13 @@
     const registration = await navigator.serviceWorker?.getRegistration();
     if (registration?.waiting) {
       // Listen for the new SW to take control, then reload
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-      }, { once: true });
+      navigator.serviceWorker.addEventListener(
+        'controllerchange',
+        () => {
+          window.location.reload();
+        },
+        { once: true }
+      );
 
       registration.waiting.postMessage({ type: 'SKIP_WAITING' });
     } else {
@@ -110,9 +117,16 @@
   <div class="update-prompt">
     <div class="update-content">
       <span class="update-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 12a9 9 0 11-6.219-8.56"/>
-          <path d="M21 3v6h-6"/>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M21 12a9 9 0 11-6.219-8.56" />
+          <path d="M21 3v6h-6" />
         </svg>
       </span>
       <span class="update-text">A new version of this page is available</span>
@@ -134,14 +148,13 @@
     align-items: center;
     gap: 1.25rem;
     padding: 1rem 1.5rem;
-    background: linear-gradient(145deg,
-      rgba(26, 26, 46, 0.95) 0%,
-      rgba(26, 26, 46, 0.85) 100%);
+    background: linear-gradient(145deg, rgba(26, 26, 46, 0.95) 0%, rgba(26, 26, 46, 0.85) 100%);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(108, 92, 231, 0.4);
     border-radius: var(--radius-xl);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-                0 0 40px rgba(108, 92, 231, 0.2);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 40px rgba(108, 92, 231, 0.2);
     z-index: 1000;
     animation: slideUp 0.4s var(--ease-bounce);
   }
@@ -153,10 +166,7 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg,
-      transparent,
-      rgba(108, 92, 231, 0.5),
-      transparent);
+    background: linear-gradient(90deg, transparent, rgba(108, 92, 231, 0.5), transparent);
   }
 
   @keyframes slideUp {
@@ -184,8 +194,12 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .update-text {

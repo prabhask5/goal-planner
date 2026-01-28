@@ -1,6 +1,11 @@
 import { supabase } from './client';
 import type { User, Session } from '@supabase/supabase-js';
-import { cacheOfflineCredentials, clearOfflineCredentials, updateOfflineCredentialsPassword, updateOfflineCredentialsProfile } from '$lib/auth/offlineCredentials';
+import {
+  cacheOfflineCredentials,
+  clearOfflineCredentials,
+  updateOfflineCredentialsPassword,
+  updateOfflineCredentialsProfile
+} from '$lib/auth/offlineCredentials';
 import { clearOfflineSession } from '$lib/auth/offlineSession';
 import { browser } from '$app/environment';
 
@@ -75,7 +80,9 @@ export async function signUp(
   };
 }
 
-export async function signOut(options?: { preserveOfflineCredentials?: boolean }): Promise<{ error: string | null }> {
+export async function signOut(options?: {
+  preserveOfflineCredentials?: boolean;
+}): Promise<{ error: string | null }> {
   // Clear offline data
   try {
     // Only clear credentials if not preserving them (e.g., when offline, keep for re-auth)
@@ -148,7 +155,7 @@ function getSessionFromStorage(): Session | null {
   try {
     // Supabase stores session in localStorage with key pattern: sb-{project-ref}-auth-token
     const keys = Object.keys(localStorage);
-    const sessionKey = keys.find(k => k.includes('-auth-token'));
+    const sessionKey = keys.find((k) => k.includes('-auth-token'));
     if (!sessionKey) return null;
 
     const stored = localStorage.getItem(sessionKey);
@@ -226,7 +233,9 @@ export async function changePassword(
   newPassword: string
 ): Promise<{ error: string | null }> {
   // Get current user email from session (egress optimization: avoids separate getUser() call)
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user?.email) {
     return { error: 'No authenticated user found' };
@@ -274,4 +283,3 @@ export async function resendConfirmationEmail(email: string): Promise<{ error: s
 
   return { error: error?.message || null };
 }
-

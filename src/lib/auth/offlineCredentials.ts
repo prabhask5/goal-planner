@@ -94,7 +94,13 @@ export async function verifyOfflineCredentials(
   }
 
   if (credentials.password !== password) {
-    console.warn('[Auth] Password mismatch (stored length:', credentials.password.length, ', entered length:', password.length, ')');
+    console.warn(
+      '[Auth] Password mismatch (stored length:',
+      credentials.password.length,
+      ', entered length:',
+      password.length,
+      ')'
+    );
     return { valid: false, reason: 'password_mismatch' };
   }
 

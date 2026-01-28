@@ -73,7 +73,7 @@
     if (activeDays.length === 2 && activeDays.includes(0) && activeDays.includes(6)) {
       return 'Weekends';
     }
-    return activeDays.map(d => dayLabels[d].short).join('');
+    return activeDays.map((d) => dayLabels[d].short).join('');
   }
 
   async function deleteList(id: string) {
@@ -111,7 +111,10 @@
   }
 
   // Helper to check if a block list is active today
-  function isBlockListActiveToday(list: { is_enabled: boolean; active_days: DayOfWeek[] | null }): boolean {
+  function isBlockListActiveToday(list: {
+    is_enabled: boolean;
+    active_days: DayOfWeek[] | null;
+  }): boolean {
     if (!list.is_enabled) return false;
     if (list.active_days === null) return true; // null means every day
     const currentDay = new Date().getDay() as DayOfWeek;
@@ -123,17 +126,33 @@
 </script>
 
 <div class="block-list-manager">
-  <button class="manager-toggle" onclick={() => isOpen = !isOpen}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-      <rect x="3" y="3" width="7" height="7"/>
-      <rect x="14" y="3" width="7" height="7"/>
-      <rect x="14" y="14" width="7" height="7"/>
-      <rect x="3" y="14" width="7" height="7"/>
+  <button class="manager-toggle" onclick={() => (isOpen = !isOpen)}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      width="18"
+      height="18"
+    >
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
     </svg>
     <span>Block Lists</span>
     <span class="badge">{activeBlockListCount}</span>
-    <svg class="chevron" class:open={isOpen} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-      <polyline points="6,9 12,15 18,9"/>
+    <svg
+      class="chevron"
+      class:open={isOpen}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      width="16"
+      height="16"
+    >
+      <polyline points="6,9 12,15 18,9" />
     </svg>
   </button>
 
@@ -142,30 +161,56 @@
       <!-- Extension Banner -->
       <div class="extension-banner">
         <div class="banner-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            width="24"
+            height="24"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
         </div>
         <div class="banner-content">
           <span class="banner-title">Browser Extension Required</span>
           <span class="banner-desc">Website blocking requires the Stellar Focus extension</span>
         </div>
-        <a href="https://github.com/prabhask5/stellar/tree/main/stellar-focus" target="_blank" rel="noopener" class="banner-btn">
+        <a
+          href="https://github.com/prabhask5/stellar/tree/main/stellar-focus"
+          target="_blank"
+          rel="noopener"
+          class="banner-btn"
+        >
           Get Extension
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-            <polyline points="15 3 21 3 21 9"/>
-            <line x1="10" y1="14" x2="21" y2="3"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            width="14"
+            height="14"
+          >
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
           </svg>
         </a>
       </div>
 
       <!-- List of block lists -->
       <div class="list-view">
-        <button class="create-btn" onclick={() => showCreateModal = true}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
+        <button class="create-btn" onclick={() => (showCreateModal = true)}>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            width="18"
+            height="18"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
           <span>Create Block List</span>
         </button>
@@ -181,32 +226,60 @@
                 class="toggle-btn"
                 class:active={list.is_enabled}
                 onclick={() => toggleList(list.id)}
-                aria-pressed={list.is_enabled}
+                aria-checked={list.is_enabled}
                 aria-label={list.is_enabled ? `Disable ${list.name}` : `Enable ${list.name}`}
                 role="switch"
               >
                 <span class="toggle-knob"></span>
               </button>
 
-              <button class="list-info" onclick={() => openEditor(list.id)} aria-label={`Edit ${list.name}`}>
+              <button
+                class="list-info"
+                onclick={() => openEditor(list.id)}
+                aria-label={`Edit ${list.name}`}
+              >
                 <div class="list-details">
                   <span class="list-name">{list.name}</span>
                   <span class="list-days">{getActiveDaysLabel(list.active_days)}</span>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
-                  <polyline points="9,18 15,12 9,6"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                  aria-hidden="true"
+                >
+                  <polyline points="9,18 15,12 9,6" />
                 </svg>
               </button>
 
-              <button class="delete-btn" onclick={() => deleteList(list.id)} aria-label={`Delete ${list.name}`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
-                  <polyline points="3,6 5,6 21,6"/>
-                  <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
+              <button
+                class="delete-btn"
+                onclick={() => deleteList(list.id)}
+                aria-label={`Delete ${list.name}`}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                  aria-hidden="true"
+                >
+                  <polyline points="3,6 5,6 21,6" />
+                  <path
+                    d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"
+                  />
                 </svg>
               </button>
             </div>
           {:else}
-            <p class="empty-text">No block lists yet. Create one to block distracting websites during focus sessions.</p>
+            <p class="empty-text">
+              No block lists yet. Create one to block distracting websites during focus sessions.
+            </p>
           {/each}
         </div>
       </div>
@@ -215,11 +288,8 @@
 </div>
 
 <!-- Create Block List Modal -->
-<Modal open={showCreateModal} title="Create Block List" onClose={() => showCreateModal = false}>
-  <BlockListForm
-    onSubmit={createList}
-    onCancel={() => showCreateModal = false}
-  />
+<Modal open={showCreateModal} title="Create Block List" onClose={() => (showCreateModal = false)}>
+  <BlockListForm onSubmit={createList} onCancel={() => (showCreateModal = false)} />
 </Modal>
 
 <style>

@@ -9,7 +9,10 @@
     task: LongTermTaskWithCategory | null;
     categories: TaskCategory[];
     onClose: () => void;
-    onUpdate: (id: string, updates: { name?: string; due_date?: string; category_id?: string | null }) => void;
+    onUpdate: (
+      id: string,
+      updates: { name?: string; due_date?: string; category_id?: string | null }
+    ) => void;
     onToggle: (id: string) => void;
     onDelete: (id: string) => void;
   }
@@ -30,7 +33,7 @@
 
   // Derive selected category from local state for immediate UI feedback
   const selectedCategory = $derived(
-    categoryId ? categories.find(c => c.id === categoryId) : null
+    categoryId ? categories.find((c) => c.id === categoryId) : null
   );
 
   $effect(() => {
@@ -104,13 +107,18 @@
 
   function formatDisplayDate(dateStr: string): string {
     const date = parseDateString(dateStr);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   }
 </script>
 
 <svelte:window onclick={handleClickOutside} />
 
-<Modal {open} title="Task Details" onClose={onClose}>
+<Modal {open} title="Task Details" {onClose}>
   {#if task}
     <div
       class="task-details"
@@ -129,7 +137,7 @@
             use:focus
           />
         {:else}
-          <button class="field-value editable" onclick={() => editingName = true}>
+          <button class="field-value editable" onclick={() => (editingName = true)}>
             {name}
           </button>
         {/if}
@@ -156,7 +164,7 @@
           <button
             type="button"
             class="dropdown-trigger"
-            onclick={() => dropdownOpen = !dropdownOpen}
+            onclick={() => (dropdownOpen = !dropdownOpen)}
           >
             {#if selectedCategory}
               <span class="selected-category">
@@ -181,7 +189,7 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <polyline points="6 9 12 15 18 9"/>
+              <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
 
@@ -215,18 +223,28 @@
 
       <div class="field">
         <label class="field-label">Status</label>
-        <button
-          class="status-toggle"
-          class:completed={completed}
-          onclick={handleToggle}
-        >
+        <button class="status-toggle" class:completed onclick={handleToggle}>
           {#if completed}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
               <polyline points="20 6 9 17 4 12" />
             </svg>
             Completed
           {:else}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <circle cx="12" cy="12" r="10" />
             </svg>
             Mark as Complete
@@ -236,9 +254,18 @@
 
       <div class="actions">
         <button class="delete-btn" onclick={handleDelete}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <path
+              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            />
           </svg>
           Delete Task
         </button>

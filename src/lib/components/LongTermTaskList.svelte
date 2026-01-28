@@ -40,7 +40,12 @@
 </script>
 
 {#if tasks.length > 0}
-  <div class="task-list" class:overdue={variant === 'overdue'} class:due-today={variant === 'due-today'} class:completed={variant === 'completed'}>
+  <div
+    class="task-list"
+    class:overdue={variant === 'overdue'}
+    class:due-today={variant === 'due-today'}
+    class:completed={variant === 'completed'}
+  >
     <h3 class="list-title">{title}</h3>
     <div class="items">
       {#each tasks as task (task.id)}
@@ -56,7 +61,14 @@
             aria-label={task.completed ? 'Mark incomplete' : 'Mark complete'}
           >
             {#if task.completed}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+              >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             {/if}
@@ -75,7 +87,14 @@
           </button>
 
           <button class="delete-btn" onclick={() => onDelete(task.id)} aria-label="Delete task">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -123,9 +142,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    background: linear-gradient(135deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.15);
     border-radius: var(--radius-lg);
     transition: all 0.3s var(--ease-out);
@@ -133,23 +150,17 @@
 
   .task-list.overdue .task-row {
     border-left: 3px solid var(--color-red);
-    background: linear-gradient(135deg,
-      rgba(255, 107, 107, 0.05) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.05) 0%, rgba(20, 20, 40, 0.9) 100%);
   }
 
   .task-list.due-today .task-row {
     border-left: 3px solid var(--color-yellow);
-    background: linear-gradient(135deg,
-      rgba(255, 217, 61, 0.08) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(255, 217, 61, 0.08) 0%, rgba(20, 20, 40, 0.9) 100%);
   }
 
   .task-list.completed .task-row {
     border-left: 3px solid var(--color-green);
-    background: linear-gradient(135deg,
-      rgba(38, 222, 129, 0.05) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(38, 222, 129, 0.05) 0%, rgba(20, 20, 40, 0.9) 100%);
     opacity: 0.7;
   }
 

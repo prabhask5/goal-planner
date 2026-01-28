@@ -14,9 +14,7 @@ function clearCorruptedAuthData(): void {
 
   try {
     // Supabase stores auth data with keys starting with 'sb-'
-    const keysToCheck = Object.keys(localStorage).filter(key =>
-      key.startsWith('sb-')
-    );
+    const keysToCheck = Object.keys(localStorage).filter((key) => key.startsWith('sb-'));
 
     for (const key of keysToCheck) {
       const value = localStorage.getItem(key);
@@ -64,8 +62,8 @@ if (typeof window !== 'undefined') {
         event.preventDefault(); // Prevent the error from showing in console
         // Clear Supabase storage
         try {
-          const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
-          keys.forEach(k => localStorage.removeItem(k));
+          const keys = Object.keys(localStorage).filter((k) => k.startsWith('sb-'));
+          keys.forEach((k) => localStorage.removeItem(k));
           // Reload the page to get a fresh state
           window.location.reload();
         } catch {

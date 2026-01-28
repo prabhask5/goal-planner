@@ -64,7 +64,7 @@
       // Update auth state to immediately reflect changes in navbar
       authState.updateUserProfile(firstName.trim(), lastName.trim());
       profileSuccess = 'Profile updated successfully';
-      setTimeout(() => profileSuccess = null, 3000);
+      setTimeout(() => (profileSuccess = null), 3000);
     }
 
     profileLoading = false;
@@ -101,7 +101,7 @@
       currentPassword = '';
       newPassword = '';
       confirmPassword = '';
-      setTimeout(() => passwordSuccess = null, 3000);
+      setTimeout(() => (passwordSuccess = null), 3000);
     }
 
     passwordLoading = false;
@@ -120,9 +120,18 @@
   <!-- Header -->
   <header class="profile-header">
     <button class="back-btn" onclick={goBack}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 12H5"/>
-        <path d="M12 19l-7-7 7-7"/>
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M19 12H5" />
+        <path d="M12 19l-7-7 7-7" />
       </svg>
       <span>Back</span>
     </button>
@@ -133,7 +142,16 @@
   <!-- Offline Warning -->
   {#if isOfflineMode || !$isOnline}
     <div class="offline-warning">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <line x1="1" y1="1" x2="23" y2="23"></line>
         <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
         <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
@@ -168,13 +186,7 @@
     <form onsubmit={handleProfileSubmit}>
       <div class="form-group">
         <label for="email">Email</label>
-        <input
-          type="email"
-          id="email"
-          value={email()}
-          disabled
-          class="input-disabled"
-        />
+        <input type="email" id="email" value={email()} disabled class="input-disabled" />
         <span class="input-hint">Email cannot be changed</span>
       </div>
 
@@ -211,11 +223,7 @@
         <div class="message success">{profileSuccess}</div>
       {/if}
 
-      <button
-        type="submit"
-        class="btn btn-primary"
-        disabled={profileLoading || changesDisabled}
-      >
+      <button type="submit" class="btn btn-primary" disabled={profileLoading || changesDisabled}>
         {#if profileLoading}
           <span class="loading-spinner"></span>
           Saving...
@@ -248,18 +256,38 @@
           <button
             type="button"
             class="password-toggle"
-            onclick={() => showCurrentPassword = !showCurrentPassword}
+            onclick={() => (showCurrentPassword = !showCurrentPassword)}
             aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
           >
             {#if showCurrentPassword}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                />
+                <line x1="1" y1="1" x2="23" y2="23" />
               </svg>
             {:else}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
               </svg>
             {/if}
           </button>
@@ -282,18 +310,38 @@
           <button
             type="button"
             class="password-toggle"
-            onclick={() => showNewPassword = !showNewPassword}
+            onclick={() => (showNewPassword = !showNewPassword)}
             aria-label={showNewPassword ? 'Hide password' : 'Show password'}
           >
             {#if showNewPassword}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                />
+                <line x1="1" y1="1" x2="23" y2="23" />
               </svg>
             {:else}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
               </svg>
             {/if}
           </button>
@@ -314,18 +362,38 @@
           <button
             type="button"
             class="password-toggle"
-            onclick={() => showConfirmPassword = !showConfirmPassword}
+            onclick={() => (showConfirmPassword = !showConfirmPassword)}
             aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
           >
             {#if showConfirmPassword}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                />
+                <line x1="1" y1="1" x2="23" y2="23" />
               </svg>
             {:else}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
               </svg>
             {/if}
           </button>
@@ -340,11 +408,7 @@
         <div class="message success">{passwordSuccess}</div>
       {/if}
 
-      <button
-        type="submit"
-        class="btn btn-secondary"
-        disabled={passwordLoading || changesDisabled}
-      >
+      <button type="submit" class="btn btn-secondary" disabled={passwordLoading || changesDisabled}>
         {#if passwordLoading}
           <span class="loading-spinner"></span>
           Updating...
@@ -358,8 +422,17 @@
   <!-- Footer Links -->
   <div class="profile-footer">
     <a href="/policy" class="footer-link">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       </svg>
       Privacy Policy
     </a>
@@ -483,8 +556,15 @@
   }
 
   @keyframes ringPulse {
-    0%, 100% { transform: scale(1); opacity: 0.6; }
-    50% { transform: scale(1.1); opacity: 0.3; }
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.3;
+    }
   }
 
   .avatar-particles {
@@ -509,8 +589,12 @@
   }
 
   @keyframes orbitParticle {
-    from { transform: rotate(var(--angle)) translateX(70px); }
-    to { transform: rotate(calc(var(--angle) + 360deg)) translateX(70px); }
+    from {
+      transform: rotate(var(--angle)) translateX(70px);
+    }
+    to {
+      transform: rotate(calc(var(--angle) + 360deg)) translateX(70px);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -518,9 +602,7 @@
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
   .profile-card {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.9) 0%,
-      rgba(20, 20, 40, 0.85) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.9) 0%, rgba(20, 20, 40, 0.85) 100%);
     border: 1px solid rgba(108, 92, 231, 0.25);
     border-radius: var(--radius-2xl);
     backdrop-filter: blur(24px);
@@ -542,12 +624,14 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.5),
       rgba(255, 255, 255, 0.3),
       rgba(255, 121, 198, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   .card-header {
@@ -679,7 +763,11 @@
   }
 
   .error {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.15) 0%, rgba(255, 107, 107, 0.05) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.15) 0%,
+      rgba(255, 107, 107, 0.05) 100%
+    );
     color: var(--color-red);
     border: 1px solid rgba(255, 107, 107, 0.3);
   }
@@ -753,7 +841,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -805,8 +895,12 @@
     }
 
     @keyframes orbitParticle {
-      from { transform: rotate(var(--angle)) translateX(55px); }
-      to { transform: rotate(calc(var(--angle) + 360deg)) translateX(55px); }
+      from {
+        transform: rotate(var(--angle)) translateX(55px);
+      }
+      to {
+        transform: rotate(calc(var(--angle) + 360deg)) translateX(55px);
+      }
     }
 
     input {
@@ -841,8 +935,12 @@
     }
 
     @keyframes orbitParticle {
-      from { transform: rotate(var(--angle)) translateX(48px); }
-      to { transform: rotate(calc(var(--angle) + 360deg)) translateX(48px); }
+      from {
+        transform: rotate(var(--angle)) translateX(48px);
+      }
+      to {
+        transform: rotate(calc(var(--angle) + 360deg)) translateX(48px);
+      }
     }
   }
 
@@ -867,8 +965,12 @@
     }
 
     @keyframes orbitParticle {
-      from { transform: rotate(var(--angle)) translateX(60px); }
-      to { transform: rotate(calc(var(--angle) + 360deg)) translateX(60px); }
+      from {
+        transform: rotate(var(--angle)) translateX(60px);
+      }
+      to {
+        transform: rotate(calc(var(--angle) + 360deg)) translateX(60px);
+      }
     }
   }
 
@@ -901,8 +1003,12 @@
     }
 
     @keyframes orbitParticle {
-      from { transform: rotate(var(--angle)) translateX(70px); }
-      to { transform: rotate(calc(var(--angle) + 360deg)) translateX(70px); }
+      from {
+        transform: rotate(var(--angle)) translateX(70px);
+      }
+      to {
+        transform: rotate(calc(var(--angle) + 360deg)) translateX(70px);
+      }
     }
   }
 

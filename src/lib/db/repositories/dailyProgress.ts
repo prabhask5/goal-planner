@@ -14,7 +14,7 @@ async function getProgressForRoutineAndDate(
     .equals([routineId, date])
     .toArray();
 
-  return results.find(p => !p.deleted);
+  return results.find((p) => !p.deleted);
 }
 
 export async function upsertDailyProgress(
@@ -118,7 +118,7 @@ export async function incrementDailyProgress(
           entityId: existing.id,
           operationType: 'increment',
           field: 'current_value',
-          value: amount  // Store the delta, not the final value
+          value: amount // Store the delta, not the final value
         });
       }
     });

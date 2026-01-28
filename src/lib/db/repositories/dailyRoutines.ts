@@ -17,15 +17,11 @@ export async function createDailyRoutineGoal(
   // Get the current min order to prepend new items at the top
   // This is backwards-compatible: existing items (order 0,1,2...) stay in place,
   // new items get -1,-2,-3... and appear first when sorted ascending
-  const existingRoutines = await db.dailyRoutineGoals
-    .where('user_id')
-    .equals(userId)
-    .toArray();
+  const existingRoutines = await db.dailyRoutineGoals.where('user_id').equals(userId).toArray();
 
-  const activeRoutines = existingRoutines.filter(r => !r.deleted);
-  const minOrder = activeRoutines.length > 0
-    ? Math.min(...activeRoutines.map(r => r.order ?? 0))
-    : 0;
+  const activeRoutines = existingRoutines.filter((r) => !r.deleted);
+  const minOrder =
+    activeRoutines.length > 0 ? Math.min(...activeRoutines.map((r) => r.order ?? 0)) : 0;
   const nextOrder = minOrder - 1;
 
   const newRoutine: DailyRoutineGoal = {
@@ -66,7 +62,12 @@ export async function createDailyRoutineGoal(
 
 export async function updateDailyRoutineGoal(
   id: string,
-  updates: Partial<Pick<DailyRoutineGoal, 'name' | 'type' | 'target_value' | 'start_date' | 'end_date' | 'active_days'>>
+  updates: Partial<
+    Pick<
+      DailyRoutineGoal,
+      'name' | 'type' | 'target_value' | 'start_date' | 'end_date' | 'active_days'
+    >
+  >
 ): Promise<DailyRoutineGoal | undefined> {
   const timestamp = now();
 
@@ -103,17 +104,21 @@ export async function deleteDailyRoutineGoal(id: string): Promise<void> {
     .toArray();
 
   // Use single transaction for all deletes + queue operations (atomic)
-  await db.transaction('rw', [db.dailyRoutineGoals, db.dailyGoalProgress, db.syncQueue], async () => {
-    // Soft delete all progress records for this routine and queue sync
-    for (const progress of progressRecords) {
-      await db.dailyGoalProgress.update(progress.id, { deleted: true, updated_at: timestamp });
-      await queueDeleteOperation('daily_goal_progress', progress.id);
-    }
+  await db.transaction(
+    'rw',
+    [db.dailyRoutineGoals, db.dailyGoalProgress, db.syncQueue],
+    async () => {
+      // Soft delete all progress records for this routine and queue sync
+      for (const progress of progressRecords) {
+        await db.dailyGoalProgress.update(progress.id, { deleted: true, updated_at: timestamp });
+        await queueDeleteOperation('daily_goal_progress', progress.id);
+      }
 
-    // Tombstone delete the routine and queue sync
-    await db.dailyRoutineGoals.update(id, { deleted: true, updated_at: timestamp });
-    await queueDeleteOperation('daily_routine_goals', id);
-  });
+      // Tombstone delete the routine and queue sync
+      await db.dailyRoutineGoals.update(id, { deleted: true, updated_at: timestamp });
+      await queueDeleteOperation('daily_routine_goals', id);
+    }
+  );
 
   // Mark all deleted entities as modified
   for (const progress of progressRecords) {
@@ -123,7 +128,10 @@ export async function deleteDailyRoutineGoal(id: string): Promise<void> {
   scheduleSyncPush();
 }
 
-export async function reorderDailyRoutineGoal(id: string, newOrder: number): Promise<DailyRoutineGoal | undefined> {
+export async function reorderDailyRoutineGoal(
+  id: string,
+  newOrder: number
+): Promise<DailyRoutineGoal | undefined> {
   const timestamp = now();
 
   // Use transaction to ensure atomicity

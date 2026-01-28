@@ -101,7 +101,7 @@
       return 'weekends only';
     }
     const days = Array.from(selectedDays).sort((a, b) => a - b);
-    return days.map(d => dayLabels[d].full).join(', ');
+    return days.map((d) => dayLabels[d].full).join(', ');
   });
 
   function handleSubmit(event: Event) {
@@ -168,13 +168,7 @@
   {#if type === 'incremental'}
     <div class="form-group">
       <label for="target-value">Daily Target Value</label>
-      <input
-        id="target-value"
-        type="number"
-        bind:value={targetValue}
-        min="1"
-        required
-      />
+      <input id="target-value" type="number" bind:value={targetValue} min="1" required />
     </div>
   {/if}
 
@@ -252,9 +246,7 @@
 
   <div class="form-actions">
     {#if onCancel}
-      <button type="button" class="btn btn-secondary" onclick={onCancel}>
-        Cancel
-      </button>
+      <button type="button" class="btn btn-secondary" onclick={onCancel}> Cancel </button>
     {/if}
     <button type="submit" class="btn btn-primary">
       {submitLabel}
@@ -307,9 +299,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 1rem;
-    background: linear-gradient(135deg,
-      rgba(37, 37, 61, 0.8) 0%,
-      rgba(26, 26, 46, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(37, 37, 61, 0.8) 0%, rgba(26, 26, 46, 0.9) 100%);
     border: 2px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-lg);
     transition: all 0.3s var(--ease-smooth);
@@ -334,8 +324,9 @@
 
   .type-btn.active {
     border-color: var(--color-primary);
-    box-shadow: 0 0 25px var(--color-primary-glow),
-                inset 0 0 30px rgba(108, 92, 231, 0.1);
+    box-shadow:
+      0 0 25px var(--color-primary-glow),
+      inset 0 0 30px rgba(108, 92, 231, 0.1);
   }
 
   .type-btn.active::before {
@@ -382,9 +373,7 @@
     min-width: 36px;
     height: 48px;
     padding: 0.375rem;
-    background: linear-gradient(135deg,
-      rgba(37, 37, 61, 0.8) 0%,
-      rgba(26, 26, 46, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(37, 37, 61, 0.8) 0%, rgba(26, 26, 46, 0.9) 100%);
     border: 2px solid rgba(108, 92, 231, 0.15);
     border-radius: var(--radius-md);
     transition: all 0.2s var(--ease-smooth);
@@ -410,18 +399,14 @@
   }
 
   .day-btn.active {
-    background: linear-gradient(135deg,
-      rgba(108, 92, 231, 0.3) 0%,
-      rgba(108, 92, 231, 0.15) 100%);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.3) 0%, rgba(108, 92, 231, 0.15) 100%);
     border-color: var(--color-primary);
     color: var(--color-text);
     box-shadow: 0 0 12px var(--color-primary-glow);
   }
 
   .day-btn.active:hover {
-    background: linear-gradient(135deg,
-      rgba(108, 92, 231, 0.4) 0%,
-      rgba(108, 92, 231, 0.2) 100%);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.4) 0%, rgba(108, 92, 231, 0.2) 100%);
   }
 
   /* Larger screens - show full day name */
@@ -502,7 +487,7 @@
     background: rgba(108, 92, 231, 0.1);
   }
 
-  .checkbox-label input[type="checkbox"] {
+  .checkbox-label input[type='checkbox'] {
     width: 20px;
     height: 20px;
     cursor: pointer;
@@ -513,9 +498,7 @@
     font-size: 0.875rem;
     color: var(--color-text-muted);
     padding: 0.875rem 1rem;
-    background: linear-gradient(135deg,
-      rgba(108, 92, 231, 0.1) 0%,
-      rgba(108, 92, 231, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.1) 0%, rgba(108, 92, 231, 0.05) 100%);
     border: 1px solid rgba(108, 92, 231, 0.15);
     border-radius: var(--radius-lg);
     line-height: 1.6;

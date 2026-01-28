@@ -13,7 +13,8 @@
     onDelete?: () => void;
   }
 
-  let { goal, onToggleComplete, onIncrement, onDecrement, onSetValue, onEdit, onDelete }: Props = $props();
+  let { goal, onToggleComplete, onIncrement, onDecrement, onSetValue, onEdit, onDelete }: Props =
+    $props();
 
   // Determine entity type for remote change tracking
   const entityType = $derived('goal_list_id' in goal ? 'goals' : 'daily_routine_goals');
@@ -62,13 +63,13 @@
     calculateGoalProgress(goal.type, completed, currentValue, goal.target_value)
   );
   // Use overflow color for >100%, regular progress color otherwise
-  const progressColor = $derived(progress > 100 ? getOverflowColor(progress) : getProgressColor(progress));
+  const progressColor = $derived(
+    progress > 100 ? getOverflowColor(progress) : getProgressColor(progress)
+  );
 
   // Celebration state for overflow
   const isCelebrating = $derived(progress > 100);
-  const celebrationIntensity = $derived(
-    progress <= 100 ? 0 : Math.min(1, (progress - 100) / 100)
-  );
+  const celebrationIntensity = $derived(progress <= 100 ? 0 : Math.min(1, (progress - 100) / 100));
 
   function startEditing() {
     if (!onSetValue) return;
@@ -108,7 +109,9 @@
         class="checkbox"
         class:checked={completed}
         onclick={handleToggle}
-        style="border-color: {progressColor}; background-color: {completed ? progressColor : 'transparent'}"
+        style="border-color: {progressColor}; background-color: {completed
+          ? progressColor
+          : 'transparent'}"
         aria-label={completed ? 'Mark as incomplete' : 'Mark as complete'}
       >
         {#if completed}
@@ -163,10 +166,7 @@
           {/if}
         {/if}
 
-        <div
-          class="mini-progress"
-          class:celebrating={isCelebrating}
-        >
+        <div class="mini-progress" class:celebrating={isCelebrating}>
           <div
             class="mini-progress-fill"
             class:celebrating={isCelebrating}
@@ -185,7 +185,8 @@
             {#each Array(Math.floor(celebrationIntensity * 8)) as _, i}
               <div
                 class="particle"
-                style="--angle: {i * 45}deg; --delay: {i * 0.15}s; --distance: {20 + (i % 3) * 10}px"
+                style="--angle: {i * 45}deg; --delay: {i * 0.15}s; --distance: {20 +
+                  (i % 3) * 10}px"
               ></div>
             {/each}
           </div>
@@ -235,9 +236,7 @@
     justify-content: space-between;
     gap: 1.25rem;
     padding: 1.125rem 1.5rem;
-    background: linear-gradient(135deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(108, 92, 231, 0.15);
@@ -256,12 +255,14 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent 0%,
       rgba(108, 92, 231, 0.3) 30%,
       rgba(255, 255, 255, 0.15) 50%,
       rgba(108, 92, 231, 0.3) 70%,
-      transparent 100%);
+      transparent 100%
+    );
   }
 
   /* Subtle nebula glow */
@@ -296,12 +297,21 @@
     border-color: color-mix(in srgb, var(--glow-color) 40%, rgba(108, 92, 231, 0.15));
     box-shadow:
       0 4px 20px rgba(0, 0, 0, 0.3),
-      0 0 calc(20px + var(--celebration-intensity, 0) * 30px) color-mix(in srgb, var(--glow-color) calc(var(--celebration-intensity, 0) * 40%), transparent);
+      0 0 calc(20px + var(--celebration-intensity, 0) * 30px)
+        color-mix(
+          in srgb,
+          var(--glow-color) calc(var(--celebration-intensity, 0) * 40%),
+          transparent
+        );
   }
 
   .goal-item.celebrating::after {
     opacity: calc(0.3 + var(--celebration-intensity, 0) * 0.7);
-    background: radial-gradient(ellipse, color-mix(in srgb, var(--glow-color) 15%, transparent) 0%, transparent 70%);
+    background: radial-gradient(
+      ellipse,
+      color-mix(in srgb, var(--glow-color) 15%, transparent) 0%,
+      transparent 70%
+    );
   }
 
   .goal-main {
@@ -351,9 +361,16 @@
   }
 
   @keyframes starComplete {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.3); box-shadow: 0 0 30px currentColor; }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.3);
+      box-shadow: 0 0 30px currentColor;
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 
   .checkmark {
@@ -365,8 +382,14 @@
   }
 
   @keyframes checkAppear {
-    from { transform: scale(0) rotate(-90deg); opacity: 0; }
-    to { transform: scale(1) rotate(0); opacity: 1; }
+    from {
+      transform: scale(0) rotate(-90deg);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1) rotate(0);
+      opacity: 1;
+    }
   }
 
   .increment-controls {
@@ -381,9 +404,7 @@
     height: 36px;
     border: 1px solid rgba(108, 92, 231, 0.25);
     border-radius: var(--radius-lg);
-    background: linear-gradient(145deg,
-      rgba(30, 30, 55, 0.9) 0%,
-      rgba(20, 20, 40, 0.95) 100%);
+    background: linear-gradient(145deg, rgba(30, 30, 55, 0.9) 0%, rgba(20, 20, 40, 0.95) 100%);
     font-size: 1.375rem;
     font-weight: 600;
     display: flex;
@@ -454,8 +475,9 @@
     margin: 0;
   }
 
-  .value-input[type=number] {
+  .value-input[type='number'] {
     -moz-appearance: textfield;
+    appearance: textfield;
   }
 
   .goal-name {
@@ -500,8 +522,13 @@
   }
 
   @keyframes wrapperPulse {
-    0%, 100% { filter: drop-shadow(0 0 calc(4px + var(--celebration-intensity, 0) * 12px) var(--glow-color)); }
-    50% { filter: drop-shadow(0 0 calc(8px + var(--celebration-intensity, 0) * 20px) var(--glow-color)); }
+    0%,
+    100% {
+      filter: drop-shadow(0 0 calc(4px + var(--celebration-intensity, 0) * 12px) var(--glow-color));
+    }
+    50% {
+      filter: drop-shadow(0 0 calc(8px + var(--celebration-intensity, 0) * 20px) var(--glow-color));
+    }
   }
 
   .mini-progress {
@@ -544,13 +571,16 @@
   }
 
   @keyframes fillPulse {
-    0%, 100% {
+    0%,
+    100% {
       filter: brightness(1);
       box-shadow: 0 0 15px currentColor;
     }
     50% {
       filter: brightness(1.3);
-      box-shadow: 0 0 25px currentColor, 0 0 40px currentColor;
+      box-shadow:
+        0 0 25px currentColor,
+        0 0 40px currentColor;
     }
   }
 
@@ -561,18 +591,24 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent 0%,
       rgba(255, 255, 255, 0.5) 40%,
       rgba(255, 255, 255, 0.8) 50%,
       rgba(255, 255, 255, 0.5) 60%,
-      transparent 100%);
+      transparent 100%
+    );
     animation: shimmerSweep calc(1.5s - var(--celebration-intensity, 0) * 0.7s) ease-in-out infinite;
   }
 
   @keyframes shimmerSweep {
-    0% { left: -100%; }
-    100% { left: 100%; }
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 100%;
+    }
   }
 
   /* Pulse rings */
@@ -629,7 +665,9 @@
     height: 3px;
     background: var(--glow-color);
     border-radius: 50%;
-    box-shadow: 0 0 6px var(--glow-color), 0 0 10px var(--glow-color);
+    box-shadow:
+      0 0 6px var(--glow-color),
+      0 0 10px var(--glow-color);
     animation: particleShoot calc(1.5s - var(--celebration-intensity, 0) * 0.5s) ease-out infinite;
     animation-delay: var(--delay);
   }
@@ -654,7 +692,9 @@
     height: 4px;
     background: var(--glow-color);
     border-radius: 50%;
-    box-shadow: 0 0 8px var(--glow-color), 0 0 15px var(--glow-color);
+    box-shadow:
+      0 0 8px var(--glow-color),
+      0 0 15px var(--glow-color);
     pointer-events: none;
   }
 
@@ -684,7 +724,9 @@
     top: 50%;
     font-size: 12px;
     color: var(--glow-color);
-    text-shadow: 0 0 8px var(--glow-color), 0 0 15px var(--glow-color);
+    text-shadow:
+      0 0 8px var(--glow-color),
+      0 0 15px var(--glow-color);
     pointer-events: none;
   }
 
@@ -712,7 +754,8 @@
   }
 
   @keyframes starPulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.6;
       transform: translateY(-50%) scale(1);
       filter: brightness(1);
@@ -724,12 +767,14 @@
     }
   }
 
-  .star-2, .star-3 {
+  .star-2,
+  .star-3 {
     transform: none;
   }
 
   @keyframes starPulseAlt {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.6;
       transform: scale(1);
       filter: brightness(1);
@@ -778,10 +823,22 @@
   }
 
   @keyframes arcCrackle {
-    0% { opacity: 0.3; transform: translateY(-50%) rotate(30deg) scaleY(0.7); }
-    33% { opacity: 1; transform: translateY(-50%) rotate(35deg) scaleY(1.2); }
-    66% { opacity: 0.5; transform: translateY(-50%) rotate(25deg) scaleY(0.9); }
-    100% { opacity: 0.3; transform: translateY(-50%) rotate(30deg) scaleY(0.7); }
+    0% {
+      opacity: 0.3;
+      transform: translateY(-50%) rotate(30deg) scaleY(0.7);
+    }
+    33% {
+      opacity: 1;
+      transform: translateY(-50%) rotate(35deg) scaleY(1.2);
+    }
+    66% {
+      opacity: 0.5;
+      transform: translateY(-50%) rotate(25deg) scaleY(0.9);
+    }
+    100% {
+      opacity: 0.3;
+      transform: translateY(-50%) rotate(30deg) scaleY(0.7);
+    }
   }
 
   .action-btn {

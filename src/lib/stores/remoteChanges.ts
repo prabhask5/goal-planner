@@ -34,22 +34,22 @@ import { writable, derived } from 'svelte/store';
  * Used to apply appropriate animations.
  */
 export type RemoteActionType =
-  | 'create'      // New entity inserted
-  | 'delete'      // Entity deleted
-  | 'toggle'      // Boolean field toggled (completed, is_enabled)
-  | 'increment'   // Numeric value increased
-  | 'decrement'   // Numeric value decreased
-  | 'reorder'     // Order changed
-  | 'rename'      // Name changed
-  | 'update';     // Other field updates
+  | 'create' // New entity inserted
+  | 'delete' // Entity deleted
+  | 'toggle' // Boolean field toggled (completed, is_enabled)
+  | 'increment' // Numeric value increased
+  | 'decrement' // Numeric value decreased
+  | 'reorder' // Order changed
+  | 'rename' // Name changed
+  | 'update'; // Other field updates
 
 export interface RemoteChange {
   entityId: string;
-  entityType: string;  // Table name
-  fields: string[];    // Which fields changed
+  entityType: string; // Table name
+  fields: string[]; // Which fields changed
   actionType: RemoteActionType; // Detected action type
   timestamp: number;
-  applied: boolean;    // Whether the change was applied to local DB
+  applied: boolean; // Whether the change was applied to local DB
   // For increment/decrement, store the delta for animation direction
   valueDelta?: number;
 }
@@ -59,7 +59,7 @@ export interface ActiveEdit {
   entityType: string;
   formType: 'auto-save' | 'manual-save';
   startedAt: number;
-  fields?: string[];   // Which fields are being edited (for field-level tracking)
+  fields?: string[]; // Which fields are being edited (for field-level tracking)
 }
 
 interface RemoteChangesState {
@@ -78,8 +78,8 @@ interface RemoteChangesState {
 // STORE
 // ============================================================
 
-const ANIMATION_DURATION = 2000;  // How long to keep change in "recent" for animation
-const CLEANUP_INTERVAL = 5000;    // How often to clean up old changes
+const ANIMATION_DURATION = 2000; // How long to keep change in "recent" for animation
+const CLEANUP_INTERVAL = 5000; // How often to clean up old changes
 
 // How long to keep items in pending delete state for animation
 const DELETE_ANIMATION_DURATION = 500;
@@ -89,7 +89,7 @@ function createRemoteChangesStore() {
     recentChanges: new Map(),
     activeEdits: new Map(),
     deferredChanges: new Map(),
-    pendingDeletes: new Map(),
+    pendingDeletes: new Map()
   });
 
   // Cleanup old changes periodically
@@ -101,7 +101,7 @@ function createRemoteChangesStore() {
 
     cleanupInterval = setInterval(() => {
       const now = Date.now();
-      update(state => {
+      update((state) => {
         // Remove old recent changes
         for (const [key, change] of state.recentChanges) {
           if (now - change.timestamp > ANIMATION_DURATION) {
@@ -193,12 +193,12 @@ function createRemoteChangesStore() {
         actionType,
         timestamp: Date.now(),
         applied,
-        valueDelta,
+        valueDelta
       };
 
       let deferred = false;
 
-      update(state => {
+      update((state) => {
         const key = `${entityType}:${entityId}`;
         const activeEdit = state.activeEdits.get(key);
 
@@ -240,10 +240,10 @@ function createRemoteChangesStore() {
         fields,
         actionType,
         timestamp: Date.now(),
-        applied: true,
+        applied: true
       };
 
-      update(state => {
+      update((state) => {
         const key = `${entityType}:${entityId}`;
         state.recentChanges.set(key, change);
         return state;
@@ -260,14 +260,14 @@ function createRemoteChangesStore() {
       formType: 'auto-save' | 'manual-save',
       fields?: string[]
     ): void {
-      update(state => {
+      update((state) => {
         const key = `${entityType}:${entityId}`;
         state.activeEdits.set(key, {
           entityId,
           entityType,
           formType,
           startedAt: Date.now(),
-          fields,
+          fields
         });
         return state;
       });
@@ -276,13 +276,10 @@ function createRemoteChangesStore() {
     /**
      * Mark editing as complete. Returns any deferred changes that need to be processed.
      */
-    stopEditing(
-      entityId: string,
-      entityType: string
-    ): RemoteChange[] {
+    stopEditing(entityId: string, entityType: string): RemoteChange[] {
       let deferredChanges: RemoteChange[] = [];
 
-      update(state => {
+      update((state) => {
         const key = `${entityType}:${entityId}`;
         state.activeEdits.delete(key);
 
@@ -303,7 +300,7 @@ function createRemoteChangesStore() {
      */
     isEditing(entityId: string, entityType: string): boolean {
       let editing = false;
-      const unsubscribe = subscribe(state => {
+      const unsubscribe = subscribe((state) => {
         editing = state.activeEdits.has(`${entityType}:${entityId}`);
       });
       unsubscribe();
@@ -315,7 +312,7 @@ function createRemoteChangesStore() {
      */
     hasDeferredChanges(entityId: string, entityType: string): boolean {
       let hasChanges = false;
-      const unsubscribe = subscribe(state => {
+      const unsubscribe = subscribe((state) => {
         const key = `${entityType}:${entityId}`;
         const changes = state.deferredChanges.get(key);
         hasChanges = !!changes && changes.length > 0;
@@ -329,7 +326,7 @@ function createRemoteChangesStore() {
      */
     wasRecentlyChanged(entityId: string, entityType: string): boolean {
       let recent = false;
-      const unsubscribe = subscribe(state => {
+      const unsubscribe = subscribe((state) => {
         const key = `${entityType}:${entityId}`;
         const change = state.recentChanges.get(key);
         if (change && Date.now() - change.timestamp < ANIMATION_DURATION) {
@@ -345,7 +342,7 @@ function createRemoteChangesStore() {
      */
     getRecentChange(entityId: string, entityType: string): RemoteChange | null {
       let change: RemoteChange | null = null;
-      const unsubscribe = subscribe(state => {
+      const unsubscribe = subscribe((state) => {
         const key = `${entityType}:${entityId}`;
         const c = state.recentChanges.get(key);
         if (c && Date.now() - c.timestamp < ANIMATION_DURATION) {
@@ -361,16 +358,16 @@ function createRemoteChangesStore() {
      * Returns a promise that resolves after the animation duration.
      */
     markPendingDelete(entityId: string, entityType: string): Promise<void> {
-      update(state => {
+      update((state) => {
         const key = `${entityType}:${entityId}`;
         state.pendingDeletes.set(key, Date.now());
         return state;
       });
 
       // Return promise that resolves after animation duration
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
-          update(state => {
+          update((state) => {
             const key = `${entityType}:${entityId}`;
             state.pendingDeletes.delete(key);
             return state;
@@ -385,7 +382,7 @@ function createRemoteChangesStore() {
      */
     isPendingDelete(entityId: string, entityType: string): boolean {
       let pending = false;
-      const unsubscribe = subscribe(state => {
+      const unsubscribe = subscribe((state) => {
         const key = `${entityType}:${entityId}`;
         pending = state.pendingDeletes.has(key);
       });
@@ -402,7 +399,7 @@ function createRemoteChangesStore() {
         recentChanges: new Map(),
         activeEdits: new Map(),
         deferredChanges: new Map(),
-        pendingDeletes: new Map(),
+        pendingDeletes: new Map()
       }));
     },
 
@@ -411,7 +408,7 @@ function createRemoteChangesStore() {
      */
     destroy(): void {
       stopCleanup();
-    },
+    }
   };
 }
 
@@ -426,7 +423,7 @@ export const remoteChangesStore = createRemoteChangesStore();
  * Use this in form components to show a warning indicator.
  */
 export function createDeferredChangesIndicator(entityId: string, entityType: string) {
-  return derived(remoteChangesStore, $state => {
+  return derived(remoteChangesStore, ($state) => {
     const key = `${entityType}:${entityId}`;
     const changes = $state.deferredChanges.get(key);
     return changes && changes.length > 0;
@@ -438,7 +435,7 @@ export function createDeferredChangesIndicator(entityId: string, entityType: str
  * Use this to trigger animations.
  */
 export function createRecentChangeIndicator(entityId: string, entityType: string) {
-  return derived(remoteChangesStore, $state => {
+  return derived(remoteChangesStore, ($state) => {
     const key = `${entityType}:${entityId}`;
     const change = $state.recentChanges.get(key);
     if (!change) return null;
@@ -452,7 +449,7 @@ export function createRecentChangeIndicator(entityId: string, entityType: string
  * Use this to apply delete animation before removing from DOM.
  */
 export function createPendingDeleteIndicator(entityId: string, entityType: string) {
-  return derived(remoteChangesStore, $state => {
+  return derived(remoteChangesStore, ($state) => {
     const key = `${entityType}:${entityId}`;
     return $state.pendingDeletes.has(key);
   });

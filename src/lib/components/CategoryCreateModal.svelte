@@ -22,7 +22,7 @@
     '#e17055', // Orange
     '#d63031', // Red
     '#00b894', // Green
-    '#0984e3', // Blue
+    '#0984e3' // Blue
   ];
 
   let name = $state('');
@@ -74,7 +74,7 @@
             class="color-btn"
             class:selected={color === presetColor}
             style="--btn-color: {presetColor}"
-            onclick={() => color = presetColor}
+            onclick={() => (color = presetColor)}
             aria-label="Select color"
           ></button>
         {/each}
@@ -86,12 +86,8 @@
     </div>
 
     <div class="actions">
-      <button type="button" class="cancel-btn" onclick={onClose}>
-        Cancel
-      </button>
-      <button type="submit" class="submit-btn" disabled={!name.trim()}>
-        Create Tag
-      </button>
+      <button type="button" class="cancel-btn" onclick={onClose}> Cancel </button>
+      <button type="submit" class="submit-btn" disabled={!name.trim()}> Create Tag </button>
     </div>
   </form>
 </Modal>

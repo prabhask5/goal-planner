@@ -3,12 +3,16 @@ import type { TaskCategory } from '$lib/types';
 import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush, markEntityModified } from '$lib/sync/engine';
 
-export async function createTaskCategory(name: string, color: string, userId: string): Promise<TaskCategory> {
+export async function createTaskCategory(
+  name: string,
+  color: string,
+  userId: string
+): Promise<TaskCategory> {
   const timestamp = now();
 
   // Get the lowest order to insert at the top (outside transaction for read)
   const existing = await db.taskCategories.where('user_id').equals(userId).toArray();
-  const minOrder = existing.length > 0 ? Math.min(...existing.map(c => c.order)) - 1 : 0;
+  const minOrder = existing.length > 0 ? Math.min(...existing.map((c) => c.order)) - 1 : 0;
 
   const newCategory: TaskCategory = {
     id: generateId(),
@@ -38,7 +42,10 @@ export async function createTaskCategory(name: string, color: string, userId: st
   return newCategory;
 }
 
-export async function updateTaskCategory(id: string, updates: Partial<Pick<TaskCategory, 'name' | 'color'>>): Promise<TaskCategory | undefined> {
+export async function updateTaskCategory(
+  id: string,
+  updates: Partial<Pick<TaskCategory, 'name' | 'color'>>
+): Promise<TaskCategory | undefined> {
   const timestamp = now();
 
   // Use transaction to ensure atomicity
@@ -97,7 +104,10 @@ export async function deleteTaskCategory(id: string): Promise<void> {
   scheduleSyncPush();
 }
 
-export async function reorderTaskCategory(id: string, newOrder: number): Promise<TaskCategory | undefined> {
+export async function reorderTaskCategory(
+  id: string,
+  newOrder: number
+): Promise<TaskCategory | undefined> {
   const timestamp = now();
 
   // Use transaction to ensure atomicity

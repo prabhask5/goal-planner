@@ -9,8 +9,12 @@
     if (browser) {
       isOffline = !navigator.onLine;
 
-      const handleOnline = () => { isOffline = false; };
-      const handleOffline = () => { isOffline = true; };
+      const handleOnline = () => {
+        isOffline = false;
+      };
+      const handleOffline = () => {
+        isOffline = true;
+      };
 
       window.addEventListener('online', handleOnline);
       window.addEventListener('offline', handleOffline);
@@ -35,7 +39,17 @@
   <div class="error-container glass-card">
     <div class="error-icon">
       {#if isOffline}
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="64"
+          height="64"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <line x1="1" y1="1" x2="23" y2="23"></line>
           <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
           <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
@@ -45,15 +59,36 @@
           <line x1="12" y1="20" x2="12.01" y2="20"></line>
         </svg>
       {:else if $page.status === 404}
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="64"
+          height="64"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <circle cx="12" cy="12" r="10"></circle>
           <path d="M16 16s-1.5-2-4-2-4 2-4 2"></path>
           <line x1="9" y1="9" x2="9.01" y2="9"></line>
           <line x1="15" y1="9" x2="15.01" y2="9"></line>
         </svg>
       {:else}
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="64"
+          height="64"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"
+          ></path>
           <line x1="12" y1="9" x2="12" y2="13"></line>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
@@ -82,17 +117,11 @@
 
     <div class="error-actions">
       {#if isOffline}
-        <button class="btn btn-primary" onclick={handleRetry}>
-          Try Again
-        </button>
+        <button class="btn btn-primary" onclick={handleRetry}> Try Again </button>
       {:else}
-        <button class="btn btn-secondary" onclick={handleRetry}>
-          Refresh Page
-        </button>
+        <button class="btn btn-secondary" onclick={handleRetry}> Refresh Page </button>
       {/if}
-      <button class="btn btn-ghost" onclick={handleGoHome}>
-        Go Home
-      </button>
+      <button class="btn btn-ghost" onclick={handleGoHome}> Go Home </button>
     </div>
 
     {#if !isOffline && $page.status !== 404}

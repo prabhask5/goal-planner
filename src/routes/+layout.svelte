@@ -5,7 +5,14 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { signOut, getUserProfile, getSession, signIn } from '$lib/supabase/auth';
-  import { stopSyncEngine, clearLocalCache, clearPendingSyncQueue, markAuthValidated, runFullSync, needsAuthValidation } from '$lib/sync/engine';
+  import {
+    stopSyncEngine,
+    clearLocalCache,
+    clearPendingSyncQueue,
+    markAuthValidated,
+    runFullSync,
+    needsAuthValidation
+  } from '$lib/sync/engine';
   import { getOfflineCredentials, clearOfflineCredentials } from '$lib/auth/offlineCredentials';
   import { syncStatusStore } from '$lib/stores/sync';
   import { authState, userDisplayInfo } from '$lib/stores/authState';
@@ -82,10 +89,12 @@
       const SESSION_TIMEOUT_MS = 15000;
       const authResult = await Promise.race([
         signIn(credentials.email, credentials.password),
-        new Promise<{ session: null; error: string }>((resolve) => setTimeout(() => {
-          console.warn('[Auth] Re-authentication timed out');
-          resolve({ session: null, error: 'timeout' });
-        }, SESSION_TIMEOUT_MS))
+        new Promise<{ session: null; error: string }>((resolve) =>
+          setTimeout(() => {
+            console.warn('[Auth] Re-authentication timed out');
+            resolve({ session: null, error: 'timeout' });
+          }, SESSION_TIMEOUT_MS)
+        )
       ]);
 
       if (authResult.session) {
@@ -101,7 +110,9 @@
         // FAILURE: Credentials are invalid (password may have been changed)
         // SECURITY: Cancel all pending syncs to prevent unauthorized data modification
         console.error('[Auth] Credential validation failed:', authResult.error);
-        await handleInvalidAuth('Your credentials may have changed while you are offline. Please sign in again.');
+        await handleInvalidAuth(
+          'Your credentials may have changed while you are offline. Please sign in again.'
+        );
       }
     } catch (e) {
       console.error('[Auth] Error validating credentials on reconnect:', e);
@@ -124,8 +135,8 @@
 
     // Also clear Supabase localStorage as backup (in case signOut fails)
     try {
-      const supabaseKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
-      supabaseKeys.forEach(k => localStorage.removeItem(k));
+      const supabaseKeys = Object.keys(localStorage).filter((k) => k.startsWith('sb-'));
+      supabaseKeys.forEach((k) => localStorage.removeItem(k));
     } catch (e) {
       console.error('[Auth] Failed to clear Supabase localStorage:', e);
     }
@@ -158,7 +169,7 @@
         error?.message?.includes('Failed to fetch dynamically imported module') ||
         error?.message?.includes('error loading dynamically imported module') ||
         error?.message?.includes('Importing a module script failed') ||
-        (error?.name === 'ChunkLoadError') ||
+        error?.name === 'ChunkLoadError' ||
         (error?.message?.includes('Loading chunk') && error?.message?.includes('failed'));
 
       if (isChunkError && !navigator.onLine) {
@@ -167,7 +178,9 @@
         toastMessage = "This page isn't available offline. Please reconnect or go back.";
         toastType = 'info';
         showToast = true;
-        setTimeout(() => { showToast = false; }, 5000);
+        setTimeout(() => {
+          showToast = false;
+        }, 5000);
       }
     };
 
@@ -305,9 +318,7 @@
   const isOnConfirmPage = $derived($page.url.pathname.startsWith('/confirm'));
   const isAuthPage = $derived(isOnLoginPage || isOnConfirmPage);
   const isAuthenticated = $derived(
-    data.authMode !== 'none' &&
-    !isAuthPage &&
-    !$authState.isLoading
+    data.authMode !== 'none' && !isAuthPage && !$authState.isLoading
   );
 
   const navItems = [
@@ -346,8 +357,8 @@
     // IMPORTANT: When offline, supabase.auth.signOut() doesn't clear localStorage
     // Manually clear Supabase session storage to prevent stale session being found
     try {
-      const supabaseKeys = Object.keys(localStorage).filter(k => k.startsWith('sb-'));
-      supabaseKeys.forEach(k => localStorage.removeItem(k));
+      const supabaseKeys = Object.keys(localStorage).filter((k) => k.startsWith('sb-'));
+      supabaseKeys.forEach((k) => localStorage.removeItem(k));
     } catch (e) {
       console.error('[Auth] Failed to clear Supabase localStorage:', e);
     }
@@ -382,16 +393,30 @@
       <div class="signout-content">
         <div class="signout-icon">
           <svg width="48" height="48" viewBox="0 0 100 100" fill="none">
-            <circle cx="50" cy="50" r="45" stroke="url(#signoutGrad)" stroke-width="5" fill="none"/>
-            <path d="M30 52 L45 67 L72 35" stroke="url(#signoutCheck)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle
+              cx="50"
+              cy="50"
+              r="45"
+              stroke="url(#signoutGrad)"
+              stroke-width="5"
+              fill="none"
+            />
+            <path
+              d="M30 52 L45 67 L72 35"
+              stroke="url(#signoutCheck)"
+              stroke-width="6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            />
             <defs>
               <linearGradient id="signoutGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#6c5ce7"/>
-                <stop offset="100%" stop-color="#ff79c6"/>
+                <stop offset="0%" stop-color="#6c5ce7" />
+                <stop offset="100%" stop-color="#ff79c6" />
               </linearGradient>
               <linearGradient id="signoutCheck" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#26de81"/>
-                <stop offset="100%" stop-color="#00d4ff"/>
+                <stop offset="0%" stop-color="#26de81" />
+                <stop offset="100%" stop-color="#00d4ff" />
               </linearGradient>
             </defs>
           </svg>
@@ -406,13 +431,31 @@
     <div class="app-toast" class:toast-error={toastType === 'error'}>
       <div class="toast-content">
         {#if toastType === 'error'}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="12"></line>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
         {:else}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="16" x2="12" y2="12"></line>
             <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -420,7 +463,16 @@
         {/if}
         <span>{toastMessage}</span>
         <button class="toast-dismiss" onclick={dismissToast} aria-label="Dismiss notification">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
@@ -442,16 +494,30 @@
         <a href="/" class="island-brand-link">
           <span class="island-brand">
             <svg class="island-logo" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="45" stroke="url(#islandGrad)" stroke-width="6" fill="none"/>
-              <path d="M30 52 L45 67 L72 35" stroke="url(#islandCheck)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                stroke="url(#islandGrad)"
+                stroke-width="6"
+                fill="none"
+              />
+              <path
+                d="M30 52 L45 67 L72 35"
+                stroke="url(#islandCheck)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                fill="none"
+              />
               <defs>
                 <linearGradient id="islandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#6c5ce7"/>
-                  <stop offset="100%" stop-color="#ff79c6"/>
+                  <stop offset="0%" stop-color="#6c5ce7" />
+                  <stop offset="100%" stop-color="#ff79c6" />
                 </linearGradient>
                 <linearGradient id="islandCheck" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#26de81"/>
-                  <stop offset="100%" stop-color="#00d4ff"/>
+                  <stop offset="0%" stop-color="#26de81" />
+                  <stop offset="100%" stop-color="#00d4ff" />
                 </linearGradient>
               </defs>
             </svg>
@@ -475,16 +541,30 @@
         <a href="/" class="nav-brand">
           <span class="brand-icon">
             <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="45" stroke="url(#brandGradient)" stroke-width="6" fill="none"/>
-              <path d="M30 52 L45 67 L72 35" stroke="url(#checkGradient)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                stroke="url(#brandGradient)"
+                stroke-width="6"
+                fill="none"
+              />
+              <path
+                d="M30 52 L45 67 L72 35"
+                stroke="url(#checkGradient)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                fill="none"
+              />
               <defs>
                 <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#6c5ce7"/>
-                  <stop offset="100%" stop-color="#ff79c6"/>
+                  <stop offset="0%" stop-color="#6c5ce7" />
+                  <stop offset="100%" stop-color="#ff79c6" />
                 </linearGradient>
                 <linearGradient id="checkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#26de81"/>
-                  <stop offset="100%" stop-color="#00d4ff"/>
+                  <stop offset="0%" stop-color="#26de81" />
+                  <stop offset="100%" stop-color="#00d4ff" />
                 </linearGradient>
               </defs>
             </svg>
@@ -495,34 +575,66 @@
         <!-- Center Navigation Links -->
         <div class="nav-center">
           {#each navItems as item}
-            <a
-              href={item.href}
-              class="nav-link"
-              class:active={isActive(item.href)}
-            >
+            <a href={item.href} class="nav-link" class:active={isActive(item.href)}>
               <span class="link-icon">
                 {#if item.icon === 'tasks'}
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 11l3 3L22 4"/>
-                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9 11l3 3L22 4" />
+                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
                   </svg>
                 {:else if item.icon === 'goals'}
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-                    <path d="M12 6v6l4 2"/>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                    <path d="M12 6v6l4 2" />
                   </svg>
                 {:else if item.icon === 'focus'}
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <circle cx="12" cy="12" r="6"/>
-                    <circle cx="12" cy="12" r="2"/>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="6" />
+                    <circle cx="12" cy="12" r="2" />
                   </svg>
                 {:else}
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 {/if}
               </span>
@@ -544,10 +656,19 @@
             <span class="user-greeting">Hey, {greeting()}!</span>
           </a>
           <button class="logout-btn" onclick={handleSignOut} aria-label="Logout">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
           </button>
         </div>
@@ -560,16 +681,30 @@
         <a href="/" class="nav-brand">
           <span class="brand-icon">
             <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="45" stroke="url(#brandGradient2)" stroke-width="6" fill="none"/>
-              <path d="M30 52 L45 67 L72 35" stroke="url(#checkGradient2)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                stroke="url(#brandGradient2)"
+                stroke-width="6"
+                fill="none"
+              />
+              <path
+                d="M30 52 L45 67 L72 35"
+                stroke="url(#checkGradient2)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                fill="none"
+              />
               <defs>
                 <linearGradient id="brandGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#6c5ce7"/>
-                  <stop offset="100%" stop-color="#ff79c6"/>
+                  <stop offset="0%" stop-color="#6c5ce7" />
+                  <stop offset="100%" stop-color="#ff79c6" />
                 </linearGradient>
                 <linearGradient id="checkGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#26de81"/>
-                  <stop offset="100%" stop-color="#00d4ff"/>
+                  <stop offset="0%" stop-color="#26de81" />
+                  <stop offset="100%" stop-color="#00d4ff" />
                 </linearGradient>
               </defs>
             </svg>
@@ -608,28 +743,64 @@
 
             <span class="tab-icon">
               {#if item.icon === 'tasks'}
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 11l3 3L22 4"/>
-                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M9 11l3 3L22 4" />
+                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
                 </svg>
               {:else if item.icon === 'goals'}
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <circle cx="12" cy="12" r="6"/>
-                  <circle cx="12" cy="12" r="2"/>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="6" />
+                  <circle cx="12" cy="12" r="2" />
                 </svg>
               {:else if item.icon === 'focus'}
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <circle cx="12" cy="12" r="6"/>
-                  <circle cx="12" cy="12" r="2"/>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="6" />
+                  <circle cx="12" cy="12" r="2" />
                 </svg>
               {:else}
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
               {/if}
             </span>
@@ -692,7 +863,9 @@
   }
 
   @keyframes auth-spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -713,11 +886,13 @@
     /* Push content below the Dynamic Island */
     padding-top: calc(env(safe-area-inset-top, 47px) * 2);
     /* Transparent gradient to show starfield behind Dynamic Island */
-    background: linear-gradient(180deg,
+    background: linear-gradient(
+      180deg,
       rgba(5, 5, 16, 0.3) 0%,
       rgba(5, 5, 16, 0.6) 40%,
       rgba(8, 8, 16, 0.85) 70%,
-      rgba(8, 8, 16, 0.7) 100%);
+      rgba(8, 8, 16, 0.7) 100%
+    );
     pointer-events: none;
     /* Entry animation */
     animation: islandFadeIn 0.6s var(--ease-out) 0.1s backwards;
@@ -793,8 +968,13 @@
   }
 
   @keyframes brandFloatMobile {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-2px); }
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-2px);
+    }
   }
 
   /* Brand text - matches desktop brand-text style */
@@ -803,10 +983,12 @@
     font-weight: 700;
     letter-spacing: -0.02em;
     /* Gradient text effect matching desktop */
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -815,8 +997,12 @@
   }
 
   @keyframes brandTextShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   /* Center gap - Reserved space for Dynamic Island */
@@ -902,9 +1088,7 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background: linear-gradient(180deg,
-      rgba(10, 10, 18, 0.95) 0%,
-      rgba(10, 10, 18, 0.9) 100%);
+    background: linear-gradient(180deg, rgba(10, 10, 18, 0.95) 0%, rgba(10, 10, 18, 0.9) 100%);
     backdrop-filter: blur(40px) saturate(180%);
     -webkit-backdrop-filter: blur(40px) saturate(180%);
     border-bottom: 1px solid rgba(108, 92, 231, 0.15);
@@ -921,18 +1105,24 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent 0%,
       rgba(108, 92, 231, 0.4) 25%,
       rgba(255, 121, 198, 0.6) 50%,
       rgba(108, 92, 231, 0.4) 75%,
-      transparent 100%);
+      transparent 100%
+    );
     animation: navGlowMove 8s linear infinite;
   }
 
   @keyframes navGlowMove {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
   }
 
   .nav-inner {
@@ -962,17 +1152,24 @@
   }
 
   @keyframes brandFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
   }
 
   .brand-text {
     font-size: 1.375rem;
     font-weight: 800;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-primary-light) 0%,
       var(--color-text) 50%,
-      var(--color-primary-light) 100%);
+      var(--color-primary-light) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -982,8 +1179,12 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   /* Center Navigation */
@@ -1061,26 +1262,28 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.2),
-      transparent
-    );
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
     animation: navShimmer 2s ease-in-out infinite;
     z-index: 0;
   }
 
   @keyframes navShimmer {
-    0% { left: -100%; }
-    50%, 100% { left: 100%; }
+    0% {
+      left: -100%;
+    }
+    50%,
+    100% {
+      left: 100%;
+    }
   }
 
   .link-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.4s var(--ease-spring), filter 0.3s;
+    transition:
+      transform 0.4s var(--ease-spring),
+      filter 0.3s;
     position: relative;
     z-index: 1;
   }
@@ -1118,7 +1321,9 @@
     height: 4px;
     background: white;
     border-radius: 50%;
-    box-shadow: 0 0 10px white, 0 0 20px var(--color-primary);
+    box-shadow:
+      0 0 10px white,
+      0 0 20px var(--color-primary);
     transition: transform 0.4s var(--ease-spring);
   }
 
@@ -1166,7 +1371,9 @@
     font-size: 0.875rem;
     border-radius: 50%;
     box-shadow: 0 2px 8px var(--color-primary-glow);
-    transition: transform 0.3s var(--ease-spring), box-shadow 0.3s;
+    transition:
+      transform 0.3s var(--ease-spring),
+      box-shadow 0.3s;
   }
 
   .user-menu:hover .user-avatar {
@@ -1274,10 +1481,12 @@
     right: 0;
     bottom: 0;
     /* SOLID color that extends to the very bottom - eliminates black bar */
-    background: linear-gradient(180deg,
+    background: linear-gradient(
+      180deg,
       rgba(12, 12, 24, 0.95) 0%,
       rgba(8, 8, 16, 0.98) 50%,
-      #080810 100%);
+      #080810 100%
+    );
     backdrop-filter: blur(40px) saturate(200%);
     -webkit-backdrop-filter: blur(40px) saturate(200%);
     border-top: 1px solid rgba(108, 92, 231, 0.15);
@@ -1295,19 +1504,26 @@
     left: 5%;
     right: 5%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent 0%,
       rgba(108, 92, 231, 0.3) 20%,
       rgba(255, 121, 198, 0.5) 40%,
       rgba(38, 222, 129, 0.3) 60%,
       rgba(108, 92, 231, 0.3) 80%,
-      transparent 100%);
+      transparent 100%
+    );
     animation: navGlowShift 6s ease-in-out infinite;
   }
 
   @keyframes navGlowShift {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
   }
 
   /* Subtle nebula accent at top */
@@ -1318,9 +1534,7 @@
     left: 20%;
     right: 20%;
     height: 40px;
-    background: radial-gradient(ellipse at center,
-      rgba(108, 92, 231, 0.15) 0%,
-      transparent 70%);
+    background: radial-gradient(ellipse at center, rgba(108, 92, 231, 0.15) 0%, transparent 70%);
     pointer-events: none;
   }
 
@@ -1385,9 +1599,7 @@
   }
 
   .tab-item.active .tab-glow {
-    background: linear-gradient(145deg,
-      rgba(108, 92, 231, 0.2) 0%,
-      rgba(108, 92, 231, 0.05) 100%);
+    background: linear-gradient(145deg, rgba(108, 92, 231, 0.2) 0%, rgba(108, 92, 231, 0.05) 100%);
     box-shadow: 0 0 20px rgba(108, 92, 231, 0.3);
   }
 
@@ -1453,7 +1665,8 @@
   }
 
   @keyframes activeIndicatorPulse {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateX(-50%) scale(1);
       box-shadow:
         0 0 12px var(--color-primary-glow),
@@ -1477,9 +1690,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg,
-      rgba(108, 92, 231, 0.3) 0%,
-      rgba(255, 121, 198, 0.2) 100%);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.3) 0%, rgba(255, 121, 198, 0.2) 100%);
     border: 1.5px solid rgba(108, 92, 231, 0.4);
     color: var(--color-text);
     font-weight: 700;
@@ -1489,7 +1700,6 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 
-  .tab-item.active .mobile-avatar,
   .tab-profile:hover .mobile-avatar {
     border-color: rgba(108, 92, 231, 0.6);
     box-shadow:
@@ -1771,9 +1981,7 @@
   @media (prefers-color-scheme: dark) {
     .nav-desktop,
     .nav-mobile {
-      background: linear-gradient(180deg,
-        rgba(8, 8, 14, 0.97) 0%,
-        rgba(8, 8, 14, 0.95) 100%);
+      background: linear-gradient(180deg, rgba(8, 8, 14, 0.97) 0%, rgba(8, 8, 14, 0.95) 100%);
     }
   }
 
@@ -1784,8 +1992,7 @@
   @media (prefers-reduced-motion: reduce) {
     .brand-icon,
     .brand-text,
-    .active-indicator,
-    .tab-active-dot {
+    .active-indicator {
       animation: none;
     }
 
@@ -1805,10 +2012,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(ellipse at center,
+    background: radial-gradient(
+      ellipse at center,
       rgba(15, 15, 35, 1) 0%,
       rgba(5, 5, 16, 1) 50%,
-      rgba(0, 0, 5, 1) 100%);
+      rgba(0, 0, 5, 1) 100%
+    );
   }
 
   .signout-content {
@@ -1820,8 +2029,15 @@
   }
 
   @keyframes signoutPulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(0.98); }
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(0.98);
+    }
   }
 
   .signout-icon {
@@ -1830,8 +2046,12 @@
   }
 
   @keyframes signoutSpin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .signout-text {
@@ -1871,9 +2091,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.875rem 1.25rem;
-    background: linear-gradient(135deg,
-      rgba(108, 92, 231, 0.15) 0%,
-      rgba(108, 92, 231, 0.2) 100%);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.15) 0%, rgba(108, 92, 231, 0.2) 100%);
     border: 1px solid rgba(108, 92, 231, 0.3);
     border-radius: var(--radius-xl);
     backdrop-filter: blur(20px);
@@ -1889,9 +2107,7 @@
   }
 
   .app-toast.toast-error .toast-content {
-    background: linear-gradient(135deg,
-      rgba(255, 121, 198, 0.15) 0%,
-      rgba(108, 92, 231, 0.2) 100%);
+    background: linear-gradient(135deg, rgba(255, 121, 198, 0.15) 0%, rgba(108, 92, 231, 0.2) 100%);
     border-color: rgba(255, 121, 198, 0.3);
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.4),

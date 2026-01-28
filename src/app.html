@@ -4,26 +4,41 @@
     <meta charset="utf-8" />
     <title>Stellar - Goal & Routine Tracker</title>
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
-    <meta name="viewport" content="initial-scale=1, viewport-fit=cover, width=device-width, maximum-scale=1, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="initial-scale=1, viewport-fit=cover, width=device-width, maximum-scale=1, user-scalable=no"
+    />
 
     <!-- SEO Meta Tags -->
     <!-- Theme color matches --color-void for seamless safe area blending -->
     <meta name="theme-color" content="#050510" />
-    <meta name="description" content="Stellar - Track your goals, daily routines, and focus sessions. Stay productive with our beautiful goal tracking app." />
-    <meta name="keywords" content="goal tracker, routine tracker, productivity, focus timer, pomodoro, habit tracker" />
+    <meta
+      name="description"
+      content="Stellar - Track your goals, daily routines, and focus sessions. Stay productive with our beautiful goal tracking app."
+    />
+    <meta
+      name="keywords"
+      content="goal tracker, routine tracker, productivity, focus timer, pomodoro, habit tracker"
+    />
     <meta name="author" content="Stellar" />
     <meta name="robots" content="index, follow" />
 
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Stellar - Goal & Routine Tracker" />
-    <meta property="og:description" content="Track your goals, daily routines, and focus sessions. Stay productive with our beautiful goal tracking app." />
+    <meta
+      property="og:description"
+      content="Track your goals, daily routines, and focus sessions. Stay productive with our beautiful goal tracking app."
+    />
     <meta property="og:image" content="%sveltekit.assets%/icon-512.png" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Stellar - Goal & Routine Tracker" />
-    <meta name="twitter:description" content="Track your goals, daily routines, and focus sessions." />
+    <meta
+      name="twitter:description"
+      content="Track your goals, daily routines, and focus sessions."
+    />
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="%sveltekit.assets%/manifest.json" />
@@ -57,9 +72,17 @@
       <!-- Content -->
       <div class="lb-content">
         <div class="lb-icon-glow"></div>
-        <svg class="lb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-          <line x1="12" y1="18" x2="12.01" y2="18"/>
+        <svg
+          class="lb-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+          <line x1="12" y1="18" x2="12.01" y2="18" />
         </svg>
         <p class="lb-message">Please rotate to portrait</p>
         <div class="lb-hint">
@@ -75,7 +98,12 @@
         position: fixed;
         inset: 0;
         z-index: 99999;
-        background: radial-gradient(ellipse at center, rgba(15, 15, 35, 1) 0%, rgba(5, 5, 16, 1) 50%, rgba(0, 0, 5, 1) 100%);
+        background: radial-gradient(
+          ellipse at center,
+          rgba(15, 15, 35, 1) 0%,
+          rgba(5, 5, 16, 1) 50%,
+          rgba(0, 0, 5, 1) 100%
+        );
         align-items: center;
         justify-content: center;
         overflow: hidden;
@@ -92,13 +120,13 @@
         position: absolute;
         inset: 0;
         background-image:
-          radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.8) 0%, transparent 100%),
-          radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.6) 0%, transparent 100%),
-          radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.7) 0%, transparent 100%),
-          radial-gradient(1px 1px at 70% 50%, rgba(255,255,255,0.5) 0%, transparent 100%),
-          radial-gradient(1px 1px at 90% 80%, rgba(255,255,255,0.6) 0%, transparent 100%),
-          radial-gradient(1.5px 1.5px at 25% 35%, rgba(108,92,231,0.9) 0%, transparent 100%),
-          radial-gradient(1.5px 1.5px at 75% 65%, rgba(255,121,198,0.8) 0%, transparent 100%);
+          radial-gradient(1px 1px at 10% 20%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+          radial-gradient(1px 1px at 30% 70%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+          radial-gradient(1px 1px at 50% 10%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
+          radial-gradient(1px 1px at 70% 50%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
+          radial-gradient(1px 1px at 90% 80%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
+          radial-gradient(1.5px 1.5px at 25% 35%, rgba(108, 92, 231, 0.9) 0%, transparent 100%),
+          radial-gradient(1.5px 1.5px at 75% 65%, rgba(255, 121, 198, 0.8) 0%, transparent 100%);
         background-size: 200px 200px;
         animation: lbStarsDrift 80s linear infinite;
       }
@@ -108,8 +136,12 @@
         opacity: 0.7;
       }
       @keyframes lbStarsDrift {
-        from { transform: translateY(0) translateX(0); }
-        to { transform: translateY(-50px) translateX(-25px); }
+        from {
+          transform: translateY(0) translateX(0);
+        }
+        to {
+          transform: translateY(-50px) translateX(-25px);
+        }
       }
 
       /* Nebula - positioned within safe area bounds */
@@ -125,7 +157,7 @@
         height: 200px;
         top: -50px;
         right: calc(env(safe-area-inset-right, 62px) - 40px);
-        background: radial-gradient(ellipse, rgba(108,92,231,0.5) 0%, transparent 70%);
+        background: radial-gradient(ellipse, rgba(108, 92, 231, 0.5) 0%, transparent 70%);
         animation: lbNebulaPulse 8s ease-in-out infinite;
       }
       .lb-nebula-2 {
@@ -133,12 +165,19 @@
         height: 180px;
         bottom: calc(env(safe-area-inset-bottom, 21px) - 40px);
         left: calc(env(safe-area-inset-left, 62px) - 40px);
-        background: radial-gradient(ellipse, rgba(255,121,198,0.4) 0%, transparent 70%);
+        background: radial-gradient(ellipse, rgba(255, 121, 198, 0.4) 0%, transparent 70%);
         animation: lbNebulaPulse 10s ease-in-out infinite 2s;
       }
       @keyframes lbNebulaPulse {
-        0%, 100% { opacity: 0.3; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(1.1); }
+        0%,
+        100% {
+          opacity: 0.3;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(1.1);
+        }
       }
 
       /* Orbit - sized for landscape viewport (max ~380pt height available) */
@@ -146,7 +185,7 @@
         position: absolute;
         width: 220px;
         height: 220px;
-        border: 1px solid rgba(108,92,231,0.15);
+        border: 1px solid rgba(108, 92, 231, 0.15);
         border-radius: 50%;
         animation: lbOrbitRotate 30s linear infinite;
       }
@@ -156,16 +195,26 @@
         height: 5px;
         background: #6c5ce7;
         border-radius: 50%;
-        box-shadow: 0 0 12px rgba(108,92,231,0.6), 0 0 24px rgba(108,92,231,0.4);
+        box-shadow:
+          0 0 12px rgba(108, 92, 231, 0.6),
+          0 0 24px rgba(108, 92, 231, 0.4);
         animation: lbParticleOrbit 30s linear infinite;
       }
       @keyframes lbOrbitRotate {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
       }
       @keyframes lbParticleOrbit {
-        from { transform: rotate(0deg) translateX(110px) rotate(0deg); }
-        to { transform: rotate(360deg) translateX(110px) rotate(-360deg); }
+        from {
+          transform: rotate(0deg) translateX(110px) rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg) translateX(110px) rotate(-360deg);
+        }
       }
 
       /* Content - compact layout for landscape viewport */
@@ -185,27 +234,46 @@
         top: -16px;
         width: 100px;
         height: 100px;
-        background: radial-gradient(ellipse, rgba(108,92,231,0.3) 0%, rgba(255,121,198,0.1) 50%, transparent 70%);
+        background: radial-gradient(
+          ellipse,
+          rgba(108, 92, 231, 0.3) 0%,
+          rgba(255, 121, 198, 0.1) 50%,
+          transparent 70%
+        );
         filter: blur(25px);
         animation: lbIconGlow 4s ease-in-out infinite;
       }
       @keyframes lbIconGlow {
-        0%, 100% { opacity: 0.6; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.2); }
+        0%,
+        100% {
+          opacity: 0.6;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.2);
+        }
       }
       .lb-icon {
         position: relative;
         color: #f0f0ff;
-        filter: drop-shadow(0 0 16px rgba(108,92,231,0.5));
+        filter: drop-shadow(0 0 16px rgba(108, 92, 231, 0.5));
         animation: lbIconRotate 3s ease-in-out infinite;
         /* Slightly smaller for landscape */
         width: 48px;
         height: 48px;
       }
       @keyframes lbIconRotate {
-        0%, 100% { transform: rotate(0deg); }
-        25% { transform: rotate(-15deg); }
-        75% { transform: rotate(15deg); }
+        0%,
+        100% {
+          transform: rotate(0deg);
+        }
+        25% {
+          transform: rotate(-15deg);
+        }
+        75% {
+          transform: rotate(15deg);
+        }
       }
       .lb-message {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -221,8 +289,12 @@
         animation: lbTextShimmer 6s linear infinite;
       }
       @keyframes lbTextShimmer {
-        0% { background-position: 0% center; }
-        100% { background-position: 200% center; }
+        0% {
+          background-position: 0% center;
+        }
+        100% {
+          background-position: 200% center;
+        }
       }
       .lb-hint {
         display: flex;
@@ -234,62 +306,105 @@
         height: 3px;
         background: #fff;
         border-radius: 50%;
-        box-shadow: 0 0 5px rgba(255,255,255,0.8);
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
         animation: lbStarPulse 2s ease-in-out infinite;
       }
-      .lb-star:nth-child(2) { animation-delay: 0.3s; }
-      .lb-star:nth-child(3) { animation-delay: 0.6s; }
+      .lb-star:nth-child(2) {
+        animation-delay: 0.3s;
+      }
+      .lb-star:nth-child(3) {
+        animation-delay: 0.6s;
+      }
       @keyframes lbStarPulse {
-        0%, 100% { opacity: 0.4; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.4); }
+        0%,
+        100% {
+          opacity: 0.4;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.4);
+        }
       }
 
       /* Show on phones in landscape */
       @media (max-height: 500px) and (orientation: landscape) and (hover: none) and (pointer: coarse) {
-        #landscape-blocker { display: flex; }
+        #landscape-blocker {
+          display: flex;
+        }
       }
 
       /* Reduced motion */
       @media (prefers-reduced-motion: reduce) {
-        .lb-stars, .lb-nebula, .lb-orbit, .lb-orbit-particle,
-        .lb-icon, .lb-icon-glow, .lb-star { animation: none; }
-        .lb-message { animation: none; background-position: 0% center; }
+        .lb-stars,
+        .lb-nebula,
+        .lb-orbit,
+        .lb-orbit-particle,
+        .lb-icon,
+        .lb-icon-glow,
+        .lb-star {
+          animation: none;
+        }
+        .lb-message {
+          animation: none;
+          background-position: 0% center;
+        }
       }
     </style>
     <div style="display: contents">%sveltekit.body%</div>
 
     <!-- Prevent zoom and bounce gestures on iOS PWA -->
     <script>
-      (function() {
+      (function () {
         // Prevent pinch-to-zoom
-        document.addEventListener('gesturestart', function(e) {
-          e.preventDefault();
-        }, { passive: false });
+        document.addEventListener(
+          'gesturestart',
+          function (e) {
+            e.preventDefault();
+          },
+          { passive: false }
+        );
 
-        document.addEventListener('gesturechange', function(e) {
-          e.preventDefault();
-        }, { passive: false });
+        document.addEventListener(
+          'gesturechange',
+          function (e) {
+            e.preventDefault();
+          },
+          { passive: false }
+        );
 
-        document.addEventListener('gestureend', function(e) {
-          e.preventDefault();
-        }, { passive: false });
+        document.addEventListener(
+          'gestureend',
+          function (e) {
+            e.preventDefault();
+          },
+          { passive: false }
+        );
 
         // Prevent double-tap zoom
         var lastTouchEnd = 0;
-        document.addEventListener('touchend', function(e) {
-          var now = Date.now();
-          if (now - lastTouchEnd <= 300) {
-            e.preventDefault();
-          }
-          lastTouchEnd = now;
-        }, { passive: false });
+        document.addEventListener(
+          'touchend',
+          function (e) {
+            var now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+              e.preventDefault();
+            }
+            lastTouchEnd = now;
+          },
+          { passive: false }
+        );
 
         // Prevent multi-touch zoom
-        document.addEventListener('touchmove', function(e) {
-          if (e.touches.length > 1) {
-            e.preventDefault();
-          }
-        }, { passive: false });
+        document.addEventListener(
+          'touchmove',
+          function (e) {
+            if (e.touches.length > 1) {
+              e.preventDefault();
+            }
+          },
+          { passive: false }
+        );
       })();
     </script>
 
@@ -297,16 +412,17 @@
     <script>
       if ('serviceWorker' in navigator) {
         // Use requestIdleCallback to defer SW registration until browser is idle
-        var registerSW = function() {
-          navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-              document.addEventListener('visibilitychange', function() {
+        var registerSW = function () {
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then(function (registration) {
+              document.addEventListener('visibilitychange', function () {
                 if (document.visibilityState === 'visible') {
                   registration.update();
                 }
               });
             })
-            .catch(function() {});
+            .catch(function () {});
         };
         if ('requestIdleCallback' in window) {
           requestIdleCallback(registerSW);

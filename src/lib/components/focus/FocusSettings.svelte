@@ -56,9 +56,16 @@
       <div class="modal-header">
         <h2>Focus Settings</h2>
         <button class="close-btn" onclick={onClose} aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            width="24"
+            height="24"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
@@ -132,7 +139,7 @@
           />
         </div>
 
-        <hr class="divider"/>
+        <hr class="divider" />
 
         <!-- Auto-start toggles -->
         <div class="setting-group toggle-group">
@@ -143,8 +150,8 @@
           <button
             class="toggle-btn"
             class:active={autoStartBreaks}
-            onclick={() => autoStartBreaks = !autoStartBreaks}
-            aria-pressed={autoStartBreaks}
+            onclick={() => (autoStartBreaks = !autoStartBreaks)}
+            aria-checked={autoStartBreaks}
             aria-labelledby="auto-start-breaks-label"
             role="switch"
           >
@@ -160,8 +167,8 @@
           <button
             class="toggle-btn"
             class:active={autoStartFocus}
-            onclick={() => autoStartFocus = !autoStartFocus}
-            aria-pressed={autoStartFocus}
+            onclick={() => (autoStartFocus = !autoStartFocus)}
+            aria-checked={autoStartFocus}
             aria-labelledby="auto-start-focus-label"
             role="switch"
           >
@@ -195,8 +202,12 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   .modal {
@@ -207,7 +218,9 @@
     background: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(15, 15, 26, 0.98) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-xl);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px var(--color-primary-glow);
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.5),
+      0 0 40px var(--color-primary-glow);
     animation: modalSlideIn 0.3s var(--ease-spring);
     margin-bottom: 1.5rem;
     flex-shrink: 0;
@@ -450,13 +463,16 @@
   /* Mobile */
   @media (max-width: 640px) {
     .modal-backdrop {
-      padding: calc(env(safe-area-inset-top, 20px) + 1rem) 1rem calc(80px + env(safe-area-inset-bottom, 0) + 1rem) 1rem;
+      padding: calc(env(safe-area-inset-top, 20px) + 1rem) 1rem
+        calc(80px + env(safe-area-inset-bottom, 0) + 1rem) 1rem;
       align-items: center;
     }
 
     .modal {
       max-width: 100%;
-      max-height: calc(100vh - env(safe-area-inset-top, 20px) - 80px - env(safe-area-inset-bottom, 0) - 2rem);
+      max-height: calc(
+        100vh - env(safe-area-inset-top, 20px) - 80px - env(safe-area-inset-bottom, 0) - 2rem
+      );
       margin-bottom: 0;
     }
   }

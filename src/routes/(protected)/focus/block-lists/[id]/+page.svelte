@@ -15,7 +15,7 @@
   let saving = $state(false);
   let newWebsite = $state('');
 
-  const blockListId = $derived($page.params.id);
+  const blockListId = $derived($page.params.id!);
 
   // Subscribe to stores
   $effect(() => {
@@ -50,10 +50,7 @@
     blockedWebsitesStore.clear();
   });
 
-  async function handleUpdateBlockList(data: {
-    name: string;
-    activeDays: DayOfWeek[] | null;
-  }) {
+  async function handleUpdateBlockList(data: { name: string; activeDays: DayOfWeek[] | null }) {
     if (!blockList || saving) return;
 
     try {
@@ -105,28 +102,45 @@
       </button>
       <h1>Edit Block List</h1>
     </div>
-    <button class="btn btn-danger" onclick={handleDeleteBlockList}>
-      Delete
-    </button>
+    <button class="btn btn-danger" onclick={handleDeleteBlockList}> Delete </button>
   </header>
 
   <!-- Extension Banner -->
   <div class="extension-banner">
     <div class="banner-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        width="24"
+        height="24"
+      >
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       </svg>
     </div>
     <div class="banner-content">
       <span class="banner-title">Browser Extension Required</span>
       <span class="banner-desc">Website blocking requires the Stellar Focus extension</span>
     </div>
-    <a href="https://github.com/prabhask5/stellar/tree/main/stellar-focus" target="_blank" rel="noopener" class="banner-btn">
+    <a
+      href="https://github.com/prabhask5/stellar/tree/main/stellar-focus"
+      target="_blank"
+      rel="noopener"
+      class="banner-btn"
+    >
       Get Extension
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-        <polyline points="15 3 21 3 21 9"/>
-        <line x1="10" y1="14" x2="21" y2="3"/>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        width="14"
+        height="14"
+      >
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+        <polyline points="15 3 21 3 21 9" />
+        <line x1="10" y1="14" x2="21" y2="3" />
       </svg>
     </a>
   </div>
@@ -181,17 +195,36 @@
     <section class="websites-section">
       <h2>Blocked Websites</h2>
 
-      <form class="add-form" onsubmit={(e) => { e.preventDefault(); addWebsite(); }}>
+      <form
+        class="add-form"
+        onsubmit={(e) => {
+          e.preventDefault();
+          addWebsite();
+        }}
+      >
         <input
           type="text"
           placeholder="Add website (e.g., twitter.com)"
           bind:value={newWebsite}
           class="input"
         />
-        <button type="submit" class="add-btn" disabled={!newWebsite.trim()} aria-label="Add website to block list">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
+        <button
+          type="submit"
+          class="add-btn"
+          disabled={!newWebsite.trim()}
+          aria-label="Add website to block list"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            width="20"
+            height="20"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
       </form>
@@ -210,15 +243,28 @@
               use:remoteChangeAnimation={{ entityId: website.id, entityType: 'blocked_websites' }}
             >
               <span class="domain">{website.domain}</span>
-              <button class="delete-btn" onclick={() => removeWebsite(website.id)} aria-label="Remove website">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
+              <button
+                class="delete-btn"
+                onclick={() => removeWebsite(website.id)}
+                aria-label="Remove website"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
           {:else}
-            <p class="empty-text">No websites added yet. Add websites to block during focus sessions.</p>
+            <p class="empty-text">
+              No websites added yet. Add websites to block during focus sessions.
+            </p>
           {/each}
         </div>
       {/if}
@@ -340,9 +386,7 @@
     white-space: nowrap;
     border: 1px solid rgba(108, 92, 231, 0.15);
     font-weight: 600;
-    background: linear-gradient(135deg,
-      rgba(15, 15, 30, 0.8) 0%,
-      rgba(20, 20, 40, 0.7) 100%);
+    background: linear-gradient(135deg, rgba(15, 15, 30, 0.8) 0%, rgba(20, 20, 40, 0.7) 100%);
   }
 
   .back-btn:hover {
@@ -356,10 +400,12 @@
   .page-header h1 {
     font-size: 2rem;
     font-weight: 800;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -369,12 +415,20 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .error-banner {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.18) 0%, rgba(255, 107, 107, 0.06) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.18) 0%,
+      rgba(255, 107, 107, 0.06) 100%
+    );
     border: 1px solid rgba(255, 107, 107, 0.4);
     border-radius: var(--radius-xl);
     padding: 1.25rem 1.5rem;
@@ -401,9 +455,7 @@
 
   /* Form card */
   .form-card {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     backdrop-filter: blur(24px);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
@@ -421,12 +473,14 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.4),
       rgba(255, 255, 255, 0.2),
       rgba(108, 92, 231, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   /* Websites Section */
@@ -556,9 +610,7 @@
   }
 
   .form-skeleton {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
     padding: 2rem;
@@ -668,26 +720,38 @@
   }
 
   @keyframes skeletonPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 200%; }
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 200%;
+    }
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 
   .error-state {
     text-align: center;
     padding: 5rem 2rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
     position: relative;

@@ -52,4 +52,3 @@ export function calculateNewOrder<T extends { order: number }>(
 
   return (prevOrder + nextOrder) / 2;
 }
-

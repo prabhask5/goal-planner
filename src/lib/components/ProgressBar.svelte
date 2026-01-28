@@ -10,7 +10,9 @@
   let { percentage, showLabel = true, height = '12px' }: Props = $props();
 
   // Use overflow color for >100%, regular progress color otherwise
-  const color = $derived(percentage > 100 ? getOverflowColor(percentage) : getProgressColor(percentage));
+  const color = $derived(
+    percentage > 100 ? getOverflowColor(percentage) : getProgressColor(percentage)
+  );
 
   // Celebration intensity: 0 at 100%, scales to 1 at 200%+
   const celebrationIntensity = $derived(
@@ -47,7 +49,7 @@
       duration: 1.5 + (i % 3) * 0.5,
       angle: (i * 30) % 360,
       distance: 30 + (i % 4) * 15,
-      size: 2 + (i % 3),
+      size: 2 + (i % 3)
     }))
   );
 
@@ -55,7 +57,7 @@
   const rings = $derived(
     Array.from({ length: ringCount }, (_, i) => ({
       delay: i * 0.6,
-      duration: 2 - celebrationIntensity * 0.5,
+      duration: 2 - celebrationIntensity * 0.5
     }))
   );
 </script>
@@ -93,7 +95,10 @@
 
     <!-- Aurora wave effect for medium+ intensity -->
     {#if celebrationIntensity > 0.2}
-      <div class="aurora-wave" style="--aurora-color: {color}; --aurora-intensity: {celebrationIntensity}"></div>
+      <div
+        class="aurora-wave"
+        style="--aurora-color: {color}; --aurora-intensity: {celebrationIntensity}"
+      ></div>
     {/if}
 
     <!-- Pulse rings emanating from the end -->
@@ -134,12 +139,24 @@
     <!-- Orbiting stars for high intensity celebrations -->
     {#if celebrationIntensity > 0.4}
       <div class="orbital-container" style="--orbit-color: {color}">
-        <div class="orbital-star" style="--orbit-radius: 20px; --orbit-duration: {4 - celebrationIntensity * 2}s; --star-delay: 0s"></div>
+        <div
+          class="orbital-star"
+          style="--orbit-radius: 20px; --orbit-duration: {4 -
+            celebrationIntensity * 2}s; --star-delay: 0s"
+        ></div>
         {#if celebrationIntensity > 0.6}
-          <div class="orbital-star" style="--orbit-radius: 28px; --orbit-duration: {5 - celebrationIntensity * 2}s; --star-delay: -1.5s"></div>
+          <div
+            class="orbital-star"
+            style="--orbit-radius: 28px; --orbit-duration: {5 -
+              celebrationIntensity * 2}s; --star-delay: -1.5s"
+          ></div>
         {/if}
         {#if celebrationIntensity > 0.8}
-          <div class="orbital-star" style="--orbit-radius: 35px; --orbit-duration: {4.5 - celebrationIntensity * 2}s; --star-delay: -0.8s"></div>
+          <div
+            class="orbital-star"
+            style="--orbit-radius: 35px; --orbit-duration: {4.5 -
+              celebrationIntensity * 2}s; --star-delay: -0.8s"
+          ></div>
         {/if}
       </div>
     {/if}
@@ -177,9 +194,7 @@
 
   .progress-bar {
     flex: 1;
-    background: linear-gradient(180deg,
-      rgba(20, 20, 40, 0.9) 0%,
-      rgba(10, 10, 25, 0.95) 100%);
+    background: linear-gradient(180deg, rgba(20, 20, 40, 0.9) 0%, rgba(10, 10, 25, 0.95) 100%);
     border-radius: var(--radius-full);
     overflow: hidden;
     position: relative;
@@ -196,14 +211,25 @@
       inset 0 2px 6px rgba(0, 0, 0, 0.4),
       inset 0 -1px 0 rgba(255, 255, 255, 0.03),
       0 1px 3px rgba(0, 0, 0, 0.3),
-      0 0 var(--glow-size) color-mix(in srgb, var(--glow-color) calc(30% + var(--celebration-intensity) * 40%), transparent);
-    animation: cosmicGlow var(--pulse-duration) ease-in-out infinite,
-               barExpand calc(var(--pulse-duration) * 0.5) ease-in-out infinite;
+      0 0 var(--glow-size)
+        color-mix(
+          in srgb,
+          var(--glow-color) calc(30% + var(--celebration-intensity) * 40%),
+          transparent
+        );
+    animation:
+      cosmicGlow var(--pulse-duration) ease-in-out infinite,
+      barExpand calc(var(--pulse-duration) * 0.5) ease-in-out infinite;
   }
 
   @keyframes barExpand {
-    0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(calc(1 + var(--celebration-intensity) * 0.15)); }
+    0%,
+    100% {
+      transform: scaleY(1);
+    }
+    50% {
+      transform: scaleY(calc(1 + var(--celebration-intensity) * 0.15));
+    }
   }
 
   /* Nebula glow background */
@@ -223,10 +249,12 @@
   .progress-fill {
     height: 100%;
     border-radius: var(--radius-full);
-    background: linear-gradient(180deg,
+    background: linear-gradient(
+      180deg,
       color-mix(in srgb, var(--fill-color) 100%, white 25%) 0%,
       var(--fill-color) 50%,
-      color-mix(in srgb, var(--fill-color) 80%, black) 100%);
+      color-mix(in srgb, var(--fill-color) 80%, black) 100%
+    );
     transition: width 0.6s var(--ease-out);
     position: relative;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -235,20 +263,27 @@
   }
 
   .progress-fill.celebrating {
-    animation: progressPulse var(--pulse-duration) ease-in-out infinite,
-               fillGlow var(--pulse-duration) ease-in-out infinite;
+    animation:
+      progressPulse var(--pulse-duration) ease-in-out infinite,
+      fillGlow var(--pulse-duration) ease-in-out infinite;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.4),
       0 0 20px color-mix(in srgb, var(--fill-color) 50%, transparent);
   }
 
   @keyframes progressPulse {
-    0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.15); }
+    0%,
+    100% {
+      filter: brightness(1);
+    }
+    50% {
+      filter: brightness(1.15);
+    }
   }
 
   @keyframes fillGlow {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.4),
         0 0 20px color-mix(in srgb, var(--fill-color) 50%, transparent);
@@ -268,10 +303,12 @@
     left: 0;
     right: 0;
     height: 50%;
-    background: linear-gradient(180deg,
+    background: linear-gradient(
+      180deg,
       rgba(255, 255, 255, 0.4) 0%,
       rgba(255, 255, 255, 0.1) 50%,
-      transparent 100%);
+      transparent 100%
+    );
     border-radius: var(--radius-full) var(--radius-full) 0 0;
   }
 
@@ -283,35 +320,59 @@
     left: 0%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent 0%,
       rgba(255, 255, 255, 0.2) 50%,
-      transparent 100%);
+      transparent 100%
+    );
     animation: shimmer 2s ease-in-out infinite;
   }
 
   .progress-fill.celebrating::after {
     animation: shimmerCelebrate var(--shimmer-duration, 2s) ease-in-out infinite;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent 0%,
       rgba(255, 255, 255, 0.5) 40%,
       rgba(255, 255, 255, 0.6) 50%,
       rgba(255, 255, 255, 0.5) 60%,
-      transparent 100%);
+      transparent 100%
+    );
   }
 
   @keyframes shimmer {
-    0% { left: 0%; opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { left: 100%; opacity: 0; }
+    0% {
+      left: 0%;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      left: 100%;
+      opacity: 0;
+    }
   }
 
   @keyframes shimmerCelebrate {
-    0% { left: 0%; opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { left: 100%; opacity: 0; }
+    0% {
+      left: 0%;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      left: 100%;
+      opacity: 0;
+    }
   }
 
   .progress-glow {
@@ -336,8 +397,13 @@
   }
 
   @keyframes glowPulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 0.7; }
+    0%,
+    100% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   /* Aurora wave effect */
@@ -362,7 +428,8 @@
   }
 
   @keyframes auroraWave {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateY(5%) scaleY(0.8);
       opacity: 0.3;
     }
@@ -461,8 +528,9 @@
     height: 4px;
     background: var(--orbit-color, var(--color-cyan));
     border-radius: 50%;
-    box-shadow: 0 0 8px var(--orbit-color, var(--color-cyan)),
-                0 0 15px var(--orbit-color, var(--color-cyan));
+    box-shadow:
+      0 0 8px var(--orbit-color, var(--color-cyan)),
+      0 0 15px var(--orbit-color, var(--color-cyan));
     animation: orbitalStar var(--orbit-duration, 3s) linear infinite;
     animation-delay: var(--star-delay, 0s);
   }
@@ -505,13 +573,24 @@
   }
 
   @keyframes crackle {
-    0%, 100% { opacity: 0.8; }
-    50% { opacity: 0.4; }
+    0%,
+    100% {
+      opacity: 0.8;
+    }
+    50% {
+      opacity: 0.4;
+    }
   }
 
   @keyframes crackleFlash {
-    0% { opacity: 0.3; transform: rotate(45deg) scaleY(0.8); }
-    100% { opacity: 0.9; transform: rotate(45deg) scaleY(1.2); }
+    0% {
+      opacity: 0.3;
+      transform: rotate(45deg) scaleY(0.8);
+    }
+    100% {
+      opacity: 0.9;
+      transform: rotate(45deg) scaleY(1.2);
+    }
   }
 
   .progress-label {
@@ -529,16 +608,23 @@
   .progress-label.celebrating {
     text-shadow:
       0 0 calc(20px + var(--celebration-intensity, 0) * 30px) var(--glow-color),
-      0 0 calc(40px + var(--celebration-intensity, 0) * 40px) color-mix(in srgb, var(--glow-color) 50%, transparent);
-    animation: celebrationTwinkle calc(1.5s - var(--celebration-intensity, 0) * 0.5s) ease-in-out infinite,
-               labelPulse calc(1s - var(--celebration-intensity, 0) * 0.3s) ease-in-out infinite;
+      0 0 calc(40px + var(--celebration-intensity, 0) * 40px)
+        color-mix(in srgb, var(--glow-color) 50%, transparent);
+    animation:
+      celebrationTwinkle calc(1.5s - var(--celebration-intensity, 0) * 0.5s) ease-in-out infinite,
+      labelPulse calc(1s - var(--celebration-intensity, 0) * 0.3s) ease-in-out infinite;
     --twinkle-min: calc(0.7 - var(--celebration-intensity, 0) * 0.2);
     --twinkle-max: 1;
   }
 
   @keyframes labelPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(calc(1 + var(--celebration-intensity, 0) * 0.1)); }
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(calc(1 + var(--celebration-intensity, 0) * 0.1));
+    }
   }
 
   .progress-container:hover .progress-label {

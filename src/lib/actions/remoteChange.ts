@@ -23,7 +23,12 @@
  * ```
  */
 
-import { remoteChangesStore, createRecentChangeIndicator, createPendingDeleteIndicator, type RemoteActionType } from '$lib/stores/remoteChanges';
+import {
+  remoteChangesStore,
+  createRecentChangeIndicator,
+  createPendingDeleteIndicator,
+  type RemoteActionType
+} from '$lib/stores/remoteChanges';
 
 interface RemoteChangeOptions {
   entityId: string;
@@ -47,7 +52,7 @@ const ACTION_ANIMATION_MAP: Record<RemoteActionType, string> = {
   decrement: 'counter-decrement',
   reorder: 'item-reordering',
   rename: 'text-changed',
-  update: 'item-changed',
+  update: 'item-changed'
 };
 
 /**
@@ -61,16 +66,13 @@ const ACTION_DURATION_MAP: Record<RemoteActionType, number> = {
   decrement: 400,
   reorder: 400,
   rename: 700,
-  update: 1600,
+  update: 1600
 };
 
 // Track currently animating elements to prevent overlapping animations
 const animatingElements = new WeakSet<HTMLElement>();
 
-export function remoteChangeAnimation(
-  node: HTMLElement,
-  options: RemoteChangeOptions
-) {
+export function remoteChangeAnimation(node: HTMLElement, options: RemoteChangeOptions) {
   let { entityId, entityType, fields, animationClass, onAction } = options;
 
   // Add base class for styling hooks
@@ -81,9 +83,7 @@ export function remoteChangeAnimation(
     // If fields are specified, only animate if those fields changed
     if (fields && fields.length > 0) {
       const fieldsList = fields; // Capture for closure
-      const hasRelevantChange = change.fields.some(
-        f => f === '*' || fieldsList.includes(f)
-      );
+      const hasRelevantChange = change.fields.some((f) => f === '*' || fieldsList.includes(f));
       if (!hasRelevantChange) return;
     }
 
@@ -121,7 +121,9 @@ export function remoteChangeAnimation(
 
     // For increment/decrement, animate the counter element
     if (actionType === 'increment' || actionType === 'decrement') {
-      const counter = node.querySelector('[class*="value"], [class*="counter"], [class*="current"]');
+      const counter = node.querySelector(
+        '[class*="value"], [class*="counter"], [class*="current"]'
+      );
       if (counter) {
         counter.classList.add(cssClass);
         setTimeout(() => counter.classList.remove(cssClass), duration);
@@ -214,7 +216,7 @@ export function remoteChangeAnimation(
       unsubscribeDelete();
       node.classList.remove('syncable-item');
       animatingElements.delete(node);
-    },
+    }
   };
 }
 
@@ -239,10 +241,7 @@ interface TrackEditingOptions {
   onDeferredChanges?: (changes: unknown[]) => void;
 }
 
-export function trackEditing(
-  node: HTMLElement,
-  options: TrackEditingOptions
-) {
+export function trackEditing(node: HTMLElement, options: TrackEditingOptions) {
   const { entityId, entityType, formType, fields, onDeferredChanges } = options;
 
   // Start tracking when the element mounts
@@ -286,7 +285,7 @@ export function trackEditing(
       if (deferredChanges.length > 0 && onDeferredChanges) {
         onDeferredChanges(deferredChanges);
       }
-    },
+    }
   };
 }
 
@@ -364,7 +363,9 @@ export function triggerLocalAnimation(
 
   // For increment/decrement, animate the counter element
   if (actionType === 'increment' || actionType === 'decrement') {
-    const counter = element.querySelector('[class*="value"], [class*="counter"], [class*="current"]');
+    const counter = element.querySelector(
+      '[class*="value"], [class*="counter"], [class*="current"]'
+    );
     if (counter) {
       counter.classList.add(cssClass);
       setTimeout(() => counter.classList.remove(cssClass), duration);

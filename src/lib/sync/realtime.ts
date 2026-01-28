@@ -39,22 +39,22 @@ const REALTIME_TABLES = [
   'blocked_websites'
 ] as const;
 
-type RealtimeTable = typeof REALTIME_TABLES[number];
+type RealtimeTable = (typeof REALTIME_TABLES)[number];
 
 // Map from Supabase table names to Dexie table names
 const TABLE_MAP: Record<RealtimeTable, keyof typeof db> = {
-  'goal_lists': 'goalLists',
-  'goals': 'goals',
-  'daily_routine_goals': 'dailyRoutineGoals',
-  'daily_goal_progress': 'dailyGoalProgress',
-  'task_categories': 'taskCategories',
-  'commitments': 'commitments',
-  'daily_tasks': 'dailyTasks',
-  'long_term_tasks': 'longTermTasks',
-  'focus_settings': 'focusSettings',
-  'focus_sessions': 'focusSessions',
-  'block_lists': 'blockLists',
-  'blocked_websites': 'blockedWebsites'
+  goal_lists: 'goalLists',
+  goals: 'goals',
+  daily_routine_goals: 'dailyRoutineGoals',
+  daily_goal_progress: 'dailyGoalProgress',
+  task_categories: 'taskCategories',
+  commitments: 'commitments',
+  daily_tasks: 'dailyTasks',
+  long_term_tasks: 'longTermTasks',
+  focus_settings: 'focusSettings',
+  focus_sessions: 'focusSessions',
+  block_lists: 'blockLists',
+  blocked_websites: 'blockedWebsites'
 };
 
 // Protection window for recently modified entities (matches engine.ts)
@@ -105,7 +105,9 @@ let reconnectScheduled = false;
 /**
  * Subscribe to connection state changes
  */
-export function onConnectionStateChange(callback: (state: RealtimeConnectionState) => void): () => void {
+export function onConnectionStateChange(
+  callback: (state: RealtimeConnectionState) => void
+): () => void {
   connectionCallbacks.add(callback);
   // Immediately call with current state
   callback(state.connectionState);
@@ -115,7 +117,9 @@ export function onConnectionStateChange(callback: (state: RealtimeConnectionStat
 /**
  * Subscribe to data update notifications (called after local DB is updated)
  */
-export function onRealtimeDataUpdate(callback: (table: string, entityId: string) => void): () => void {
+export function onRealtimeDataUpdate(
+  callback: (table: string, entityId: string) => void
+): () => void {
   dataUpdateCallbacks.add(callback);
   return () => dataUpdateCallbacks.delete(callback);
 }
@@ -303,8 +307,8 @@ async function handleRealtimeChange(
         // Calculate value delta for increment/decrement detection
         let valueDelta: number | undefined;
         if (changedFields.includes('current_value') && localEntity && newRecord) {
-          const oldValue = localEntity.current_value as number || 0;
-          const newValue = newRecord.current_value as number || 0;
+          const oldValue = (localEntity.current_value as number) || 0;
+          const newValue = (newRecord.current_value as number) || 0;
           valueDelta = newValue - oldValue;
         }
 
@@ -351,13 +355,7 @@ async function handleRealtimeChange(
         // But if hard delete happens, we should remove locally too
         if (oldRecord) {
           // Record the delete for UI animation before removing
-          remoteChangesStore.recordRemoteChange(
-            entityId,
-            table,
-            ['*'],
-            true,
-            'DELETE'
-          );
+          remoteChangesStore.recordRemoteChange(entityId, table, ['*'], true, 'DELETE');
 
           // Mark as pending delete and wait for animation to complete
           // This allows the UI to play the delete animation before DOM removal
@@ -410,7 +408,9 @@ function scheduleReconnect(): void {
 
   reconnectScheduled = true;
   const delay = RECONNECT_BASE_DELAY * Math.pow(2, state.reconnectAttempts);
-  console.log(`[Realtime] Scheduling reconnect attempt ${state.reconnectAttempts + 1} in ${delay}ms`);
+  console.log(
+    `[Realtime] Scheduling reconnect attempt ${state.reconnectAttempts + 1} in ${delay}ms`
+  );
 
   state.reconnectTimeout = setTimeout(async () => {
     reconnectScheduled = false;
@@ -501,10 +501,12 @@ export async function startRealtimeSubscriptions(userId: string): Promise<void> 
         },
         (payload) => {
           // Handle async function properly - catch errors to prevent unhandled rejections
-          handleRealtimeChange(table, payload as RealtimePostgresChangesPayload<Record<string, unknown>>)
-            .catch(error => {
-              console.error(`[Realtime] Error processing ${table} change:`, error);
-            });
+          handleRealtimeChange(
+            table,
+            payload as RealtimePostgresChangesPayload<Record<string, unknown>>
+          ).catch((error) => {
+            console.error(`[Realtime] Error processing ${table} change:`, error);
+          });
         }
       );
     }

@@ -72,7 +72,16 @@
         <div class="modal-header">
           <h2 id="modal-title">{title}</h2>
           <button class="close-btn" onclick={onClose} aria-label="Close modal">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
@@ -92,7 +101,16 @@
         <div class="modal-header">
           <h2 id="modal-title">{title}</h2>
           <button class="close-btn" onclick={onClose} aria-label="Close modal">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
@@ -156,13 +174,27 @@
   }
 
   @keyframes depthFloat1 {
-    0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
-    50% { transform: translateY(-10px) scale(1.02); opacity: 1; }
+    0%,
+    100% {
+      transform: translateY(0) scale(1);
+      opacity: 0.8;
+    }
+    50% {
+      transform: translateY(-10px) scale(1.02);
+      opacity: 1;
+    }
   }
 
   @keyframes depthFloat2 {
-    0%, 100% { transform: translateY(0) scale(1); opacity: 0.6; }
-    50% { transform: translateY(8px) scale(1.01); opacity: 0.8; }
+    0%,
+    100% {
+      transform: translateY(0) scale(1);
+      opacity: 0.6;
+    }
+    50% {
+      transform: translateY(8px) scale(1.01);
+      opacity: 0.8;
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════
@@ -170,10 +202,12 @@
      ═══════════════════════════════════════════════════════════════════════════════ */
 
   .modal {
-    background: linear-gradient(165deg,
+    background: linear-gradient(
+      165deg,
       rgba(18, 18, 36, 0.98) 0%,
       rgba(12, 12, 26, 0.95) 50%,
-      rgba(18, 18, 36, 0.98) 100%);
+      rgba(18, 18, 36, 0.98) 100%
+    );
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
     border: 1px solid rgba(108, 92, 231, 0.25);
@@ -202,19 +236,26 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.5),
       rgba(255, 255, 255, 0.3),
       rgba(255, 121, 198, 0.4),
-      transparent);
+      transparent
+    );
     border-radius: var(--radius-full);
     animation: glowPulse 3s ease-in-out infinite;
   }
 
   @keyframes glowPulse {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; }
+    0%,
+    100% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
   }
 
   /* Nebula background effect */
@@ -235,8 +276,13 @@
   }
 
   @keyframes nebulaFloat {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    50% { transform: translate(-3%, 3%) rotate(3deg); }
+    0%,
+    100% {
+      transform: translate(0, 0) rotate(0deg);
+    }
+    50% {
+      transform: translate(-3%, 3%) rotate(3deg);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════
@@ -244,9 +290,7 @@
      ═══════════════════════════════════════════════════════════════════════════════ */
 
   .modal-sheet {
-    background: linear-gradient(180deg,
-      rgba(18, 18, 36, 0.98) 0%,
-      rgba(12, 12, 26, 0.99) 100%);
+    background: linear-gradient(180deg, rgba(18, 18, 36, 0.98) 0%, rgba(12, 12, 26, 0.99) 100%);
     backdrop-filter: blur(40px) saturate(200%);
     -webkit-backdrop-filter: blur(40px) saturate(200%);
     border: 1px solid rgba(108, 92, 231, 0.2);
@@ -274,12 +318,14 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.4),
       rgba(255, 255, 255, 0.2),
       rgba(108, 92, 231, 0.4),
-      transparent);
+      transparent
+    );
     border-radius: var(--radius-full);
   }
 
@@ -314,9 +360,7 @@
     justify-content: space-between;
     padding: 1.25rem 1.5rem;
     border-bottom: 1px solid rgba(108, 92, 231, 0.12);
-    background: linear-gradient(180deg,
-      rgba(108, 92, 231, 0.08) 0%,
-      transparent 100%);
+    background: linear-gradient(180deg, rgba(108, 92, 231, 0.08) 0%, transparent 100%);
     position: relative;
     z-index: 1;
   }
@@ -329,10 +373,12 @@
     font-size: 1.25rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -341,8 +387,12 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .close-btn {
@@ -359,7 +409,11 @@
   }
 
   .close-btn:hover {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(255, 107, 107, 0.08) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.2) 0%,
+      rgba(255, 107, 107, 0.08) 100%
+    );
     border-color: rgba(255, 107, 107, 0.35);
     color: var(--color-red);
     transform: rotate(90deg) scale(1.1);
@@ -406,13 +460,16 @@
   /* Mobile - when not using sheet style */
   @media (max-width: 640px) {
     .modal-backdrop:not(.mobile-sheet) {
-      padding: calc(env(safe-area-inset-top, 20px) + 1rem) 0.75rem calc(80px + env(safe-area-inset-bottom, 0) + 1rem) 0.75rem;
+      padding: calc(env(safe-area-inset-top, 20px) + 1rem) 0.75rem
+        calc(80px + env(safe-area-inset-bottom, 0) + 1rem) 0.75rem;
       align-items: center;
     }
 
     .modal {
       max-width: 100%;
-      max-height: calc(100dvh - env(safe-area-inset-top, 20px) - 100px - env(safe-area-inset-bottom, 0));
+      max-height: calc(
+        100dvh - env(safe-area-inset-top, 20px) - 100px - env(safe-area-inset-bottom, 0)
+      );
       border-radius: var(--radius-xl);
       margin-bottom: 0;
     }

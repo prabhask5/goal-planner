@@ -14,15 +14,10 @@ export async function createGoal(
   // Get the current min order to prepend new items at the top
   // This is backwards-compatible: existing items (order 0,1,2...) stay in place,
   // new items get -1,-2,-3... and appear first when sorted ascending
-  const existingGoals = await db.goals
-    .where('goal_list_id')
-    .equals(goalListId)
-    .toArray();
+  const existingGoals = await db.goals.where('goal_list_id').equals(goalListId).toArray();
 
-  const activeGoals = existingGoals.filter(g => !g.deleted);
-  const minOrder = activeGoals.length > 0
-    ? Math.min(...activeGoals.map(g => g.order))
-    : 0;
+  const activeGoals = existingGoals.filter((g) => !g.deleted);
+  const minOrder = activeGoals.length > 0 ? Math.min(...activeGoals.map((g) => g.order)) : 0;
   const nextOrder = minOrder - 1;
 
   const newGoal: Goal = {
@@ -122,7 +117,7 @@ export async function incrementGoal(id: string, amount: number = 1): Promise<Goa
         entityId: id,
         operationType: 'increment',
         field: 'current_value',
-        value: amount  // Store the delta, not the final value
+        value: amount // Store the delta, not the final value
       });
     }
   });

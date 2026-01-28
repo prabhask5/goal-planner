@@ -37,9 +37,10 @@ export const load: LayoutLoad = async ({ url }): Promise<ProtectedLayoutData> =>
       // No valid Supabase session while online - redirect to login
       // Do NOT fall back to offline session when online
       const returnUrl = url.pathname + url.search;
-      const loginUrl = returnUrl && returnUrl !== '/'
-        ? `/login?redirect=${encodeURIComponent(returnUrl)}`
-        : '/login';
+      const loginUrl =
+        returnUrl && returnUrl !== '/'
+          ? `/login?redirect=${encodeURIComponent(returnUrl)}`
+          : '/login';
       throw redirect(302, loginUrl);
     }
 
@@ -71,9 +72,10 @@ export const load: LayoutLoad = async ({ url }): Promise<ProtectedLayoutData> =>
 
     // No valid session while offline - redirect to login
     const returnUrl = url.pathname + url.search;
-    const loginUrl = returnUrl && returnUrl !== '/'
-      ? `/login?redirect=${encodeURIComponent(returnUrl)}`
-      : '/login';
+    const loginUrl =
+      returnUrl && returnUrl !== '/'
+        ? `/login?redirect=${encodeURIComponent(returnUrl)}`
+        : '/login';
     throw redirect(302, loginUrl);
   }
   return { session: null, authMode: 'none', offlineProfile: null };

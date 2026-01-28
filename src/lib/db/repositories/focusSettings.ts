@@ -14,10 +14,7 @@ const DEFAULT_FOCUS_SETTINGS = {
 };
 
 export async function getFocusSettings(userId: string): Promise<FocusSettings | null> {
-  const settings = await db.focusSettings
-    .where('user_id')
-    .equals(userId)
-    .first();
+  const settings = await db.focusSettings.where('user_id').equals(userId).first();
 
   if (!settings || settings.deleted) return null;
   return settings;
@@ -58,7 +55,17 @@ async function createFocusSettings(userId: string): Promise<FocusSettings> {
 
 export async function updateFocusSettings(
   id: string,
-  updates: Partial<Pick<FocusSettings, 'focus_duration' | 'break_duration' | 'long_break_duration' | 'cycles_before_long_break' | 'auto_start_breaks' | 'auto_start_focus'>>
+  updates: Partial<
+    Pick<
+      FocusSettings,
+      | 'focus_duration'
+      | 'break_duration'
+      | 'long_break_duration'
+      | 'cycles_before_long_break'
+      | 'auto_start_breaks'
+      | 'auto_start_focus'
+    >
+  >
 ): Promise<FocusSettings | undefined> {
   const timestamp = now();
 

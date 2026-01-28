@@ -1,5 +1,11 @@
 import { writable, derived, type Writable, type Readable } from 'svelte/store';
-import type { FocusSettings, FocusSession, FocusPhase, BlockList, BlockedWebsite } from '$lib/types';
+import type {
+  FocusSettings,
+  FocusSession,
+  FocusPhase,
+  BlockList,
+  BlockedWebsite
+} from '$lib/types';
 import * as repo from '$lib/db/repositories';
 import * as sync from '$lib/sync/engine';
 import { browser } from '$app/environment';
@@ -33,7 +39,7 @@ function createFocusStore() {
     isRunning: false
   });
 
-  let loading = writable(true);
+  const loading = writable(true);
   let tickInterval: ReturnType<typeof setInterval> | null = null;
   let currentUserId: string | null = null;
   let unsubscribe: (() => void) | null = null;
@@ -41,12 +47,12 @@ function createFocusStore() {
 
   // Function to trigger focus time refresh
   function notifyFocusTimeUpdated() {
-    focusTimeUpdatedStore.update(n => n + 1);
+    focusTimeUpdatedStore.update((n) => n + 1);
   }
 
   // Tick function to update remaining time
   function tick() {
-    update(state => {
+    update((state) => {
       if (!state.session || state.session.status !== 'running') {
         return state;
       }
@@ -69,7 +75,10 @@ function createFocusStore() {
   // Handle phase completion
   async function handlePhaseComplete() {
     let state: FocusState | null = null;
-    update(s => { state = s; return s; });
+    update((s) => {
+      state = s;
+      return s;
+    });
 
     if (!state || !(state as FocusState).session || !(state as FocusState).settings) return;
 
@@ -88,7 +97,7 @@ function createFocusStore() {
       // Session complete
       await repo.stopFocusSession(session.id, elapsedFocusMinutes);
       const stopped = await repo.getFocusSession(session.id);
-      update(s => ({
+      update((s) => ({
         ...s,
         session: stopped,
         remainingMs: 0,
@@ -121,7 +130,7 @@ function createFocusStore() {
         // Pause at the start of new phase
         await repo.pauseFocusSession(session.id, next.durationMs);
         const paused = await repo.getFocusSession(session.id);
-        update(s => ({
+        update((s) => ({
           ...s,
           session: paused,
           remainingMs: next.durationMs,
@@ -129,7 +138,7 @@ function createFocusStore() {
         }));
         stopTicker();
       } else {
-        update(s => ({
+        update((s) => ({
           ...s,
           session: updated,
           remainingMs: next.durationMs,
@@ -201,7 +210,7 @@ function createFocusStore() {
             if (currentUserId) {
               const refreshedSettings = await repo.getFocusSettings(currentUserId);
               const refreshedSession = await repo.getActiveSession(currentUserId);
-              update(s => ({
+              update((s) => ({
                 ...s,
                 settings: refreshedSettings || s.settings,
                 session: refreshedSession || s.session
@@ -217,7 +226,10 @@ function createFocusStore() {
     // Start a new focus session
     start: async () => {
       let state: FocusState | null = null;
-      update(s => { state = s; return s; });
+      update((s) => {
+        state = s;
+        return s;
+      });
 
       if (!state || !(state as FocusState).settings || !currentUserId) return;
 
@@ -233,7 +245,7 @@ function createFocusStore() {
 
       const durationMs = settings.focus_duration * 60 * 1000;
 
-      update(s => ({
+      update((s) => ({
         ...s,
         session,
         remainingMs: durationMs,
@@ -246,7 +258,10 @@ function createFocusStore() {
     // Pause current session
     pause: async () => {
       let state: FocusState | null = null;
-      update(s => { state = s; return s; });
+      update((s) => {
+        state = s;
+        return s;
+      });
 
       if (!state || !(state as FocusState).session) return;
 
@@ -256,7 +271,7 @@ function createFocusStore() {
       await repo.pauseFocusSession(session.id, remaining);
       const paused = await repo.getFocusSession(session.id);
 
-      update(s => ({
+      update((s) => ({
         ...s,
         session: paused,
         remainingMs: remaining,
@@ -269,7 +284,10 @@ function createFocusStore() {
     // Resume paused session
     resume: async () => {
       let state: FocusState | null = null;
-      update(s => { state = s; return s; });
+      update((s) => {
+        state = s;
+        return s;
+      });
 
       if (!state || !(state as FocusState).session) return;
 
@@ -278,7 +296,7 @@ function createFocusStore() {
       await repo.resumeFocusSession(session.id);
       const resumed = await repo.getFocusSession(session.id);
 
-      update(s => ({
+      update((s) => ({
         ...s,
         session: resumed,
         isRunning: true
@@ -290,7 +308,10 @@ function createFocusStore() {
     // Stop session entirely
     stop: async () => {
       let state: FocusState | null = null;
-      update(s => { state = s; return s; });
+      update((s) => {
+        state = s;
+        return s;
+      });
 
       if (!state || !(state as FocusState).session) return;
 
@@ -305,7 +326,7 @@ function createFocusStore() {
 
       await repo.stopFocusSession(session.id, elapsedFocusMinutes);
 
-      update(s => ({
+      update((s) => ({
         ...s,
         session: null,
         remainingMs: 0,
@@ -323,7 +344,10 @@ function createFocusStore() {
     // Skip to next phase
     skip: async () => {
       let state: FocusState | null = null;
-      update(s => { state = s; return s; });
+      update((s) => {
+        state = s;
+        return s;
+      });
 
       if (!state || !(state as FocusState).session || !(state as FocusState).settings) return;
 
@@ -343,7 +367,7 @@ function createFocusStore() {
       if (next.phase === 'idle') {
         // Session complete
         await repo.stopFocusSession(session.id, elapsedFocusMinutes);
-        update(s => ({
+        update((s) => ({
           ...s,
           session: null,
           remainingMs: 0,
@@ -369,7 +393,7 @@ function createFocusStore() {
       if (updated) {
         // Keep running state if was running
         if (wasRunning) {
-          update(s => ({
+          update((s) => ({
             ...s,
             session: updated,
             remainingMs: next.durationMs,
@@ -378,7 +402,7 @@ function createFocusStore() {
         } else {
           await repo.pauseFocusSession(session.id, next.durationMs);
           const paused = await repo.getFocusSession(session.id);
-          update(s => ({
+          update((s) => ({
             ...s,
             session: paused,
             remainingMs: next.durationMs,
@@ -394,9 +418,24 @@ function createFocusStore() {
     },
 
     // Update settings
-    updateSettings: async (updates: Partial<Pick<FocusSettings, 'focus_duration' | 'break_duration' | 'long_break_duration' | 'cycles_before_long_break' | 'auto_start_breaks' | 'auto_start_focus'>>) => {
+    updateSettings: async (
+      updates: Partial<
+        Pick<
+          FocusSettings,
+          | 'focus_duration'
+          | 'break_duration'
+          | 'long_break_duration'
+          | 'cycles_before_long_break'
+          | 'auto_start_breaks'
+          | 'auto_start_focus'
+        >
+      >
+    ) => {
       let state: FocusState | null = null;
-      update(s => { state = s; return s; });
+      update((s) => {
+        state = s;
+        return s;
+      });
 
       if (!state || !(state as FocusState).settings) return;
 
@@ -404,7 +443,7 @@ function createFocusStore() {
       const updated = await repo.updateFocusSettings(settings.id, updates);
 
       if (updated) {
-        update(s => ({ ...s, settings: updated }));
+        update((s) => ({ ...s, settings: updated }));
       }
     },
 
@@ -436,7 +475,7 @@ export const focusTimeUpdated: Readable<number> = { subscribe: focusTimeUpdatedS
 
 function createBlockListStore() {
   const { subscribe, set, update }: Writable<BlockList[]> = writable([]);
-  let loading = writable(true);
+  const loading = writable(true);
   let currentUserId: string | null = null;
   let unsubscribe: (() => void) | null = null;
 
@@ -470,14 +509,17 @@ function createBlockListStore() {
       const newList = await repo.createBlockList(name, currentUserId);
       // Record for animation before updating store
       remoteChangesStore.recordLocalChange(newList.id, 'block_lists', 'create');
-      update(lists => [newList, ...lists]);
+      update((lists) => [newList, ...lists]);
       return newList;
     },
 
-    update: async (id: string, updates: Partial<Pick<BlockList, 'name' | 'active_days' | 'is_enabled'>>) => {
+    update: async (
+      id: string,
+      updates: Partial<Pick<BlockList, 'name' | 'active_days' | 'is_enabled'>>
+    ) => {
       const updated = await repo.updateBlockList(id, updates);
       if (updated) {
-        update(lists => lists.map(l => l.id === id ? updated : l));
+        update((lists) => lists.map((l) => (l.id === id ? updated : l)));
       }
       return updated;
     },
@@ -485,21 +527,21 @@ function createBlockListStore() {
     toggle: async (id: string) => {
       const updated = await repo.toggleBlockList(id);
       if (updated) {
-        update(lists => lists.map(l => l.id === id ? updated : l));
+        update((lists) => lists.map((l) => (l.id === id ? updated : l)));
       }
       return updated;
     },
 
     delete: async (id: string) => {
       await repo.deleteBlockList(id);
-      update(lists => lists.filter(l => l.id !== id));
+      update((lists) => lists.filter((l) => l.id !== id));
     },
 
     reorder: async (id: string, newOrder: number) => {
       const updated = await repo.reorderBlockList(id, newOrder);
       if (updated) {
-        update(lists => {
-          const updatedLists = lists.map(l => l.id === id ? updated : l);
+        update((lists) => {
+          const updatedLists = lists.map((l) => (l.id === id ? updated : l));
           updatedLists.sort((a, b) => a.order - b.order);
           return updatedLists;
         });
@@ -515,7 +557,7 @@ function createBlockListStore() {
     },
 
     getEnabledCount: (): Readable<number> => {
-      return derived({ subscribe }, $lists => $lists.filter(l => l.is_enabled).length);
+      return derived({ subscribe }, ($lists) => $lists.filter((l) => l.is_enabled).length);
     }
   };
 }
@@ -528,7 +570,7 @@ export const blockListStore = createBlockListStore();
 
 function createBlockedWebsitesStore() {
   const { subscribe, set, update }: Writable<BlockedWebsite[]> = writable([]);
-  let loading = writable(true);
+  const loading = writable(true);
   let currentBlockListId: string | null = null;
   let unsubscribe: (() => void) | null = null;
 
@@ -563,21 +605,21 @@ function createBlockedWebsitesStore() {
       // Record for animation before updating store
       remoteChangesStore.recordLocalChange(newWebsite.id, 'blocked_websites', 'create');
       // Prepend to top
-      update(websites => [newWebsite, ...websites]);
+      update((websites) => [newWebsite, ...websites]);
       return newWebsite;
     },
 
     update: async (id: string, domain: string) => {
       const updated = await repo.updateBlockedWebsite(id, domain);
       if (updated) {
-        update(websites => websites.map(w => w.id === id ? updated : w));
+        update((websites) => websites.map((w) => (w.id === id ? updated : w)));
       }
       return updated;
     },
 
     delete: async (id: string) => {
       await repo.deleteBlockedWebsite(id);
-      update(websites => websites.filter(w => w.id !== id));
+      update((websites) => websites.filter((w) => w.id !== id));
     },
 
     clear: () => {
@@ -595,7 +637,7 @@ export const blockedWebsitesStore = createBlockedWebsitesStore();
 
 function createSingleBlockListStore() {
   const { subscribe, set }: Writable<BlockList | null> = writable(null);
-  let loading = writable(true);
+  const loading = writable(true);
   let currentId: string | null = null;
   let unsubscribe: (() => void) | null = null;
 
@@ -625,7 +667,10 @@ function createSingleBlockListStore() {
       }
     },
 
-    update: async (id: string, updates: Partial<Pick<BlockList, 'name' | 'active_days' | 'is_enabled'>>) => {
+    update: async (
+      id: string,
+      updates: Partial<Pick<BlockList, 'name' | 'active_days' | 'is_enabled'>>
+    ) => {
       const updated = await repo.updateBlockList(id, updates);
       if (updated) {
         set(updated);

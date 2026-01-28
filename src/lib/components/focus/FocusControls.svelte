@@ -12,15 +12,17 @@
     onSkip: () => void;
   }
 
-  let { session, isRunning, remainingMs, onStart, onPause, onResume, onStop, onSkip }: Props = $props();
+  let { session, isRunning, remainingMs, onStart, onPause, onResume, onStop, onSkip }: Props =
+    $props();
 
   // Can go back only in first 30 seconds of a phase
   const canGoBack = $derived(
     session &&
-    session.status === 'running' &&
-    remainingMs > (session.phase === 'focus'
-      ? session.focus_duration * 60 * 1000 - 30000
-      : session.break_duration * 60 * 1000 - 30000)
+      session.status === 'running' &&
+      remainingMs >
+        (session.phase === 'focus'
+          ? session.focus_duration * 60 * 1000 - 30000
+          : session.break_duration * 60 * 1000 - 30000)
   );
 
   const hasSession = $derived(!!session && session.status !== 'stopped');
@@ -32,7 +34,7 @@
     <!-- No session - show start button -->
     <button class="control-btn primary large" onclick={onStart} aria-label="Start focus session">
       <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-        <polygon points="5,3 19,12 5,21"/>
+        <polygon points="5,3 19,12 5,21" />
       </svg>
       <span>Start Focus</span>
     </button>
@@ -42,7 +44,7 @@
       <!-- Stop button -->
       <button class="control-btn stop" onclick={onStop} aria-label="Stop session">
         <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <rect x="5" y="5" width="14" height="14" rx="2"/>
+          <rect x="5" y="5" width="14" height="14" rx="2" />
         </svg>
       </button>
 
@@ -50,14 +52,14 @@
       {#if isRunning}
         <button class="control-btn primary" onclick={onPause} aria-label="Pause">
           <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
-            <rect x="6" y="4" width="4" height="16" rx="1"/>
-            <rect x="14" y="4" width="4" height="16" rx="1"/>
+            <rect x="6" y="4" width="4" height="16" rx="1" />
+            <rect x="14" y="4" width="4" height="16" rx="1" />
           </svg>
         </button>
       {:else}
         <button class="control-btn primary" onclick={onResume} aria-label="Resume">
           <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
-            <polygon points="5,3 19,12 5,21"/>
+            <polygon points="5,3 19,12 5,21" />
           </svg>
         </button>
       {/if}
@@ -65,8 +67,8 @@
       <!-- Skip button -->
       <button class="control-btn skip" onclick={onSkip} aria-label="Skip to next phase">
         <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <polygon points="5,4 15,12 5,20"/>
-          <rect x="15" y="4" width="4" height="16" rx="1"/>
+          <polygon points="5,4 15,12 5,20" />
+          <rect x="15" y="4" width="4" height="16" rx="1" />
         </svg>
       </button>
     </div>

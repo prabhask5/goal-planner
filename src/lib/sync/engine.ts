@@ -1,13 +1,40 @@
 import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/db/client';
-import { getPendingSync, removeSyncItem, incrementRetry, getPendingEntityIds, cleanupFailedItems, coalescePendingOps } from './queue';
+import {
+  getPendingSync,
+  removeSyncItem,
+  incrementRetry,
+  getPendingEntityIds,
+  cleanupFailedItems,
+  coalescePendingOps
+} from './queue';
 import { getDeviceId } from './deviceId';
-import type { Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress, TaskCategory, Commitment, DailyTask, LongTermTask, LongTermTaskWithCategory, FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
+import type {
+  Goal,
+  GoalList,
+  DailyRoutineGoal,
+  DailyGoalProgress,
+  GoalListWithProgress,
+  TaskCategory,
+  Commitment,
+  DailyTask,
+  LongTermTask,
+  LongTermTaskWithCategory,
+  FocusSettings,
+  FocusSession,
+  BlockList,
+  BlockedWebsite
+} from '$lib/types';
 import type { SyncOperationItem } from './types';
 import { syncStatusStore } from '$lib/stores/sync';
 import { calculateGoalProgressCapped } from '$lib/utils/colors';
 import { isRoutineActiveOnDate } from '$lib/utils/dates';
-import { resolveConflicts, storeConflictHistory, cleanupConflictHistory, getPendingOpsForEntity } from './conflicts';
+import {
+  resolveConflicts,
+  storeConflictHistory,
+  cleanupConflictHistory,
+  getPendingOpsForEntity
+} from './conflicts';
 import {
   startRealtimeSubscriptions,
   stopRealtimeSubscriptions,
@@ -119,7 +146,10 @@ function estimateJsonSize(data: unknown): number {
 }
 
 // Track egress for a table
-function trackEgress(tableName: string, data: unknown[] | null): { bytes: number; records: number } {
+function trackEgress(
+  tableName: string,
+  data: unknown[] | null
+): { bytes: number; records: number } {
   if (!data || data.length === 0) {
     return { bytes: 0, records: 0 };
   }
@@ -151,7 +181,7 @@ function formatBytes(bytes: number): string {
 function logSyncCycle(stats: Omit<SyncCycleStats, 'timestamp'>) {
   const entry: SyncCycleStats = {
     ...stats,
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString()
   };
   syncStats.push(entry);
   totalSyncCycles++;
@@ -163,8 +193,8 @@ function logSyncCycle(stats: Omit<SyncCycleStats, 'timestamp'>) {
 
   console.log(
     `[SYNC] Cycle #${totalSyncCycles}: ` +
-    `trigger=${stats.trigger}, pushed=${stats.pushedItems}, ` +
-    `pulled=${stats.pulledRecords} records (${formatBytes(stats.egressBytes)}), ${stats.durationMs}ms`
+      `trigger=${stats.trigger}, pushed=${stats.pushedItems}, ` +
+      `pulled=${stats.pulledRecords} records (${formatBytes(stats.egressBytes)}), ${stats.durationMs}ms`
   );
 }
 
@@ -173,8 +203,8 @@ function logSyncCycle(stats: Omit<SyncCycleStats, 'timestamp'>) {
 // Also: window.__stellarEgress?.()
 if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__stellarSyncStats = () => {
-    const recentMinute = syncStats.filter(s =>
-      new Date(s.timestamp).getTime() > Date.now() - 60000
+    const recentMinute = syncStats.filter(
+      (s) => new Date(s.timestamp).getTime() > Date.now() - 60000
     );
     console.log('=== STELLAR SYNC STATS ===');
     console.log(`Total cycles: ${totalSyncCycles}`);
@@ -186,18 +216,22 @@ if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__stellarEgress = () => {
     console.log('=== STELLAR EGRESS STATS ===');
     console.log(`Session started: ${egressStats.sessionStart}`);
-    console.log(`Total egress: ${formatBytes(egressStats.totalBytes)} (${egressStats.totalRecords} records)`);
+    console.log(
+      `Total egress: ${formatBytes(egressStats.totalBytes)} (${egressStats.totalRecords} records)`
+    );
     console.log('');
     console.log('--- BY TABLE ---');
 
     // Sort tables by bytes descending
-    const sortedTables = Object.entries(egressStats.byTable)
-      .sort(([, a], [, b]) => b.bytes - a.bytes);
+    const sortedTables = Object.entries(egressStats.byTable).sort(
+      ([, a], [, b]) => b.bytes - a.bytes
+    );
 
     for (const [table, stats] of sortedTables) {
-      const pct = egressStats.totalBytes > 0
-        ? ((stats.bytes / egressStats.totalBytes) * 100).toFixed(1)
-        : '0';
+      const pct =
+        egressStats.totalBytes > 0
+          ? ((stats.bytes / egressStats.totalBytes) * 100).toFixed(1)
+          : '0';
       console.log(`  ${table}: ${formatBytes(stats.bytes)} (${stats.records} records, ${pct}%)`);
     }
 
@@ -205,7 +239,9 @@ if (typeof window !== 'undefined') {
     console.log('--- RECENT SYNC CYCLES ---');
     const recent = syncStats.slice(-5);
     for (const cycle of recent) {
-      console.log(`  ${cycle.timestamp}: ${formatBytes(cycle.egressBytes)} (${cycle.pulledRecords} records)`);
+      console.log(
+        `  ${cycle.timestamp}: ${formatBytes(cycle.egressBytes)} (${cycle.pulledRecords} records)`
+      );
     }
 
     return {
@@ -225,16 +261,23 @@ if (typeof window !== 'undefined') {
 // Column definitions for each table (explicit to reduce egress vs select('*'))
 const COLUMNS = {
   goal_lists: 'id,user_id,name,created_at,updated_at,deleted,_version,device_id',
-  goals: 'id,goal_list_id,name,type,target_value,current_value,completed,order,created_at,updated_at,deleted,_version,device_id',
-  daily_routine_goals: 'id,user_id,name,type,target_value,start_date,end_date,active_days,order,created_at,updated_at,deleted,_version,device_id',
-  daily_goal_progress: 'id,daily_routine_goal_id,date,current_value,completed,updated_at,deleted,_version,device_id',
+  goals:
+    'id,goal_list_id,name,type,target_value,current_value,completed,order,created_at,updated_at,deleted,_version,device_id',
+  daily_routine_goals:
+    'id,user_id,name,type,target_value,start_date,end_date,active_days,order,created_at,updated_at,deleted,_version,device_id',
+  daily_goal_progress:
+    'id,daily_routine_goal_id,date,current_value,completed,updated_at,deleted,_version,device_id',
   task_categories: 'id,user_id,name,color,order,created_at,updated_at,deleted,_version,device_id',
   commitments: 'id,user_id,name,section,order,created_at,updated_at,deleted,_version,device_id',
   daily_tasks: 'id,user_id,name,order,completed,created_at,updated_at,deleted,_version,device_id',
-  long_term_tasks: 'id,user_id,name,due_date,category_id,completed,created_at,updated_at,deleted,_version,device_id',
-  focus_settings: 'id,user_id,focus_duration,break_duration,long_break_duration,cycles_before_long_break,auto_start_breaks,auto_start_focus,created_at,updated_at,deleted,_version,device_id',
-  focus_sessions: 'id,user_id,started_at,ended_at,phase,status,current_cycle,total_cycles,focus_duration,break_duration,phase_started_at,phase_remaining_ms,elapsed_duration,created_at,updated_at,deleted,_version,device_id',
-  block_lists: 'id,user_id,name,active_days,is_enabled,order,created_at,updated_at,deleted,_version,device_id',
+  long_term_tasks:
+    'id,user_id,name,due_date,category_id,completed,created_at,updated_at,deleted,_version,device_id',
+  focus_settings:
+    'id,user_id,focus_duration,break_duration,long_break_duration,cycles_before_long_break,auto_start_breaks,auto_start_focus,created_at,updated_at,deleted,_version,device_id',
+  focus_sessions:
+    'id,user_id,started_at,ended_at,phase,status,current_cycle,total_cycles,focus_duration,break_duration,phase_started_at,phase_remaining_ms,elapsed_duration,created_at,updated_at,deleted,_version,device_id',
+  block_lists:
+    'id,user_id,name,active_days,is_enabled,order,created_at,updated_at,deleted,_version,device_id',
   blocked_websites: 'id,block_list_id,domain,created_at,updated_at,deleted,_version,device_id'
 } as const;
 
@@ -339,12 +382,19 @@ function notifySyncComplete(): void {
 // ============================================================
 
 // Helper to calculate progress for a list
-function calculateListProgress(goals: Goal[]): { totalGoals: number; completedGoals: number; completionPercentage: number } {
+function calculateListProgress(goals: Goal[]): {
+  totalGoals: number;
+  completedGoals: number;
+  completionPercentage: number;
+} {
   // Filter out deleted goals
-  const activeGoals = goals.filter(g => !g.deleted);
+  const activeGoals = goals.filter((g) => !g.deleted);
   const totalGoals = activeGoals.length;
   const completedProgress = activeGoals.reduce((sum: number, goal: Goal) => {
-    return sum + calculateGoalProgressCapped(goal.type, goal.completed, goal.current_value, goal.target_value);
+    return (
+      sum +
+      calculateGoalProgressCapped(goal.type, goal.completed, goal.current_value, goal.target_value)
+    );
   }, 0);
   const completionPercentage = totalGoals > 0 ? completedProgress / totalGoals : 0;
 
@@ -368,7 +418,7 @@ export async function getGoalLists(): Promise<GoalListWithProgress[]> {
   }
 
   // Filter out deleted lists
-  const activeLists = lists.filter(l => !l.deleted);
+  const activeLists = lists.filter((l) => !l.deleted);
 
   const listsWithProgress: GoalListWithProgress[] = await Promise.all(
     activeLists.map(async (list) => {
@@ -415,7 +465,7 @@ export async function getGoalList(id: string): Promise<(GoalList & { goals: Goal
 
   const goals = await db.goals.where('goal_list_id').equals(id).toArray();
   // Filter out deleted goals and sort by order
-  const activeGoals = goals.filter(g => !g.deleted).sort((a, b) => a.order - b.order);
+  const activeGoals = goals.filter((g) => !g.deleted).sort((a, b) => a.order - b.order);
   return { ...list, goals: activeGoals };
 }
 
@@ -424,15 +474,18 @@ export async function getDailyRoutineGoals(): Promise<DailyRoutineGoal[]> {
   let routines = await db.dailyRoutineGoals.toArray();
 
   // If local is empty and online and we haven't tried hydrating yet, try to hydrate from remote
-  if (routines.length === 0 && !hasHydrated && typeof navigator !== 'undefined' && navigator.onLine) {
+  if (
+    routines.length === 0 &&
+    !hasHydrated &&
+    typeof navigator !== 'undefined' &&
+    navigator.onLine
+  ) {
     await hydrateFromRemote();
     routines = await db.dailyRoutineGoals.toArray();
   }
 
   // Sort by order (ascending), filter out deleted
-  return routines
-    .filter(r => !r.deleted)
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  return routines.filter((r) => !r.deleted).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
 // Get a single daily routine goal from LOCAL DB, fetch from remote if not found
@@ -466,7 +519,12 @@ export async function getActiveRoutinesForDate(date: string): Promise<DailyRouti
   let allRoutines = await db.dailyRoutineGoals.toArray();
 
   // If local is empty and online and we haven't tried hydrating yet, try to hydrate from remote
-  if (allRoutines.length === 0 && !hasHydrated && typeof navigator !== 'undefined' && navigator.onLine) {
+  if (
+    allRoutines.length === 0 &&
+    !hasHydrated &&
+    typeof navigator !== 'undefined' &&
+    navigator.onLine
+  ) {
     await hydrateFromRemote();
     allRoutines = await db.dailyRoutineGoals.toArray();
   }
@@ -502,7 +560,7 @@ export async function getDailyProgress(date: string): Promise<DailyGoalProgress[
   }
 
   // Filter out deleted records
-  return progress.filter(p => !p.deleted);
+  return progress.filter((p) => !p.deleted);
 }
 
 // Get month progress from LOCAL DB, fetch from remote if not found
@@ -535,7 +593,7 @@ export async function getMonthProgress(year: number, month: number): Promise<Dai
   }
 
   // Filter out deleted records
-  return progress.filter(p => !p.deleted);
+  return progress.filter((p) => !p.deleted);
 }
 
 // ============================================================
@@ -547,15 +605,18 @@ export async function getTaskCategories(): Promise<TaskCategory[]> {
   let categories = await db.taskCategories.toArray();
 
   // If local is empty and online and we haven't tried hydrating yet, try to hydrate from remote
-  if (categories.length === 0 && !hasHydrated && typeof navigator !== 'undefined' && navigator.onLine) {
+  if (
+    categories.length === 0 &&
+    !hasHydrated &&
+    typeof navigator !== 'undefined' &&
+    navigator.onLine
+  ) {
     await hydrateFromRemote();
     categories = await db.taskCategories.toArray();
   }
 
   // Sort by order, filter out deleted
-  return categories
-    .filter(c => !c.deleted)
-    .sort((a, b) => a.order - b.order);
+  return categories.filter((c) => !c.deleted).sort((a, b) => a.order - b.order);
 }
 
 // Get all commitments from LOCAL DB
@@ -563,15 +624,18 @@ export async function getCommitments(): Promise<Commitment[]> {
   let commitments = await db.commitments.toArray();
 
   // If local is empty and online and we haven't tried hydrating yet, try to hydrate from remote
-  if (commitments.length === 0 && !hasHydrated && typeof navigator !== 'undefined' && navigator.onLine) {
+  if (
+    commitments.length === 0 &&
+    !hasHydrated &&
+    typeof navigator !== 'undefined' &&
+    navigator.onLine
+  ) {
     await hydrateFromRemote();
     commitments = await db.commitments.toArray();
   }
 
   // Sort by order, filter out deleted
-  return commitments
-    .filter(c => !c.deleted)
-    .sort((a, b) => a.order - b.order);
+  return commitments.filter((c) => !c.deleted).sort((a, b) => a.order - b.order);
 }
 
 // Get all daily tasks from LOCAL DB
@@ -585,9 +649,7 @@ export async function getDailyTasks(): Promise<DailyTask[]> {
   }
 
   // Sort by order, filter out deleted
-  return tasks
-    .filter(t => !t.deleted)
-    .sort((a, b) => a.order - b.order);
+  return tasks.filter((t) => !t.deleted).sort((a, b) => a.order - b.order);
 }
 
 // Get all long-term tasks from LOCAL DB with optional category join
@@ -601,7 +663,7 @@ export async function getLongTermTasks(): Promise<LongTermTaskWithCategory[]> {
   }
 
   // Filter out deleted
-  const activeTasks = tasks.filter(t => !t.deleted);
+  const activeTasks = tasks.filter((t) => !t.deleted);
 
   // Get all categories for joining
   const categories = await db.taskCategories.toArray();
@@ -613,7 +675,7 @@ export async function getLongTermTasks(): Promise<LongTermTaskWithCategory[]> {
   }
 
   // Join with categories
-  return activeTasks.map(task => ({
+  return activeTasks.map((task) => ({
     ...task,
     category: task.category_id ? categoryMap.get(task.category_id) : undefined
   }));
@@ -652,7 +714,9 @@ export function scheduleSyncPush(): void {
 // Get current user ID for sync cursor isolation
 async function getCurrentUserId(): Promise<string | null> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
     return user?.id || null;
   } catch {
     return null;
@@ -836,7 +900,7 @@ async function pullRemoteChanges(minCursor?: string): Promise<{ bytes: number; r
     remoteRecords: T[] | null,
     table: { get: (id: string) => Promise<T | undefined>; put: (entity: T) => Promise<unknown> }
   ): Promise<void> {
-    for (const remote of (remoteRecords || [])) {
+    for (const remote of remoteRecords || []) {
       // Skip recently modified entities (protects against race conditions)
       // Note: We no longer skip entities with pending ops - conflict resolution handles them
       if (isRecentlyModified(remote.id)) continue;
@@ -889,21 +953,67 @@ async function pullRemoteChanges(minCursor?: string): Promise<{ bytes: number; r
   }
 
   // Apply changes to local DB with conflict handling
-  await db.transaction('rw', [db.goalLists, db.goals, db.dailyRoutineGoals, db.dailyGoalProgress, db.taskCategories, db.commitments, db.dailyTasks, db.longTermTasks, db.focusSettings, db.focusSessions, db.blockLists, db.blockedWebsites, db.conflictHistory], async () => {
-    // Apply all tables with conflict resolution
-    await applyRemoteWithConflictResolution('goal_lists', remoteLists, db.goalLists);
-    await applyRemoteWithConflictResolution('goals', remoteGoals, db.goals);
-    await applyRemoteWithConflictResolution('daily_routine_goals', remoteRoutines, db.dailyRoutineGoals);
-    await applyRemoteWithConflictResolution('daily_goal_progress', remoteProgress, db.dailyGoalProgress);
-    await applyRemoteWithConflictResolution('task_categories', remoteCategories, db.taskCategories);
-    await applyRemoteWithConflictResolution('commitments', remoteCommitments, db.commitments);
-    await applyRemoteWithConflictResolution('daily_tasks', remoteDailyTasks, db.dailyTasks);
-    await applyRemoteWithConflictResolution('long_term_tasks', remoteLongTermTasks, db.longTermTasks);
-    await applyRemoteWithConflictResolution('focus_settings', remoteFocusSettings, db.focusSettings);
-    await applyRemoteWithConflictResolution('focus_sessions', remoteFocusSessions, db.focusSessions);
-    await applyRemoteWithConflictResolution('block_lists', remoteBlockLists, db.blockLists);
-    await applyRemoteWithConflictResolution('blocked_websites', remoteBlockedWebsites, db.blockedWebsites);
-  });
+  await db.transaction(
+    'rw',
+    [
+      db.goalLists,
+      db.goals,
+      db.dailyRoutineGoals,
+      db.dailyGoalProgress,
+      db.taskCategories,
+      db.commitments,
+      db.dailyTasks,
+      db.longTermTasks,
+      db.focusSettings,
+      db.focusSessions,
+      db.blockLists,
+      db.blockedWebsites,
+      db.conflictHistory
+    ],
+    async () => {
+      // Apply all tables with conflict resolution
+      await applyRemoteWithConflictResolution('goal_lists', remoteLists, db.goalLists);
+      await applyRemoteWithConflictResolution('goals', remoteGoals, db.goals);
+      await applyRemoteWithConflictResolution(
+        'daily_routine_goals',
+        remoteRoutines,
+        db.dailyRoutineGoals
+      );
+      await applyRemoteWithConflictResolution(
+        'daily_goal_progress',
+        remoteProgress,
+        db.dailyGoalProgress
+      );
+      await applyRemoteWithConflictResolution(
+        'task_categories',
+        remoteCategories,
+        db.taskCategories
+      );
+      await applyRemoteWithConflictResolution('commitments', remoteCommitments, db.commitments);
+      await applyRemoteWithConflictResolution('daily_tasks', remoteDailyTasks, db.dailyTasks);
+      await applyRemoteWithConflictResolution(
+        'long_term_tasks',
+        remoteLongTermTasks,
+        db.longTermTasks
+      );
+      await applyRemoteWithConflictResolution(
+        'focus_settings',
+        remoteFocusSettings,
+        db.focusSettings
+      );
+      await applyRemoteWithConflictResolution(
+        'focus_sessions',
+        remoteFocusSessions,
+        db.focusSessions
+      );
+      await applyRemoteWithConflictResolution('block_lists', remoteBlockLists, db.blockLists);
+      await applyRemoteWithConflictResolution(
+        'blocked_websites',
+        remoteBlockedWebsites,
+        db.blockedWebsites
+      );
+    }
+  );
 
   // Update sync cursor (per-user)
   setLastSyncCursor(newestUpdate, userId);
@@ -942,7 +1052,9 @@ async function pushPendingOps(): Promise<PushStats> {
   // This merges e.g. 50 rapid increments into 1 update request
   const coalescedCount = await coalescePendingOps();
   if (coalescedCount > 0) {
-    console.log(`[SYNC] Coalesced ${coalescedCount} redundant operations (${originalCount} → ${originalCount - coalescedCount})`);
+    console.log(
+      `[SYNC] Coalesced ${coalescedCount} redundant operations (${originalCount} → ${originalCount - coalescedCount})`
+    );
   }
 
   while (iterations < maxIterations) {
@@ -1121,7 +1233,7 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
       const updatePayload: Record<string, unknown> = {
         [field]: currentValue,
         updated_at: timestamp,
-        device_id: deviceId,
+        device_id: deviceId
       };
 
       // Also sync completed status if this is a goal/progress increment
@@ -1129,10 +1241,7 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
         updatePayload.completed = localEntity.completed;
       }
 
-      const { error } = await supabase
-        .from(table)
-        .update(updatePayload)
-        .eq('id', entityId);
+      const { error } = await supabase.from(table).update(updatePayload).eq('id', entityId);
       if (error) throw error;
       break;
     }
@@ -1146,21 +1255,18 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
         updatePayload = {
           [field]: value,
           updated_at: timestamp,
-          device_id: deviceId,
+          device_id: deviceId
         };
       } else {
         // Multi-field set (value is the full payload)
         updatePayload = {
           ...(value as Record<string, unknown>),
           updated_at: timestamp,
-          device_id: deviceId,
+          device_id: deviceId
         };
       }
 
-      const { error } = await supabase
-        .from(table)
-        .update(updatePayload)
-        .eq('id', entityId);
+      const { error } = await supabase.from(table).update(updatePayload).eq('id', entityId);
       if (error) throw error;
       break;
     }
@@ -1230,7 +1336,12 @@ function parseErrorMessage(error: unknown): string {
     }
 
     // Auth errors
-    if (msg.includes('jwt') || msg.includes('token') || msg.includes('unauthorized') || msg.includes('401')) {
+    if (
+      msg.includes('jwt') ||
+      msg.includes('token') ||
+      msg.includes('unauthorized') ||
+      msg.includes('401')
+    ) {
       return 'Session expired. Please sign in again.';
     }
 
@@ -1256,7 +1367,7 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.onLine) {
     if (!quiet) {
       syncStatusStore.setStatus('offline');
-      syncStatusStore.setSyncMessage('You\'re offline. Changes will sync when reconnected.');
+      syncStatusStore.setSyncMessage("You're offline. Changes will sync when reconnected.");
     }
     return;
   }
@@ -1277,13 +1388,12 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
   // This causes the "sync succeeded but nothing synced" bug
   const userId = await getCurrentUserId();
   if (!userId) {
-    console.warn('[SYNC] No authenticated user - cannot sync. RLS would silently block all writes.');
+    console.warn(
+      '[SYNC] No authenticated user - cannot sync. RLS would silently block all writes.'
+    );
     if (!quiet) {
       syncStatusStore.setStatus('error');
-      syncStatusStore.setError(
-        'Not signed in',
-        'Please sign in to sync your data.'
-      );
+      syncStatusStore.setError('Not signed in', 'Please sign in to sync your data.');
       syncStatusStore.setSyncMessage('Sign in required to sync');
     }
     return;
@@ -1340,7 +1450,7 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
         pullAttempts++;
         if (pullAttempts < maxPullAttempts) {
           // Wait before retry (exponential backoff: 1s, 2s)
-          await new Promise(resolve => setTimeout(resolve, pullAttempts * 1000));
+          await new Promise((resolve) => setTimeout(resolve, pullAttempts * 1000));
         }
       }
     }
@@ -1363,7 +1473,7 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
       // 2. Remaining items have been retrying for a while (retries >= 2)
       // This prevents "error" flash for items that will succeed on next retry
       const hasSignificantErrors = pushErrors.length > 0;
-      const hasStaleRetries = remaining.some(item => item.retries >= 2);
+      const hasStaleRetries = remaining.some((item) => item.retries >= 2);
       const showErrorStatus = remaining.length > 0 && (hasSignificantErrors || hasStaleRetries);
 
       syncStatusStore.setStatus(showErrorStatus ? 'error' : 'idle');
@@ -1386,11 +1496,12 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
         } else {
           // Items in retry backoff - no specific errors this cycle
           // Show pending retry info instead of clearing error details
-          const retryInfo = remaining.map(item => `${item.table} (${item.operationType})`).slice(0, 3);
+          const retryInfo = remaining
+            .map((item) => `${item.table} (${item.operationType})`)
+            .slice(0, 3);
           const moreCount = remaining.length - retryInfo.length;
-          const details = moreCount > 0
-            ? `${retryInfo.join(', ')} and ${moreCount} more`
-            : retryInfo.join(', ');
+          const details =
+            moreCount > 0 ? `${retryInfo.join(', ')} and ${moreCount} more` : retryInfo.join(', ');
           syncStatusStore.setError(
             `${remaining.length} change${remaining.length === 1 ? '' : 's'} pending retry`,
             `Affected: ${details}. Will retry automatically.`
@@ -1434,7 +1545,7 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
       pulledTables: pullSucceeded ? 12 : 0, // 12 tables pulled on success
       pulledRecords: cycleEgressRecords,
       egressBytes: cycleEgressBytes,
-      durationMs: Date.now() - cycleStart,
+      durationMs: Date.now() - cycleStart
     });
     releaseSyncLock();
   }
@@ -1466,7 +1577,12 @@ export async function hydrateFromRemote(): Promise<void> {
   const localDailyTaskCount = await db.dailyTasks.count();
   const localLongTermTaskCount = await db.longTermTasks.count();
 
-  if (localListCount > 0 || localRoutineCount > 0 || localDailyTaskCount > 0 || localLongTermTaskCount > 0) {
+  if (
+    localListCount > 0 ||
+    localRoutineCount > 0 ||
+    localDailyTaskCount > 0 ||
+    localLongTermTaskCount > 0
+  ) {
     // Local has data, release lock and do a normal sync
     releaseSyncLock();
     await runFullSync();
@@ -1566,11 +1682,22 @@ export async function hydrateFromRemote(): Promise<void> {
     trackEgress('block_lists', blockLists);
     trackEgress('blocked_websites', blockedWebsites);
 
-    const totalRecords = (lists?.length || 0) + (goals?.length || 0) + (routines?.length || 0) +
-      (progress?.length || 0) + (categories?.length || 0) + (commitments?.length || 0) +
-      (dailyTasks?.length || 0) + (longTermTasks?.length || 0) + (focusSettings?.length || 0) +
-      (focusSessions?.length || 0) + (blockLists?.length || 0) + (blockedWebsites?.length || 0);
-    console.log(`[SYNC] Initial hydration: ${totalRecords} records (${formatBytes(egressStats.totalBytes)})`);
+    const totalRecords =
+      (lists?.length || 0) +
+      (goals?.length || 0) +
+      (routines?.length || 0) +
+      (progress?.length || 0) +
+      (categories?.length || 0) +
+      (commitments?.length || 0) +
+      (dailyTasks?.length || 0) +
+      (longTermTasks?.length || 0) +
+      (focusSettings?.length || 0) +
+      (focusSessions?.length || 0) +
+      (blockLists?.length || 0) +
+      (blockedWebsites?.length || 0);
+    console.log(
+      `[SYNC] Initial hydration: ${totalRecords} records (${formatBytes(egressStats.totalBytes)})`
+    );
 
     // Calculate the max updated_at from all pulled data to use as sync cursor
     // This prevents missing changes that happened during hydration
@@ -1596,44 +1723,61 @@ export async function hydrateFromRemote(): Promise<void> {
     }
 
     // Store everything locally
-    await db.transaction('rw', [db.goalLists, db.goals, db.dailyRoutineGoals, db.dailyGoalProgress, db.taskCategories, db.commitments, db.dailyTasks, db.longTermTasks, db.focusSettings, db.focusSessions, db.blockLists, db.blockedWebsites], async () => {
-      if (lists && lists.length > 0) {
-        await db.goalLists.bulkPut(lists);
+    await db.transaction(
+      'rw',
+      [
+        db.goalLists,
+        db.goals,
+        db.dailyRoutineGoals,
+        db.dailyGoalProgress,
+        db.taskCategories,
+        db.commitments,
+        db.dailyTasks,
+        db.longTermTasks,
+        db.focusSettings,
+        db.focusSessions,
+        db.blockLists,
+        db.blockedWebsites
+      ],
+      async () => {
+        if (lists && lists.length > 0) {
+          await db.goalLists.bulkPut(lists);
+        }
+        if (goals && goals.length > 0) {
+          await db.goals.bulkPut(goals);
+        }
+        if (routines && routines.length > 0) {
+          await db.dailyRoutineGoals.bulkPut(routines);
+        }
+        if (progress && progress.length > 0) {
+          await db.dailyGoalProgress.bulkPut(progress);
+        }
+        if (categories && categories.length > 0) {
+          await db.taskCategories.bulkPut(categories);
+        }
+        if (commitments && commitments.length > 0) {
+          await db.commitments.bulkPut(commitments);
+        }
+        if (dailyTasks && dailyTasks.length > 0) {
+          await db.dailyTasks.bulkPut(dailyTasks);
+        }
+        if (longTermTasks && longTermTasks.length > 0) {
+          await db.longTermTasks.bulkPut(longTermTasks);
+        }
+        if (focusSettings && focusSettings.length > 0) {
+          await db.focusSettings.bulkPut(focusSettings);
+        }
+        if (focusSessions && focusSessions.length > 0) {
+          await db.focusSessions.bulkPut(focusSessions);
+        }
+        if (blockLists && blockLists.length > 0) {
+          await db.blockLists.bulkPut(blockLists);
+        }
+        if (blockedWebsites && blockedWebsites.length > 0) {
+          await db.blockedWebsites.bulkPut(blockedWebsites);
+        }
       }
-      if (goals && goals.length > 0) {
-        await db.goals.bulkPut(goals);
-      }
-      if (routines && routines.length > 0) {
-        await db.dailyRoutineGoals.bulkPut(routines);
-      }
-      if (progress && progress.length > 0) {
-        await db.dailyGoalProgress.bulkPut(progress);
-      }
-      if (categories && categories.length > 0) {
-        await db.taskCategories.bulkPut(categories);
-      }
-      if (commitments && commitments.length > 0) {
-        await db.commitments.bulkPut(commitments);
-      }
-      if (dailyTasks && dailyTasks.length > 0) {
-        await db.dailyTasks.bulkPut(dailyTasks);
-      }
-      if (longTermTasks && longTermTasks.length > 0) {
-        await db.longTermTasks.bulkPut(longTermTasks);
-      }
-      if (focusSettings && focusSettings.length > 0) {
-        await db.focusSettings.bulkPut(focusSettings);
-      }
-      if (focusSessions && focusSessions.length > 0) {
-        await db.focusSessions.bulkPut(focusSessions);
-      }
-      if (blockLists && blockLists.length > 0) {
-        await db.blockLists.bulkPut(blockLists);
-      }
-      if (blockedWebsites && blockedWebsites.length > 0) {
-        await db.blockedWebsites.bulkPut(blockedWebsites);
-      }
-    });
+    );
 
     // Set sync cursor to MAX of pulled data timestamps (prevents missing concurrent changes)
     setLastSyncCursor(maxUpdatedAt, userId);
@@ -1677,31 +1821,50 @@ async function cleanupLocalTombstones(): Promise<number> {
   let totalDeleted = 0;
 
   try {
-    await db.transaction('rw', [db.goalLists, db.goals, db.dailyRoutineGoals, db.dailyGoalProgress, db.taskCategories, db.commitments, db.dailyTasks, db.longTermTasks, db.focusSettings, db.focusSessions, db.blockLists, db.blockedWebsites], async () => {
-      // Delete old tombstones from each table and count
-      const tables = [
-        { table: db.goalLists, name: 'goalLists' },
-        { table: db.goals, name: 'goals' },
-        { table: db.dailyRoutineGoals, name: 'dailyRoutineGoals' },
-        { table: db.dailyGoalProgress, name: 'dailyGoalProgress' },
-        { table: db.taskCategories, name: 'taskCategories' },
-        { table: db.commitments, name: 'commitments' },
-        { table: db.dailyTasks, name: 'dailyTasks' },
-        { table: db.longTermTasks, name: 'longTermTasks' },
-        { table: db.focusSettings, name: 'focusSettings' },
-        { table: db.focusSessions, name: 'focusSessions' },
-        { table: db.blockLists, name: 'blockLists' },
-        { table: db.blockedWebsites, name: 'blockedWebsites' }
-      ];
+    await db.transaction(
+      'rw',
+      [
+        db.goalLists,
+        db.goals,
+        db.dailyRoutineGoals,
+        db.dailyGoalProgress,
+        db.taskCategories,
+        db.commitments,
+        db.dailyTasks,
+        db.longTermTasks,
+        db.focusSettings,
+        db.focusSessions,
+        db.blockLists,
+        db.blockedWebsites
+      ],
+      async () => {
+        // Delete old tombstones from each table and count
+        const tables = [
+          { table: db.goalLists, name: 'goalLists' },
+          { table: db.goals, name: 'goals' },
+          { table: db.dailyRoutineGoals, name: 'dailyRoutineGoals' },
+          { table: db.dailyGoalProgress, name: 'dailyGoalProgress' },
+          { table: db.taskCategories, name: 'taskCategories' },
+          { table: db.commitments, name: 'commitments' },
+          { table: db.dailyTasks, name: 'dailyTasks' },
+          { table: db.longTermTasks, name: 'longTermTasks' },
+          { table: db.focusSettings, name: 'focusSettings' },
+          { table: db.focusSessions, name: 'focusSessions' },
+          { table: db.blockLists, name: 'blockLists' },
+          { table: db.blockedWebsites, name: 'blockedWebsites' }
+        ];
 
-      for (const { table, name } of tables) {
-        const count = await table.filter(item => item.deleted === true && item.updated_at < cutoffStr).delete();
-        if (count > 0) {
-          console.log(`[Tombstone] Cleaned ${count} old records from local ${name}`);
-          totalDeleted += count;
+        for (const { table, name } of tables) {
+          const count = await table
+            .filter((item) => item.deleted === true && item.updated_at < cutoffStr)
+            .delete();
+          if (count > 0) {
+            console.log(`[Tombstone] Cleaned ${count} old records from local ${name}`);
+            totalDeleted += count;
+          }
         }
       }
-    });
+    );
 
     if (totalDeleted > 0) {
       console.log(`[Tombstone] Local cleanup complete: ${totalDeleted} total records removed`);
@@ -1781,14 +1944,19 @@ async function cleanupOldTombstones(): Promise<{ local: number; server: number }
 }
 
 // Debug function to check tombstone status and manually trigger cleanup
-export async function debugTombstones(options?: { cleanup?: boolean; force?: boolean }): Promise<void> {
+export async function debugTombstones(options?: {
+  cleanup?: boolean;
+  force?: boolean;
+}): Promise<void> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - TOMBSTONE_MAX_AGE_DAYS);
   const cutoffStr = cutoffDate.toISOString();
 
   console.log('=== TOMBSTONE DEBUG ===');
   console.log(`Cutoff date (${TOMBSTONE_MAX_AGE_DAYS} days ago): ${cutoffStr}`);
-  console.log(`Last server cleanup: ${lastServerCleanup ? new Date(lastServerCleanup).toISOString() : 'Never'}`);
+  console.log(
+    `Last server cleanup: ${lastServerCleanup ? new Date(lastServerCleanup).toISOString() : 'Never'}`
+  );
   console.log('');
 
   // Check local tombstones
@@ -1812,17 +1980,19 @@ export async function debugTombstones(options?: { cleanup?: boolean; force?: boo
   let totalLocalEligible = 0;
 
   for (const { table, name } of localTables) {
-    const allDeleted = await table.filter(item => item.deleted === true).toArray();
-    const eligible = allDeleted.filter(item => item.updated_at < cutoffStr);
+    const allDeleted = await table.filter((item) => item.deleted === true).toArray();
+    const eligible = allDeleted.filter((item) => item.updated_at < cutoffStr);
 
     if (allDeleted.length > 0) {
-      console.log(`  ${name}: ${allDeleted.length} tombstones (${eligible.length} eligible for cleanup)`);
+      console.log(
+        `  ${name}: ${allDeleted.length} tombstones (${eligible.length} eligible for cleanup)`
+      );
       totalLocalTombstones += allDeleted.length;
       totalLocalEligible += eligible.length;
 
       // Show oldest tombstone
       if (allDeleted.length > 0) {
-        const oldest = allDeleted.reduce((a, b) => a.updated_at < b.updated_at ? a : b);
+        const oldest = allDeleted.reduce((a, b) => (a.updated_at < b.updated_at ? a : b));
         console.log(`    Oldest: ${oldest.updated_at}`);
       }
     }
@@ -1835,9 +2005,18 @@ export async function debugTombstones(options?: { cleanup?: boolean; force?: boo
   if (navigator.onLine) {
     console.log('--- SERVER TOMBSTONES (Supabase) ---');
     const serverTables = [
-      'goal_lists', 'goals', 'daily_routine_goals', 'daily_goal_progress',
-      'task_categories', 'commitments', 'daily_tasks', 'long_term_tasks',
-      'focus_settings', 'focus_sessions', 'block_lists', 'blocked_websites'
+      'goal_lists',
+      'goals',
+      'daily_routine_goals',
+      'daily_goal_progress',
+      'task_categories',
+      'commitments',
+      'daily_tasks',
+      'long_term_tasks',
+      'focus_settings',
+      'focus_sessions',
+      'block_lists',
+      'blocked_websites'
     ];
 
     let totalServerTombstones = 0;
@@ -1854,15 +2033,17 @@ export async function debugTombstones(options?: { cleanup?: boolean; force?: boo
         continue;
       }
 
-      const eligible = (allDeleted || []).filter(item => item.updated_at < cutoffStr);
+      const eligible = (allDeleted || []).filter((item) => item.updated_at < cutoffStr);
 
       if (allDeleted && allDeleted.length > 0) {
-        console.log(`  ${table}: ${allDeleted.length} tombstones (${eligible.length} eligible for cleanup)`);
+        console.log(
+          `  ${table}: ${allDeleted.length} tombstones (${eligible.length} eligible for cleanup)`
+        );
         totalServerTombstones += allDeleted.length;
         totalServerEligible += eligible.length;
 
         // Show oldest tombstone
-        const oldest = allDeleted.reduce((a, b) => a.updated_at < b.updated_at ? a : b);
+        const oldest = allDeleted.reduce((a, b) => (a.updated_at < b.updated_at ? a : b));
         console.log(`    Oldest: ${oldest.updated_at}`);
       }
     }
@@ -1885,7 +2066,9 @@ export async function debugTombstones(options?: { cleanup?: boolean; force?: boo
     console.log(`Cleanup complete: ${localDeleted} local, ${serverDeleted} server records removed`);
   } else {
     console.log('To run cleanup, call: debugTombstones({ cleanup: true })');
-    console.log('To force server cleanup (bypass 24h limit): debugTombstones({ cleanup: true, force: true })');
+    console.log(
+      'To force server cleanup (bypass 24h limit): debugTombstones({ cleanup: true, force: true })'
+    );
   }
 
   console.log('========================');
@@ -1964,7 +2147,7 @@ export async function startSyncEngine(): Promise<void> {
   handleOfflineRef = () => {
     markOffline(); // Mark that auth needs validation when we come back online
     syncStatusStore.setStatus('offline');
-    syncStatusStore.setSyncMessage('You\'re offline. Changes will sync when reconnected.');
+    syncStatusStore.setSyncMessage("You're offline. Changes will sync when reconnected.");
     // Pause realtime - stops reconnection attempts until we come back online
     pauseRealtime();
   };
@@ -2026,13 +2209,15 @@ export async function startSyncEngine(): Promise<void> {
     });
 
     // Subscribe to realtime connection state changes
-    realtimeConnectionUnsubscribe = onConnectionStateChange((connectionState: RealtimeConnectionState) => {
-      // Update sync store with realtime connection state
-      syncStatusStore.setRealtimeState(connectionState);
+    realtimeConnectionUnsubscribe = onConnectionStateChange(
+      (connectionState: RealtimeConnectionState) => {
+        // Update sync store with realtime connection state
+        syncStatusStore.setRealtimeState(connectionState);
 
-      // Note: 'error' state means max reconnect attempts exhausted
-      // Polling will automatically pick up the slack (periodic sync runs when realtime unhealthy)
-    });
+        // Note: 'error' state means max reconnect attempts exhausted
+        // Polling will automatically pick up the slack (periodic sync runs when realtime unhealthy)
+      }
+    );
 
     // Start realtime subscriptions
     startRealtimeSubscriptions(userId);
@@ -2074,7 +2259,7 @@ export async function startSyncEngine(): Promise<void> {
   cleanupOldTombstones();
   cleanupConflictHistory();
   cleanupRealtimeTracking();
-  cleanupFailedItems().then(failedResult => {
+  cleanupFailedItems().then((failedResult) => {
     if (failedResult.count > 0) {
       syncStatusStore.setStatus('error');
       syncStatusStore.setError(
@@ -2136,22 +2321,41 @@ export async function clearLocalCache(): Promise<void> {
   // Get user ID before clearing to remove their sync cursor
   const userId = await getCurrentUserId();
 
-  await db.transaction('rw', [db.goalLists, db.goals, db.dailyRoutineGoals, db.dailyGoalProgress, db.syncQueue, db.taskCategories, db.commitments, db.dailyTasks, db.longTermTasks, db.focusSettings, db.focusSessions, db.blockLists, db.blockedWebsites, db.conflictHistory], async () => {
-    await db.goalLists.clear();
-    await db.goals.clear();
-    await db.dailyRoutineGoals.clear();
-    await db.dailyGoalProgress.clear();
-    await db.taskCategories.clear();
-    await db.commitments.clear();
-    await db.dailyTasks.clear();
-    await db.longTermTasks.clear();
-    await db.focusSettings.clear();
-    await db.focusSessions.clear();
-    await db.blockLists.clear();
-    await db.blockedWebsites.clear();
-    await db.syncQueue.clear();
-    await db.conflictHistory.clear();
-  });
+  await db.transaction(
+    'rw',
+    [
+      db.goalLists,
+      db.goals,
+      db.dailyRoutineGoals,
+      db.dailyGoalProgress,
+      db.syncQueue,
+      db.taskCategories,
+      db.commitments,
+      db.dailyTasks,
+      db.longTermTasks,
+      db.focusSettings,
+      db.focusSessions,
+      db.blockLists,
+      db.blockedWebsites,
+      db.conflictHistory
+    ],
+    async () => {
+      await db.goalLists.clear();
+      await db.goals.clear();
+      await db.dailyRoutineGoals.clear();
+      await db.dailyGoalProgress.clear();
+      await db.taskCategories.clear();
+      await db.commitments.clear();
+      await db.dailyTasks.clear();
+      await db.longTermTasks.clear();
+      await db.focusSettings.clear();
+      await db.focusSessions.clear();
+      await db.blockLists.clear();
+      await db.blockedWebsites.clear();
+      await db.syncQueue.clear();
+      await db.conflictHistory.clear();
+    }
+  );
   // Reset sync cursor (user-specific) and hydration flag
   if (typeof localStorage !== 'undefined') {
     // Remove user-specific cursor if we have userId

@@ -21,7 +21,7 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
 
-  const dateStr = $derived($page.params.date);
+  const dateStr = $derived($page.params.date!);
   const date = $derived(parseISO(dateStr));
   const displayDate = $derived(formatDisplayDate(dateStr));
   const canEdit = $derived(isPastDay(date) || isTodayDate(date));
@@ -39,7 +39,9 @@
     const total = goalsWithProgress.reduce((sum, goal) => {
       const currentValue = goal.progress?.current_value ?? 0;
       const completed = goal.progress?.completed ?? false;
-      return sum + calculateGoalProgressCapped(goal.type, completed, currentValue, goal.target_value);
+      return (
+        sum + calculateGoalProgressCapped(goal.type, completed, currentValue, goal.target_value)
+      );
     }, 0);
     return Math.round(total / goalsWithProgress.length);
   });
@@ -240,9 +242,7 @@
     white-space: nowrap;
     border: 1px solid rgba(108, 92, 231, 0.15);
     font-weight: 600;
-    background: linear-gradient(135deg,
-      rgba(15, 15, 30, 0.8) 0%,
-      rgba(20, 20, 40, 0.7) 100%);
+    background: linear-gradient(135deg, rgba(15, 15, 30, 0.8) 0%, rgba(20, 20, 40, 0.7) 100%);
   }
 
   .back-btn:hover {
@@ -262,10 +262,12 @@
   .page-header h1 {
     font-size: 2rem;
     font-weight: 800;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -275,8 +277,12 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .badge {
@@ -297,8 +303,15 @@
   }
 
   @keyframes todayPulse {
-    0%, 100% { box-shadow: 0 0 20px var(--color-primary-glow); }
-    50% { box-shadow: 0 0 35px var(--color-primary-glow), 0 0 50px rgba(108, 92, 231, 0.3); }
+    0%,
+    100% {
+      box-shadow: 0 0 20px var(--color-primary-glow);
+    }
+    50% {
+      box-shadow:
+        0 0 35px var(--color-primary-glow),
+        0 0 50px rgba(108, 92, 231, 0.3);
+    }
   }
 
   .badge.past {
@@ -315,7 +328,11 @@
   }
 
   .error-banner {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.18) 0%, rgba(255, 107, 107, 0.06) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.18) 0%,
+      rgba(255, 107, 107, 0.06) 100%
+    );
     border: 1px solid rgba(255, 107, 107, 0.4);
     border-radius: var(--radius-xl);
     padding: 1.25rem 1.5rem;
@@ -373,9 +390,7 @@
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
   .skeleton-progress-section {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
     padding: 1.5rem 1.75rem;
@@ -409,9 +424,7 @@
   .goal-skeleton-handle {
     width: 32px;
     min-height: 90px;
-    background: linear-gradient(135deg,
-      rgba(37, 37, 61, 0.9) 0%,
-      rgba(26, 26, 46, 0.95) 100%);
+    background: linear-gradient(135deg, rgba(37, 37, 61, 0.9) 0%, rgba(26, 26, 46, 0.95) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-right: none;
     border-radius: var(--radius-xl) 0 0 var(--radius-xl);
@@ -423,9 +436,7 @@
     flex-direction: column;
     gap: 1rem;
     padding: 1.25rem 1.5rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-left: none;
     border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
@@ -447,10 +458,12 @@
   .goal-skeleton-title {
     width: 55%;
     height: 1.25rem;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(108, 92, 231, 0.15) 0%,
       rgba(108, 92, 231, 0.25) 50%,
-      rgba(108, 92, 231, 0.15) 100%);
+      rgba(108, 92, 231, 0.15) 100%
+    );
     border-radius: var(--radius-md);
   }
 
@@ -483,19 +496,26 @@
   }
 
   @keyframes skeletonPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 200%; }
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 200%;
+    }
   }
 
   .progress-section {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     backdrop-filter: blur(24px);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
@@ -513,12 +533,14 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.4),
       rgba(255, 255, 255, 0.2),
       rgba(108, 92, 231, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   .goal-with-handle {
@@ -539,9 +561,7 @@
   }
 
   .goal-with-handle .drag-handle {
-    background: linear-gradient(135deg,
-      rgba(37, 37, 61, 0.9) 0%,
-      rgba(26, 26, 46, 0.95) 100%);
+    background: linear-gradient(135deg, rgba(37, 37, 61, 0.9) 0%, rgba(26, 26, 46, 0.95) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-right: none;
     border-radius: var(--radius-xl) 0 0 var(--radius-xl);

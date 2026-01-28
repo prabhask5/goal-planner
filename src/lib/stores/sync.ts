@@ -46,7 +46,8 @@ function createSyncStatusStore() {
 
   let currentStatus: SyncStatus = 'idle';
   let syncingStartTime: number | null = null;
-  let pendingStatusChange: { status: SyncStatus; timeout: ReturnType<typeof setTimeout> } | null = null;
+  let pendingStatusChange: { status: SyncStatus; timeout: ReturnType<typeof setTimeout> } | null =
+    null;
 
   return {
     subscribe,
@@ -66,7 +67,7 @@ function createSyncStatusStore() {
         // Starting sync - record the time and clear previous errors
         syncingStartTime = Date.now();
         currentStatus = status;
-        update(state => ({ ...state, status, lastError: null, syncErrors: [] }));
+        update((state) => ({ ...state, status, lastError: null, syncErrors: [] }));
       } else if (syncingStartTime !== null) {
         // Ending sync - ensure minimum display time
         const elapsed = Date.now() - syncingStartTime;
@@ -80,34 +81,50 @@ function createSyncStatusStore() {
               syncingStartTime = null;
               pendingStatusChange = null;
               currentStatus = status;
-              update(state => ({ ...state, status, lastError: status === 'idle' ? null : state.lastError }));
+              update((state) => ({
+                ...state,
+                status,
+                lastError: status === 'idle' ? null : state.lastError
+              }));
             }, remaining)
           };
         } else {
           syncingStartTime = null;
           currentStatus = status;
-          update(state => ({ ...state, status, lastError: status === 'idle' ? null : state.lastError }));
+          update((state) => ({
+            ...state,
+            status,
+            lastError: status === 'idle' ? null : state.lastError
+          }));
         }
       } else {
         currentStatus = status;
-        update(state => ({ ...state, status, lastError: status === 'idle' ? null : state.lastError }));
+        update((state) => ({
+          ...state,
+          status,
+          lastError: status === 'idle' ? null : state.lastError
+        }));
       }
     },
-    setPendingCount: (count: number) => update(state => ({ ...state, pendingCount: count })),
-    setError: (friendly: string | null, raw?: string | null) => update(state => ({
-      ...state,
-      lastError: friendly,
-      lastErrorDetails: raw ?? null
-    })),
-    addSyncError: (error: SyncError) => update(state => ({
-      ...state,
-      syncErrors: [...state.syncErrors, error].slice(-MAX_ERROR_HISTORY)
-    })),
-    clearSyncErrors: () => update(state => ({ ...state, syncErrors: [] })),
-    setLastSyncTime: (time: string) => update(state => ({ ...state, lastSyncTime: time })),
-    setSyncMessage: (message: string | null) => update(state => ({ ...state, syncMessage: message })),
-    setTabVisible: (visible: boolean) => update(state => ({ ...state, isTabVisible: visible })),
-    setRealtimeState: (realtimeState: RealtimeState) => update(state => ({ ...state, realtimeState })),
+    setPendingCount: (count: number) => update((state) => ({ ...state, pendingCount: count })),
+    setError: (friendly: string | null, raw?: string | null) =>
+      update((state) => ({
+        ...state,
+        lastError: friendly,
+        lastErrorDetails: raw ?? null
+      })),
+    addSyncError: (error: SyncError) =>
+      update((state) => ({
+        ...state,
+        syncErrors: [...state.syncErrors, error].slice(-MAX_ERROR_HISTORY)
+      })),
+    clearSyncErrors: () => update((state) => ({ ...state, syncErrors: [] })),
+    setLastSyncTime: (time: string) => update((state) => ({ ...state, lastSyncTime: time })),
+    setSyncMessage: (message: string | null) =>
+      update((state) => ({ ...state, syncMessage: message })),
+    setTabVisible: (visible: boolean) => update((state) => ({ ...state, isTabVisible: visible })),
+    setRealtimeState: (realtimeState: RealtimeState) =>
+      update((state) => ({ ...state, realtimeState })),
     reset: () => {
       if (pendingStatusChange) {
         clearTimeout(pendingStatusChange.timeout);
@@ -115,7 +132,17 @@ function createSyncStatusStore() {
       }
       syncingStartTime = null;
       currentStatus = 'idle';
-      set({ status: 'idle', pendingCount: 0, lastError: null, lastErrorDetails: null, syncErrors: [], lastSyncTime: null, syncMessage: null, isTabVisible: true, realtimeState: 'disconnected' });
+      set({
+        status: 'idle',
+        pendingCount: 0,
+        lastError: null,
+        lastErrorDetails: null,
+        syncErrors: [],
+        lastSyncTime: null,
+        syncMessage: null,
+        isTabVisible: true,
+        realtimeState: 'disconnected'
+      });
     }
   };
 }

@@ -3,7 +3,13 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { monthProgressStore, dailyRoutinesStore } from '$lib/stores/data';
-  import { formatDate, formatDisplayDate, isPastDay, isTodayDate, isRoutineActiveOnDate } from '$lib/utils/dates';
+  import {
+    formatDate,
+    formatDisplayDate,
+    isPastDay,
+    isTodayDate,
+    isRoutineActiveOnDate
+  } from '$lib/utils/dates';
   import type { DayProgress, DailyRoutineGoal, GoalType, DayOfWeek } from '$lib/types';
   import Calendar from '$lib/components/Calendar.svelte';
   import Modal from '$lib/components/Modal.svelte';
@@ -33,7 +39,10 @@
     if (activeDays.length === 2 && activeDays.includes(0) && activeDays.includes(6)) {
       return 'Weekends';
     }
-    return [...activeDays].sort((a, b) => a - b).map(d => dayLabels[d]).join(' ');
+    return [...activeDays]
+      .sort((a, b) => a - b)
+      .map((d) => dayLabels[d])
+      .join(' ');
   }
 
   // Derive dayProgressMap from store, filtering for past days and today only
@@ -50,12 +59,8 @@
     return filteredMap;
   });
 
-  const activeRoutines = $derived(
-    routines.filter((r) => isRoutineActiveOnDate(r, today))
-  );
-  const inactiveRoutines = $derived(
-    routines.filter((r) => !isRoutineActiveOnDate(r, today))
-  );
+  const activeRoutines = $derived(routines.filter((r) => isRoutineActiveOnDate(r, today)));
+  const inactiveRoutines = $derived(routines.filter((r) => !isRoutineActiveOnDate(r, today)));
 
   // Subscribe to stores
   $effect(() => {
@@ -287,7 +292,10 @@
             {#snippet renderItem({ item: routine, dragHandleProps })}
               <div
                 class="routine-with-handle"
-                use:remoteChangeAnimation={{ entityId: routine.id, entityType: 'daily_routine_goals' }}
+                use:remoteChangeAnimation={{
+                  entityId: routine.id,
+                  entityType: 'daily_routine_goals'
+                }}
               >
                 <button class="drag-handle" {...dragHandleProps} aria-label="Drag to reorder">
                   ⋮⋮
@@ -297,13 +305,18 @@
                     <h4>{routine.name}</h4>
                     <div class="routine-meta">
                       <span class="badge type-{routine.type}">
-                        {routine.type === 'completion' ? '✓' : '↑'} {routine.type === 'incremental' ? routine.target_value + '/day' : 'Complete'}
+                        {routine.type === 'completion' ? '✓' : '↑'}
+                        {routine.type === 'incremental'
+                          ? routine.target_value + '/day'
+                          : 'Complete'}
                       </span>
                       <span class="badge days-badge">
                         {getActiveDaysDisplay(routine.active_days)}
                       </span>
                       <span class="date-range">
-                        {formatDisplayDate(routine.start_date)} → {routine.end_date ? formatDisplayDate(routine.end_date) : '∞'}
+                        {formatDisplayDate(routine.start_date)} → {routine.end_date
+                          ? formatDisplayDate(routine.end_date)
+                          : '∞'}
                       </span>
                     </div>
                   </div>
@@ -337,7 +350,10 @@
             {#snippet renderItem({ item: routine, dragHandleProps })}
               <div
                 class="routine-with-handle"
-                use:remoteChangeAnimation={{ entityId: routine.id, entityType: 'daily_routine_goals' }}
+                use:remoteChangeAnimation={{
+                  entityId: routine.id,
+                  entityType: 'daily_routine_goals'
+                }}
               >
                 <button class="drag-handle" {...dragHandleProps} aria-label="Drag to reorder">
                   ⋮⋮
@@ -347,13 +363,18 @@
                     <h4>{routine.name}</h4>
                     <div class="routine-meta">
                       <span class="badge type-{routine.type}">
-                        {routine.type === 'completion' ? '✓' : '↑'} {routine.type === 'incremental' ? routine.target_value + '/day' : 'Complete'}
+                        {routine.type === 'completion' ? '✓' : '↑'}
+                        {routine.type === 'incremental'
+                          ? routine.target_value + '/day'
+                          : 'Complete'}
                       </span>
                       <span class="badge days-badge">
                         {getActiveDaysDisplay(routine.active_days)}
                       </span>
                       <span class="date-range">
-                        {formatDisplayDate(routine.start_date)} → {routine.end_date ? formatDisplayDate(routine.end_date) : '∞'}
+                        {formatDisplayDate(routine.start_date)} → {routine.end_date
+                          ? formatDisplayDate(routine.end_date)
+                          : '∞'}
                       </span>
                     </div>
                   </div>
@@ -383,7 +404,11 @@
   </section>
 </div>
 
-<Modal open={showCreateModal} title="Create Daily Routine" onClose={() => (showCreateModal = false)}>
+<Modal
+  open={showCreateModal}
+  title="Create Daily Routine"
+  onClose={() => (showCreateModal = false)}
+>
   <RoutineForm onSubmit={handleCreateRoutine} onCancel={() => (showCreateModal = false)} />
 </Modal>
 
@@ -406,10 +431,12 @@
   .page-header h1 {
     font-size: 2.25rem;
     font-weight: 800;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -419,12 +446,20 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .error-banner {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.18) 0%, rgba(255, 107, 107, 0.06) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.18) 0%,
+      rgba(255, 107, 107, 0.06) 100%
+    );
     border: 1px solid rgba(255, 107, 107, 0.4);
     border-radius: var(--radius-xl);
     padding: 1.25rem 1.5rem;
@@ -454,10 +489,12 @@
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
   .calendar-skeleton {
-    background: linear-gradient(165deg,
+    background: linear-gradient(
+      165deg,
       rgba(15, 15, 30, 0.95) 0%,
       rgba(10, 10, 22, 0.98) 50%,
-      rgba(15, 15, 30, 0.95) 100%);
+      rgba(15, 15, 30, 0.95) 100%
+    );
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
     overflow: hidden;
@@ -483,10 +520,12 @@
     width: 180px;
     height: 1.75rem;
     border-radius: var(--radius-md);
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(108, 92, 231, 0.15) 0%,
       rgba(108, 92, 231, 0.25) 50%,
-      rgba(108, 92, 231, 0.15) 100%);
+      rgba(108, 92, 231, 0.15) 100%
+    );
   }
 
   .skeleton-weekdays {
@@ -514,9 +553,7 @@
     aspect-ratio: 1;
     min-height: 70px;
     border-radius: var(--radius-md);
-    background: linear-gradient(145deg,
-      rgba(20, 20, 40, 0.95) 0%,
-      rgba(15, 15, 32, 0.9) 100%);
+    background: linear-gradient(145deg, rgba(20, 20, 40, 0.95) 0%, rgba(15, 15, 32, 0.9) 100%);
     animation: skeletonPulse 2s ease-in-out infinite;
     animation-delay: var(--delay);
   }
@@ -541,9 +578,7 @@
   .routine-skeleton-handle {
     width: 32px;
     min-height: 80px;
-    background: linear-gradient(135deg,
-      rgba(37, 37, 61, 0.9) 0%,
-      rgba(26, 26, 46, 0.95) 100%);
+    background: linear-gradient(135deg, rgba(37, 37, 61, 0.9) 0%, rgba(26, 26, 46, 0.95) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-right: none;
     border-radius: var(--radius-xl) 0 0 var(--radius-xl);
@@ -555,9 +590,7 @@
     flex-direction: column;
     gap: 0.75rem;
     padding: 1.25rem 1.5rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-left: 4px solid rgba(108, 92, 231, 0.3);
     border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
@@ -566,10 +599,12 @@
   .routine-skeleton-title {
     width: 60%;
     height: 1.125rem;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(108, 92, 231, 0.15) 0%,
       rgba(108, 92, 231, 0.25) 50%,
-      rgba(108, 92, 231, 0.15) 100%);
+      rgba(108, 92, 231, 0.15) 100%
+    );
     border-radius: var(--radius-md);
   }
 
@@ -629,13 +664,22 @@
   }
 
   @keyframes skeletonPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 200%; }
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 200%;
+    }
   }
 
   .legend {
@@ -648,9 +692,7 @@
     display: flex;
     gap: 2rem;
     padding: 1rem 2rem;
-    background: linear-gradient(135deg,
-      rgba(15, 15, 30, 0.9) 0%,
-      rgba(20, 20, 40, 0.85) 100%);
+    background: linear-gradient(135deg, rgba(15, 15, 30, 0.9) 0%, rgba(20, 20, 40, 0.85) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-full);
     backdrop-filter: blur(16px);
@@ -675,13 +717,26 @@
     animation: legendPulse 3s ease-in-out infinite;
   }
 
-  .legend-item:nth-child(1) .legend-color { animation-delay: 0s; }
-  .legend-item:nth-child(2) .legend-color { animation-delay: 1s; }
-  .legend-item:nth-child(3) .legend-color { animation-delay: 2s; }
+  .legend-item:nth-child(1) .legend-color {
+    animation-delay: 0s;
+  }
+  .legend-item:nth-child(2) .legend-color {
+    animation-delay: 1s;
+  }
+  .legend-item:nth-child(3) .legend-color {
+    animation-delay: 2s;
+  }
 
   @keyframes legendPulse {
-    0%, 100% { box-shadow: 0 0 10px currentColor; }
-    50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+    0%,
+    100% {
+      box-shadow: 0 0 10px currentColor;
+    }
+    50% {
+      box-shadow:
+        0 0 20px currentColor,
+        0 0 30px currentColor;
+    }
   }
 
   /* Routines Section */
@@ -709,9 +764,7 @@
     font-size: 1.625rem;
     font-weight: 700;
     margin-bottom: 2rem;
-    background: linear-gradient(135deg,
-      var(--color-text) 0%,
-      var(--color-primary-light) 100%);
+    background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary-light) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -720,9 +773,7 @@
   .empty-routines {
     text-align: center;
     padding: 4rem 2rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
     backdrop-filter: blur(24px);
@@ -737,12 +788,14 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.4),
       rgba(255, 255, 255, 0.2),
       rgba(108, 92, 231, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   .empty-routines p {
@@ -772,9 +825,7 @@
   }
 
   .routine-with-handle .drag-handle {
-    background: linear-gradient(135deg,
-      rgba(37, 37, 61, 0.9) 0%,
-      rgba(26, 26, 46, 0.95) 100%);
+    background: linear-gradient(135deg, rgba(37, 37, 61, 0.9) 0%, rgba(26, 26, 46, 0.95) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-right: none;
     border-radius: var(--radius-xl) 0 0 var(--radius-xl);
@@ -797,9 +848,7 @@
     justify-content: space-between;
     gap: 1.25rem;
     padding: 1.25rem 1.5rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     backdrop-filter: blur(16px);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-left-width: 4px;

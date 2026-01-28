@@ -25,12 +25,20 @@
     node.focus();
   }
 
-  const listId = $derived($page.params.id);
+  const listId = $derived($page.params.id!);
 
   const totalProgress = $derived(() => {
     if (!list?.goals || list.goals.length === 0) return 0;
     const total = list.goals.reduce((sum, goal) => {
-      return sum + calculateGoalProgressCapped(goal.type, goal.completed, goal.current_value, goal.target_value);
+      return (
+        sum +
+        calculateGoalProgressCapped(
+          goal.type,
+          goal.completed,
+          goal.current_value,
+          goal.target_value
+        )
+      );
     }, 0);
     return Math.round(total / list.goals.length);
   });
@@ -70,7 +78,11 @@
     }
   }
 
-  async function handleUpdateGoal(data: { name: string; type: GoalType; targetValue: number | null }) {
+  async function handleUpdateGoal(data: {
+    name: string;
+    type: GoalType;
+    targetValue: number | null;
+  }) {
     if (!editingGoal || !list) return;
 
     try {
@@ -182,30 +194,39 @@
         ← Back
       </button>
       {#if editingListName}
-        <form class="edit-name-form" onsubmit={(e) => { e.preventDefault(); handleUpdateListName(); }}>
-          <input
-            type="text"
-            bind:value={newListName}
-            use:focus
-          />
+        <form
+          class="edit-name-form"
+          onsubmit={(e) => {
+            e.preventDefault();
+            handleUpdateListName();
+          }}
+        >
+          <input type="text" bind:value={newListName} use:focus />
           <button type="submit" class="btn btn-sm btn-primary">Save</button>
-          <button type="button" class="btn btn-sm btn-secondary" onclick={() => { editingListName = false; newListName = list?.name ?? ''; }}>
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            onclick={() => {
+              editingListName = false;
+              newListName = list?.name ?? '';
+            }}
+          >
             Cancel
           </button>
         </form>
+      {:else if loading}
+        <div class="title-skeleton"></div>
       {:else}
-        {#if loading}
-          <div class="title-skeleton"></div>
-        {:else}
-          <button class="title-edit-btn" onclick={() => (editingListName = true)} title="Click to edit list name">
-            <h1>{list?.name ?? 'List'}</h1>
-          </button>
-        {/if}
+        <button
+          class="title-edit-btn"
+          onclick={() => (editingListName = true)}
+          title="Click to edit list name"
+        >
+          <h1>{list?.name ?? 'List'}</h1>
+        </button>
       {/if}
     </div>
-    <button class="btn btn-primary" onclick={() => (showAddModal = true)}>
-      + Add Goal
-    </button>
+    <button class="btn btn-primary" onclick={() => (showAddModal = true)}> + Add Goal </button>
   </header>
 
   {#if error}
@@ -330,9 +351,7 @@
     white-space: nowrap;
     border: 1px solid rgba(108, 92, 231, 0.15);
     font-weight: 600;
-    background: linear-gradient(135deg,
-      rgba(15, 15, 30, 0.8) 0%,
-      rgba(20, 20, 40, 0.7) 100%);
+    background: linear-gradient(135deg, rgba(15, 15, 30, 0.8) 0%, rgba(20, 20, 40, 0.7) 100%);
   }
 
   .back-btn:hover {
@@ -370,10 +389,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -383,16 +404,22 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .page-header h1:hover,
   .title-edit-btn:hover h1 {
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-primary-light) 0%,
       var(--color-accent) 50%,
-      var(--color-primary-light) 100%);
+      var(--color-primary-light) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     background-clip: text;
@@ -418,7 +445,11 @@
   }
 
   .error-banner {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.18) 0%, rgba(255, 107, 107, 0.06) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.18) 0%,
+      rgba(255, 107, 107, 0.06) 100%
+    );
     border: 1px solid rgba(255, 107, 107, 0.4);
     border-radius: var(--radius-xl);
     padding: 1.25rem 1.5rem;
@@ -448,9 +479,7 @@
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
   .skeleton-progress-section {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
     padding: 1.5rem 1.75rem;
@@ -484,9 +513,7 @@
   .goal-skeleton-handle {
     width: 32px;
     min-height: 100px;
-    background: linear-gradient(135deg,
-      rgba(37, 37, 61, 0.9) 0%,
-      rgba(26, 26, 46, 0.95) 100%);
+    background: linear-gradient(135deg, rgba(37, 37, 61, 0.9) 0%, rgba(26, 26, 46, 0.95) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-right: none;
     border-radius: var(--radius-xl) 0 0 var(--radius-xl);
@@ -498,9 +525,7 @@
     flex-direction: column;
     gap: 0.875rem;
     padding: 1.25rem 1.5rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-left: none;
     border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
@@ -531,10 +556,12 @@
   .goal-skeleton-title {
     width: 60%;
     height: 1.125rem;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(108, 92, 231, 0.15) 0%,
       rgba(108, 92, 231, 0.25) 50%,
-      rgba(108, 92, 231, 0.15) 100%);
+      rgba(108, 92, 231, 0.15) 100%
+    );
     border-radius: var(--radius-md);
   }
 
@@ -589,30 +616,39 @@
   }
 
   @keyframes skeletonPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 200%; }
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 200%;
+    }
   }
 
   .title-skeleton {
     width: 200px;
     height: 2rem;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(108, 92, 231, 0.15) 0%,
       rgba(108, 92, 231, 0.25) 50%,
-      rgba(108, 92, 231, 0.15) 100%);
+      rgba(108, 92, 231, 0.15) 100%
+    );
     border-radius: var(--radius-lg);
     animation: skeletonPulse 2s ease-in-out infinite;
   }
 
   .progress-section {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     backdrop-filter: blur(24px);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-2xl);
@@ -630,12 +666,14 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.4),
       rgba(255, 255, 255, 0.2),
       rgba(108, 92, 231, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   .goal-with-handle {
@@ -656,9 +694,7 @@
   }
 
   .goal-with-handle .drag-handle {
-    background: linear-gradient(135deg,
-      rgba(37, 37, 61, 0.9) 0%,
-      rgba(26, 26, 46, 0.95) 100%);
+    background: linear-gradient(135deg, rgba(37, 37, 61, 0.9) 0%, rgba(26, 26, 46, 0.95) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-right: none;
     border-radius: var(--radius-xl) 0 0 var(--radius-xl);

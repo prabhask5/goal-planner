@@ -4,12 +4,9 @@ import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '
 import { scheduleSyncPush, markEntityModified } from '$lib/sync/engine';
 
 export async function getBlockedWebsites(blockListId: string): Promise<BlockedWebsite[]> {
-  const websites = await db.blockedWebsites
-    .where('block_list_id')
-    .equals(blockListId)
-    .toArray();
+  const websites = await db.blockedWebsites.where('block_list_id').equals(blockListId).toArray();
 
-  return websites.filter(w => !w.deleted);
+  return websites.filter((w) => !w.deleted);
 }
 
 export async function createBlockedWebsite(

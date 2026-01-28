@@ -4,7 +4,7 @@
   let isVisible = $state(false);
 
   onMount(() => {
-    setTimeout(() => isVisible = true, 100);
+    setTimeout(() => (isVisible = true), 100);
   });
 </script>
 
@@ -63,12 +63,22 @@
     <div class="content-glow"></div>
     <h1 class="title">Privacy</h1>
     <p class="policy-text">
-      Your goals, tasks, routines, and focus sessions are stored securely and never sold. Who would want that anyway?
+      Your goals, tasks, routines, and focus sessions are stored securely and never sold. Who would
+      want that anyway?
     </p>
     <a href="/" class="back-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="19" y1="12" x2="5" y2="12"/>
-        <polyline points="12 19 5 12 12 5"/>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <line x1="19" y1="12" x2="5" y2="12" />
+        <polyline points="12 19 5 12 12 5" />
       </svg>
       Back to Stellar
     </a>
@@ -84,10 +94,12 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: radial-gradient(ellipse at center,
+    background: radial-gradient(
+      ellipse at center,
       rgba(15, 15, 35, 1) 0%,
       rgba(5, 5, 16, 1) 50%,
-      rgba(0, 0, 5, 1) 100%);
+      rgba(0, 0, 5, 1) 100%
+    );
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -136,17 +148,28 @@
       radial-gradient(2.5px 2.5px at 75% 75%, rgba(108, 92, 231, 1) 0%, transparent 100%),
       radial-gradient(2px 2px at 50% 90%, rgba(255, 121, 198, 0.9) 0%, transparent 100%);
     background-size: 400px 400px;
-    animation: starsTwinkle 4s ease-in-out infinite, starsDrift 200s linear infinite;
+    animation:
+      starsTwinkle 4s ease-in-out infinite,
+      starsDrift 200s linear infinite;
   }
 
   @keyframes starsDrift {
-    from { transform: translateY(0) translateX(0); }
-    to { transform: translateY(-100px) translateX(-50px); }
+    from {
+      transform: translateY(0) translateX(0);
+    }
+    to {
+      transform: translateY(-100px) translateX(-50px);
+    }
   }
 
   @keyframes starsTwinkle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -167,7 +190,9 @@
     top: -200px;
     right: -150px;
     background: radial-gradient(ellipse, rgba(108, 92, 231, 0.5) 0%, transparent 70%);
-    animation: nebulaPulse 8s ease-in-out infinite, nebulaFloat 20s ease-in-out infinite;
+    animation:
+      nebulaPulse 8s ease-in-out infinite,
+      nebulaFloat 20s ease-in-out infinite;
   }
 
   .nebula-2 {
@@ -176,7 +201,9 @@
     bottom: -150px;
     left: -100px;
     background: radial-gradient(ellipse, rgba(255, 121, 198, 0.4) 0%, transparent 70%);
-    animation: nebulaPulse 10s ease-in-out infinite 2s, nebulaFloat 25s ease-in-out infinite reverse;
+    animation:
+      nebulaPulse 10s ease-in-out infinite 2s,
+      nebulaFloat 25s ease-in-out infinite reverse;
   }
 
   .nebula-3 {
@@ -190,14 +217,28 @@
   }
 
   @keyframes nebulaPulse {
-    0%, 100% { opacity: 0.3; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.1); }
+    0%,
+    100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.1);
+    }
   }
 
   @keyframes nebulaFloat {
-    0%, 100% { transform: translate(0, 0); }
-    33% { transform: translate(30px, -20px); }
-    66% { transform: translate(-20px, 30px); }
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    33% {
+      transform: translate(30px, -20px);
+    }
+    66% {
+      transform: translate(-20px, 30px);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -242,8 +283,12 @@
   }
 
   @keyframes orbitRotate {
-    from { transform: translate(-50%, -50%) rotate(0deg); }
-    to { transform: translate(-50%, -50%) rotate(360deg); }
+    from {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
   }
 
   .orbit-particle {
@@ -257,13 +302,17 @@
 
   .particle-1 {
     background: var(--color-primary);
-    box-shadow: 0 0 15px var(--color-primary-glow), 0 0 30px var(--color-primary-glow);
+    box-shadow:
+      0 0 15px var(--color-primary-glow),
+      0 0 30px var(--color-primary-glow);
     animation: orbitParticle1 30s linear infinite;
   }
 
   .particle-2 {
     background: var(--color-accent);
-    box-shadow: 0 0 15px var(--color-accent-glow), 0 0 30px var(--color-accent-glow);
+    box-shadow:
+      0 0 15px var(--color-accent-glow),
+      0 0 30px var(--color-accent-glow);
     animation: orbitParticle2 50s linear infinite reverse;
     width: 4px;
     height: 4px;
@@ -271,25 +320,39 @@
 
   .particle-3 {
     background: var(--color-success);
-    box-shadow: 0 0 15px var(--color-success-glow), 0 0 30px var(--color-success-glow);
+    box-shadow:
+      0 0 15px var(--color-success-glow),
+      0 0 30px var(--color-success-glow);
     animation: orbitParticle3 70s linear infinite;
     width: 5px;
     height: 5px;
   }
 
   @keyframes orbitParticle1 {
-    from { transform: rotate(0deg) translateX(150px) rotate(0deg); }
-    to { transform: rotate(360deg) translateX(150px) rotate(-360deg); }
+    from {
+      transform: rotate(0deg) translateX(150px) rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg) translateX(150px) rotate(-360deg);
+    }
   }
 
   @keyframes orbitParticle2 {
-    from { transform: rotate(0deg) translateX(250px) rotate(0deg); }
-    to { transform: rotate(360deg) translateX(250px) rotate(-360deg); }
+    from {
+      transform: rotate(0deg) translateX(250px) rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg) translateX(250px) rotate(-360deg);
+    }
   }
 
   @keyframes orbitParticle3 {
-    from { transform: rotate(0deg) translateX(350px) rotate(0deg); }
-    to { transform: rotate(360deg) translateX(350px) rotate(-360deg); }
+    from {
+      transform: rotate(0deg) translateX(350px) rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg) translateX(350px) rotate(-360deg);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -300,10 +363,12 @@
     position: absolute;
     width: 100px;
     height: 2px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(255, 255, 255, 0) 0%,
       rgba(255, 255, 255, 0.8) 50%,
-      rgba(108, 92, 231, 1) 100%);
+      rgba(108, 92, 231, 1) 100%
+    );
     border-radius: 100px;
     opacity: 0;
     pointer-events: none;
@@ -331,11 +396,15 @@
   }
 
   @keyframes shootingStar {
-    0%, 90%, 100% {
+    0%,
+    90%,
+    100% {
       opacity: 0;
       transform: rotate(-35deg) translateX(0);
     }
-    92% { opacity: 1; }
+    92% {
+      opacity: 1;
+    }
     95% {
       opacity: 1;
       transform: rotate(-35deg) translateX(300px);
@@ -370,16 +439,21 @@
   }
 
   @keyframes particleFloat {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateY(0) translateX(0);
       opacity: var(--opacity);
     }
-    25% { transform: translateY(-30px) translateX(15px); }
+    25% {
+      transform: translateY(-30px) translateX(15px);
+    }
     50% {
       transform: translateY(-50px) translateX(-10px);
       opacity: calc(var(--opacity) * 1.5);
     }
-    75% { transform: translateY(-20px) translateX(20px); }
+    75% {
+      transform: translateY(-20px) translateX(20px);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -394,7 +468,9 @@
     max-width: 500px;
     opacity: 0;
     transform: translateY(30px) scale(0.95);
-    transition: opacity 1s ease-out, transform 1s ease-out;
+    transition:
+      opacity 1s ease-out,
+      transform 1s ease-out;
   }
 
   .content.visible {
@@ -409,18 +485,27 @@
     transform: translate(-50%, -50%);
     width: 300px;
     height: 150px;
-    background: radial-gradient(ellipse,
+    background: radial-gradient(
+      ellipse,
       rgba(108, 92, 231, 0.3) 0%,
       rgba(255, 121, 198, 0.1) 50%,
-      transparent 70%);
+      transparent 70%
+    );
     filter: blur(40px);
     animation: contentGlow 4s ease-in-out infinite;
     pointer-events: none;
   }
 
   @keyframes contentGlow {
-    0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    0%,
+    100% {
+      opacity: 0.6;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.2);
+    }
   }
 
   .title {
@@ -429,12 +514,14 @@
     font-weight: 800;
     letter-spacing: -0.03em;
     margin: 0 0 1.5rem;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 25%,
       var(--color-accent) 50%,
       var(--color-primary-light) 75%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 300% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -443,8 +530,12 @@
   }
 
   @keyframes titleShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 300% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 300% center;
+    }
   }
 
   .policy-text {
@@ -483,28 +574,58 @@
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
   @media (max-width: 768px) {
-    .orbit-1 { width: 200px; height: 200px; }
-    .orbit-2 { width: 350px; height: 350px; }
-    .orbit-3 { width: 500px; height: 500px; }
+    .orbit-1 {
+      width: 200px;
+      height: 200px;
+    }
+    .orbit-2 {
+      width: 350px;
+      height: 350px;
+    }
+    .orbit-3 {
+      width: 500px;
+      height: 500px;
+    }
 
     @keyframes orbitParticle1 {
-      from { transform: rotate(0deg) translateX(100px) rotate(0deg); }
-      to { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
+      from {
+        transform: rotate(0deg) translateX(100px) rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg) translateX(100px) rotate(-360deg);
+      }
     }
 
     @keyframes orbitParticle2 {
-      from { transform: rotate(0deg) translateX(175px) rotate(0deg); }
-      to { transform: rotate(360deg) translateX(175px) rotate(-360deg); }
+      from {
+        transform: rotate(0deg) translateX(175px) rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg) translateX(175px) rotate(-360deg);
+      }
     }
 
     @keyframes orbitParticle3 {
-      from { transform: rotate(0deg) translateX(250px) rotate(0deg); }
-      to { transform: rotate(360deg) translateX(250px) rotate(-360deg); }
+      from {
+        transform: rotate(0deg) translateX(250px) rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg) translateX(250px) rotate(-360deg);
+      }
     }
 
-    .nebula-1 { width: 400px; height: 400px; }
-    .nebula-2 { width: 350px; height: 350px; }
-    .nebula-3 { width: 300px; height: 300px; }
+    .nebula-1 {
+      width: 400px;
+      height: 400px;
+    }
+    .nebula-2 {
+      width: 350px;
+      height: 350px;
+    }
+    .nebula-3 {
+      width: 300px;
+      height: 300px;
+    }
   }
 
   @media (max-width: 640px) {
@@ -519,8 +640,13 @@
   }
 
   @media (max-width: 480px) {
-    .shooting-star { width: 60px; }
-    .content-glow { width: 200px; height: 100px; }
+    .shooting-star {
+      width: 60px;
+    }
+    .content-glow {
+      width: 200px;
+      height: 100px;
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════

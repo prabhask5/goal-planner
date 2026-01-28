@@ -51,21 +51,12 @@ export interface ConflictResolution {
  * Fields that should be excluded from conflict resolution
  * (they're always taken from the winning side or auto-managed)
  */
-const EXCLUDED_FIELDS = new Set([
-  'id',
-  'user_id',
-  'created_at',
-  '_version',
-]);
+const EXCLUDED_FIELDS = new Set(['id', 'user_id', 'created_at', '_version']);
 
 /**
  * Fields where numeric merge is appropriate (only for increment operations)
  */
-const NUMERIC_MERGE_FIELDS = new Set([
-  'current_value',
-  'elapsed_duration',
-  'phase_remaining_ms',
-]);
+const NUMERIC_MERGE_FIELDS = new Set(['current_value', 'elapsed_duration', 'phase_remaining_ms']);
 
 /**
  * Resolve conflicts between local and remote entity states.
@@ -98,7 +89,7 @@ export async function resolveConflicts(
       fieldResolutions: [],
       mergedEntity: { ...remote },
       hasConflicts: false,
-      timestamp,
+      timestamp
     };
   }
 
@@ -109,10 +100,7 @@ export async function resolveConflicts(
   const mergedEntity: Record<string, unknown> = { ...remote };
 
   // Get all unique fields from both entities
-  const allFields = new Set([
-    ...Object.keys(local),
-    ...Object.keys(remote),
-  ]);
+  const allFields = new Set([...Object.keys(local), ...Object.keys(remote)]);
 
   // Check for pending operations on specific fields
   const pendingFieldOps = new Map<string, SyncOperationItem[]>();
@@ -132,7 +120,7 @@ export async function resolveConflicts(
   }
 
   // Check if there's a pending delete
-  const hasPendingDelete = pendingOps.some(op => op.operationType === 'delete');
+  const hasPendingDelete = pendingOps.some((op) => op.operationType === 'delete');
 
   // If there's a pending delete locally, local delete wins
   if (hasPendingDelete && !remote.deleted) {
@@ -143,7 +131,7 @@ export async function resolveConflicts(
       remoteValue: remote.deleted,
       resolvedValue: true,
       winner: 'local',
-      strategy: 'local_pending',
+      strategy: 'local_pending'
     });
   }
 
@@ -156,17 +144,19 @@ export async function resolveConflicts(
       entityType,
       localUpdatedAt,
       remoteUpdatedAt,
-      fieldResolutions: [{
-        field: 'deleted',
-        localValue: local.deleted,
-        remoteValue: true,
-        resolvedValue: true,
-        winner: 'remote',
-        strategy: 'delete_wins',
-      }],
+      fieldResolutions: [
+        {
+          field: 'deleted',
+          localValue: local.deleted,
+          remoteValue: true,
+          resolvedValue: true,
+          winner: 'remote',
+          strategy: 'delete_wins'
+        }
+      ],
       mergedEntity: { ...remote },
       hasConflicts: true,
-      timestamp,
+      timestamp
     };
   }
 
@@ -198,18 +188,32 @@ export async function resolveConflicts(
         remoteValue,
         resolvedValue: localValue,
         winner: 'local',
-        strategy: 'local_pending',
+        strategy: 'local_pending'
       };
       mergedEntity[field] = localValue;
     } else if (NUMERIC_MERGE_FIELDS.has(field) && canNumericMerge(local, remote, field)) {
       // Tier 3b: Numeric field that could theoretically be merged
       // For now, use last-write-wins since we only have final values, not operation deltas
       // True numeric merge (e.g., +50 + +30 = +80) would require an operation inbox system
-      resolution = resolveByTimestamp(field, local, remote, localUpdatedAt, remoteUpdatedAt, deviceId);
+      resolution = resolveByTimestamp(
+        field,
+        local,
+        remote,
+        localUpdatedAt,
+        remoteUpdatedAt,
+        deviceId
+      );
       mergedEntity[field] = resolution.resolvedValue;
     } else {
       // Tier 3c: Last-write-wins with timestamp comparison
-      resolution = resolveByTimestamp(field, local, remote, localUpdatedAt, remoteUpdatedAt, deviceId);
+      resolution = resolveByTimestamp(
+        field,
+        local,
+        remote,
+        localUpdatedAt,
+        remoteUpdatedAt,
+        deviceId
+      );
       mergedEntity[field] = resolution.resolvedValue;
     }
 
@@ -236,7 +240,7 @@ export async function resolveConflicts(
     fieldResolutions,
     mergedEntity,
     hasConflicts: fieldResolutions.length > 0,
-    timestamp,
+    timestamp
   };
 }
 
@@ -292,7 +296,7 @@ function resolveByTimestamp(
     remoteValue,
     resolvedValue,
     winner,
-    strategy: 'last_write',
+    strategy: 'last_write'
   };
 }
 
@@ -313,7 +317,7 @@ function valuesEqual(a: unknown, b: unknown): boolean {
     const aKeys = Object.keys(a as object);
     const bKeys = Object.keys(b as object);
     if (aKeys.length !== bKeys.length) return false;
-    return aKeys.every(key =>
+    return aKeys.every((key) =>
       valuesEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])
     );
   }
@@ -341,7 +345,7 @@ export async function storeConflictHistory(resolution: ConflictResolution): Prom
   if (!resolution.hasConflicts) return;
 
   try {
-    const entries: ConflictHistoryEntry[] = resolution.fieldResolutions.map(fr => ({
+    const entries: ConflictHistoryEntry[] = resolution.fieldResolutions.map((fr) => ({
       entityId: resolution.entityId,
       entityType: resolution.entityType,
       field: fr.field,
@@ -350,7 +354,7 @@ export async function storeConflictHistory(resolution: ConflictResolution): Prom
       resolvedValue: fr.resolvedValue,
       winner: fr.winner,
       strategy: fr.strategy,
-      timestamp: resolution.timestamp,
+      timestamp: resolution.timestamp
     }));
 
     await db.conflictHistory.bulkAdd(entries);
@@ -379,9 +383,7 @@ export async function cleanupConflictHistory(): Promise<number> {
   const cutoffStr = cutoffDate.toISOString();
 
   try {
-    const count = await db.conflictHistory
-      .filter(entry => entry.timestamp < cutoffStr)
-      .delete();
+    const count = await db.conflictHistory.filter((entry) => entry.timestamp < cutoffStr).delete();
 
     if (count > 0) {
       console.log(`[Conflict] Cleaned up ${count} old conflict history entries`);

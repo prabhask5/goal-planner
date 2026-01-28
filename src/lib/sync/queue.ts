@@ -33,7 +33,7 @@ const MAX_SYNC_RETRIES = 5;
  *   11. Empty/timestamp-only sets: Remove (no data change)
  */
 export async function coalescePendingOps(): Promise<number> {
-  const allItems = await db.syncQueue.toArray() as unknown as SyncOperationItem[];
+  const allItems = (await db.syncQueue.toArray()) as unknown as SyncOperationItem[];
   if (allItems.length <= 1) return 0;
 
   // Track changes in memory - apply in batch at the end
@@ -75,12 +75,10 @@ export async function coalescePendingOps(): Promise<number> {
   // === STEP 2: Process each entity group ===
   for (const [, items] of entityGroups) {
     // Sort by timestamp to understand the sequence
-    items.sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
+    items.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    const hasCreate = items.some(i => i.operationType === 'create');
-    const hasDelete = items.some(i => i.operationType === 'delete');
+    const hasCreate = items.some((i) => i.operationType === 'create');
+    const hasDelete = items.some((i) => i.operationType === 'delete');
 
     // Case 1: CREATE followed eventually by DELETE → cancel everything for this entity
     if (hasCreate && hasDelete) {
@@ -102,8 +100,8 @@ export async function coalescePendingOps(): Promise<number> {
 
     // Case 3: Has CREATE but no DELETE → merge all updates/sets into create
     if (hasCreate && !hasDelete) {
-      const createItem = items.find(i => i.operationType === 'create');
-      const otherItems = items.filter(i => i.operationType !== 'create');
+      const createItem = items.find((i) => i.operationType === 'create');
+      const otherItems = items.filter((i) => i.operationType !== 'create');
 
       if (createItem && otherItems.length > 0) {
         let mergedPayload = { ...(createItem.value as Record<string, unknown>) };
@@ -116,9 +114,10 @@ export async function coalescePendingOps(): Promise<number> {
               mergedPayload = { ...mergedPayload, ...(item.value as Record<string, unknown>) };
             }
           } else if (item.operationType === 'increment' && item.field) {
-            const currentVal = typeof mergedPayload[item.field] === 'number'
-              ? mergedPayload[item.field] as number
-              : 0;
+            const currentVal =
+              typeof mergedPayload[item.field] === 'number'
+                ? (mergedPayload[item.field] as number)
+                : 0;
             const delta = typeof item.value === 'number' ? item.value : 0;
             mergedPayload[item.field] = currentVal + delta;
           }
@@ -151,9 +150,7 @@ export async function coalescePendingOps(): Promise<number> {
     const aliveItems = items.filter(isAlive);
     if (aliveItems.length <= 1) continue;
 
-    aliveItems.sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
+    aliveItems.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     let totalDelta = 0;
     for (const item of aliveItems) {
@@ -184,9 +181,7 @@ export async function coalescePendingOps(): Promise<number> {
     const aliveItems = items.filter(isAlive);
     if (aliveItems.length <= 1) continue;
 
-    aliveItems.sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
+    aliveItems.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     let mergedValue: Record<string, unknown> = {};
     for (const item of aliveItems) {
@@ -232,7 +227,7 @@ export async function coalescePendingOps(): Promise<number> {
         }
       } else if (typeof effectiveValue === 'object' && effectiveValue !== null) {
         const payload = effectiveValue as Record<string, unknown>;
-        const keys = Object.keys(payload).filter(k => k !== 'updated_at');
+        const keys = Object.keys(payload).filter((k) => k !== 'updated_at');
         if (keys.length === 0) {
           shouldDelete = true;
         }
@@ -299,21 +294,20 @@ function processFieldOperations(
     if (fieldItems.length <= 1) continue;
 
     // Sort by timestamp
-    fieldItems.sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
+    fieldItems.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    const hasIncrement = fieldItems.some(i => i.operationType === 'increment');
-    const hasSet = fieldItems.some(i => i.operationType === 'set');
+    const hasIncrement = fieldItems.some((i) => i.operationType === 'increment');
+    const hasSet = fieldItems.some((i) => i.operationType === 'set');
 
     if (hasIncrement && hasSet) {
       // Find the last set operation
-      const lastSetIndex = fieldItems.map(i => i.operationType).lastIndexOf('set');
+      const lastSetIndex = fieldItems.map((i) => i.operationType).lastIndexOf('set');
       const lastSet = fieldItems[lastSetIndex];
 
       // Check if there are increments AFTER the last set
-      const incrementsAfterSet = fieldItems.slice(lastSetIndex + 1)
-        .filter(i => i.operationType === 'increment');
+      const incrementsAfterSet = fieldItems
+        .slice(lastSetIndex + 1)
+        .filter((i) => i.operationType === 'increment');
 
       if (incrementsAfterSet.length > 0) {
         // SET followed by INCREMENT(s): sum increments and add to set value
@@ -355,19 +349,21 @@ function shouldRetryItem(item: SyncOperationItem): boolean {
   const lastAttempt = new Date(item.timestamp).getTime();
   const now = Date.now();
 
-  return (now - lastAttempt) >= backoffMs;
+  return now - lastAttempt >= backoffMs;
 }
 
 export async function getPendingSync(): Promise<SyncOperationItem[]> {
-  const allItems = await db.syncQueue.orderBy('timestamp').toArray() as unknown as SyncOperationItem[];
+  const allItems = (await db.syncQueue
+    .orderBy('timestamp')
+    .toArray()) as unknown as SyncOperationItem[];
   // Filter to only items that should be retried (haven't exceeded max retries and backoff has passed)
-  return allItems.filter(item => shouldRetryItem(item));
+  return allItems.filter((item) => shouldRetryItem(item));
 }
 
 // Remove items that have exceeded max retries and return details for notification
 export async function cleanupFailedItems(): Promise<{ count: number; tables: string[] }> {
-  const allItems = await db.syncQueue.toArray() as unknown as SyncOperationItem[];
-  const failedItems = allItems.filter(item => item.retries >= MAX_SYNC_RETRIES);
+  const allItems = (await db.syncQueue.toArray()) as unknown as SyncOperationItem[];
+  const failedItems = allItems.filter((item) => item.retries >= MAX_SYNC_RETRIES);
 
   const affectedTables = new Set<string>();
 
@@ -406,8 +402,8 @@ export async function incrementRetry(id: number): Promise<void> {
 
 // Get entity IDs that have pending sync operations
 export async function getPendingEntityIds(): Promise<Set<string>> {
-  const pending = await db.syncQueue.toArray() as unknown as SyncOperationItem[];
-  return new Set(pending.map(item => item.entityId));
+  const pending = (await db.syncQueue.toArray()) as unknown as SyncOperationItem[];
+  return new Set(pending.map((item) => item.entityId));
 }
 
 /**
@@ -430,7 +426,7 @@ export async function queueSyncOperation(
   const fullItem: SyncOperationItem = {
     ...item,
     timestamp: new Date().toISOString(),
-    retries: 0,
+    retries: 0
   };
 
   await db.syncQueue.add(fullItem);
@@ -451,7 +447,7 @@ export async function queueIncrementOperation(
     entityId,
     operationType: 'increment',
     field,
-    value: delta,
+    value: delta
   });
 }
 
@@ -469,7 +465,7 @@ export async function queueSetOperation(
     entityId,
     operationType: 'set',
     field,
-    value,
+    value
   });
 }
 
@@ -485,7 +481,7 @@ export async function queueMultiFieldSetOperation(
     table,
     entityId,
     operationType: 'set',
-    value: fields,
+    value: fields
   });
 }
 
@@ -501,20 +497,17 @@ export async function queueCreateOperation(
     table,
     entityId,
     operationType: 'create',
-    value: payload,
+    value: payload
   });
 }
 
 /**
  * Helper to queue a delete operation.
  */
-export async function queueDeleteOperation(
-  table: SyncEntityType,
-  entityId: string
-): Promise<void> {
+export async function queueDeleteOperation(table: SyncEntityType, entityId: string): Promise<void> {
   await queueSyncOperation({
     table,
     entityId,
-    operationType: 'delete',
+    operationType: 'delete'
   });
 }

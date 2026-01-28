@@ -9,8 +9,8 @@ import type { Session } from '@supabase/supabase-js';
 
 interface AuthState {
   mode: AuthMode;
-  session: Session | null;          // Supabase session (when mode is 'supabase')
-  offlineProfile: OfflineCredentials | null;  // Cached profile (when mode is 'offline')
+  session: Session | null; // Supabase session (when mode is 'supabase')
+  offlineProfile: OfflineCredentials | null; // Cached profile (when mode is 'offline')
   isLoading: boolean;
   authKickedMessage: string | null; // Message to show when user is kicked back to login
 }
@@ -31,7 +31,7 @@ function createAuthStateStore() {
      * Set auth mode to Supabase with session
      */
     setSupabaseAuth(session: Session): void {
-      update(state => ({
+      update((state) => ({
         ...state,
         mode: 'supabase',
         session,
@@ -45,7 +45,7 @@ function createAuthStateStore() {
      * Set auth mode to offline with cached profile
      */
     setOfflineAuth(profile: OfflineCredentials): void {
-      update(state => ({
+      update((state) => ({
         ...state,
         mode: 'offline',
         session: null,
@@ -59,7 +59,7 @@ function createAuthStateStore() {
      * Set auth mode to none (no session)
      */
     setNoAuth(kickedMessage?: string): void {
-      update(state => ({
+      update((state) => ({
         ...state,
         mode: 'none',
         session: null,
@@ -73,21 +73,21 @@ function createAuthStateStore() {
      * Set loading state
      */
     setLoading(isLoading: boolean): void {
-      update(state => ({ ...state, isLoading }));
+      update((state) => ({ ...state, isLoading }));
     },
 
     /**
      * Clear the auth kicked message
      */
     clearKickedMessage(): void {
-      update(state => ({ ...state, authKickedMessage: null }));
+      update((state) => ({ ...state, authKickedMessage: null }));
     },
 
     /**
      * Update the Supabase session (for token refresh)
      */
     updateSession(session: Session | null): void {
-      update(state => {
+      update((state) => {
         if (!session) {
           // Session was cleared - if online, set no auth
           // If offline and was in supabase mode, we'll check offline session elsewhere
@@ -109,7 +109,7 @@ function createAuthStateStore() {
      * Used when profile is updated to immediately reflect changes in UI
      */
     updateUserProfile(firstName: string, lastName: string): void {
-      update(state => {
+      update((state) => {
         if (state.mode === 'supabase' && state.session) {
           return {
             ...state,
@@ -160,7 +160,7 @@ export const authState = createAuthStateStore();
 // Derived store for checking if user is authenticated (any mode)
 export const isAuthenticated: Readable<boolean> = derived(
   authState,
-  $authState => $authState.mode !== 'none' && !$authState.isLoading
+  ($authState) => $authState.mode !== 'none' && !$authState.isLoading
 );
 
 // Derived store for getting user display info
@@ -168,24 +168,21 @@ export const userDisplayInfo: Readable<{
   firstName: string;
   lastName: string;
   email: string;
-} | null> = derived(
-  authState,
-  $authState => {
-    if ($authState.mode === 'supabase' && $authState.session) {
-      const user = $authState.session.user;
-      return {
-        firstName: user.user_metadata?.first_name || '',
-        lastName: user.user_metadata?.last_name || '',
-        email: user.email || ''
-      };
-    }
-    if ($authState.mode === 'offline' && $authState.offlineProfile) {
-      return {
-        firstName: $authState.offlineProfile.firstName,
-        lastName: $authState.offlineProfile.lastName,
-        email: $authState.offlineProfile.email
-      };
-    }
-    return null;
+} | null> = derived(authState, ($authState) => {
+  if ($authState.mode === 'supabase' && $authState.session) {
+    const user = $authState.session.user;
+    return {
+      firstName: user.user_metadata?.first_name || '',
+      lastName: user.user_metadata?.last_name || '',
+      email: user.email || ''
+    };
   }
-);
+  if ($authState.mode === 'offline' && $authState.offlineProfile) {
+    return {
+      firstName: $authState.offlineProfile.firstName,
+      lastName: $authState.offlineProfile.lastName,
+      email: $authState.offlineProfile.email
+    };
+  }
+  return null;
+});

@@ -15,7 +15,7 @@
     '#fd79a8', // Pink
     '#fdcb6e', // Orange
     '#74b9ff', // Blue
-    '#55efc4', // Teal
+    '#55efc4' // Teal
   ];
 
   interface Props {
@@ -30,7 +30,17 @@
     onUpdateCategory: (id: string, updates: { name?: string; color?: string }) => void;
   }
 
-  let { open, categories, tasks, onClose, onTaskClick, onToggle, onDelete, onDeleteCategory, onUpdateCategory }: Props = $props();
+  let {
+    open,
+    categories,
+    tasks,
+    onClose,
+    onTaskClick,
+    onToggle,
+    onDelete,
+    onDeleteCategory,
+    onUpdateCategory
+  }: Props = $props();
 
   // Editing state
   let editingCategoryId = $state<string | null>(null);
@@ -39,7 +49,7 @@
 
   // Group incomplete tasks by category, sorted by date (soonest first)
   const tasksByCategory = $derived(() => {
-    const incompleteTasks = tasks.filter(t => !t.completed);
+    const incompleteTasks = tasks.filter((t) => !t.completed);
     const grouped = new Map<string | null, LongTermTaskWithCategory[]>();
 
     // Initialize with all categories (even empty ones)
@@ -69,7 +79,7 @@
   // Get category by ID
   function getCategory(id: string | null): TaskCategory | undefined {
     if (!id) return undefined;
-    return categories.find(c => c.id === id);
+    return categories.find((c) => c.id === id);
   }
 
   function formatDate(dateStr: string): string {
@@ -173,9 +183,10 @@
 
   // Confirm before deleting tag
   function handleDeleteTag(id: string, name: string, taskCount: number) {
-    const message = taskCount > 0
-      ? `Delete "${name}"? ${taskCount} task${taskCount === 1 ? '' : 's'} will become untagged.`
-      : `Delete "${name}"?`;
+    const message =
+      taskCount > 0
+        ? `Delete "${name}"? ${taskCount} task${taskCount === 1 ? '' : 's'} will become untagged.`
+        : `Delete "${name}"?`;
 
     if (confirm(message)) {
       onDeleteCategory(id);
@@ -263,10 +274,18 @@
                   </div>
                   <button
                     class="delete-tag-btn"
-                    onclick={() => handleDeleteTag(category.id, category.name, categoryTasks.length)}
+                    onclick={() =>
+                      handleDeleteTag(category.id, category.name, categoryTasks.length)}
                     aria-label="Delete tag"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
                       <line x1="18" y1="6" x2="6" y2="18" />
                       <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
@@ -280,7 +299,10 @@
                         class="task-row"
                         class:overdue={isOverdue(task.due_date)}
                         class:due-today={isDueToday(task.due_date)}
-                        use:remoteChangeAnimation={{ entityId: task.id, entityType: 'long_term_tasks' }}
+                        use:remoteChangeAnimation={{
+                          entityId: task.id,
+                          entityType: 'long_term_tasks'
+                        }}
                       >
                         <button
                           class="checkbox"
@@ -290,13 +312,28 @@
 
                         <button class="task-info" onclick={() => onTaskClick(task)}>
                           <span class="task-name">{task.name}</span>
-                          <span class="due-date" class:overdue={isOverdue(task.due_date)} class:due-today={isDueToday(task.due_date)}>
+                          <span
+                            class="due-date"
+                            class:overdue={isOverdue(task.due_date)}
+                            class:due-today={isDueToday(task.due_date)}
+                          >
                             {formatDate(task.due_date)}
                           </span>
                         </button>
 
-                        <button class="delete-btn" onclick={() => onDelete(task.id)} aria-label="Delete task">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <button
+                          class="delete-btn"
+                          onclick={() => onDelete(task.id)}
+                          aria-label="Delete task"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
                             <line x1="18" y1="6" x2="6" y2="18" />
                             <line x1="6" y1="6" x2="18" y2="18" />
                           </svg>
@@ -316,7 +353,10 @@
               <div class="category-section untagged">
                 <div class="category-header">
                   <div class="category-info">
-                    <span class="category-color-static" style="background-color: rgba(108, 92, 231, 0.5)"></span>
+                    <span
+                      class="category-color-static"
+                      style="background-color: rgba(108, 92, 231, 0.5)"
+                    ></span>
                     <span class="category-name-static">Untagged</span>
                     <span class="task-count">{untaggedTasks.length}</span>
                   </div>
@@ -328,7 +368,10 @@
                       class="task-row"
                       class:overdue={isOverdue(task.due_date)}
                       class:due-today={isDueToday(task.due_date)}
-                      use:remoteChangeAnimation={{ entityId: task.id, entityType: 'long_term_tasks' }}
+                      use:remoteChangeAnimation={{
+                        entityId: task.id,
+                        entityType: 'long_term_tasks'
+                      }}
                     >
                       <button
                         class="checkbox"
@@ -338,13 +381,28 @@
 
                       <button class="task-info" onclick={() => onTaskClick(task)}>
                         <span class="task-name">{task.name}</span>
-                        <span class="due-date" class:overdue={isOverdue(task.due_date)} class:due-today={isDueToday(task.due_date)}>
+                        <span
+                          class="due-date"
+                          class:overdue={isOverdue(task.due_date)}
+                          class:due-today={isDueToday(task.due_date)}
+                        >
                           {formatDate(task.due_date)}
                         </span>
                       </button>
 
-                      <button class="delete-btn" onclick={() => onDelete(task.id)} aria-label="Delete task">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <button
+                        class="delete-btn"
+                        onclick={() => onDelete(task.id)}
+                        aria-label="Delete task"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
                           <line x1="18" y1="6" x2="6" y2="18" />
                           <line x1="6" y1="6" x2="18" y2="18" />
                         </svg>
@@ -379,10 +437,12 @@
   }
 
   .modal {
-    background: linear-gradient(165deg,
+    background: linear-gradient(
+      165deg,
       rgba(20, 20, 40, 0.98) 0%,
       rgba(15, 15, 30, 0.95) 50%,
-      rgba(20, 20, 40, 0.98) 100%);
+      rgba(20, 20, 40, 0.98) 100%
+    );
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
     border: 1px solid rgba(108, 92, 231, 0.3);
@@ -421,12 +481,14 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.6),
       rgba(255, 255, 255, 0.4),
       rgba(108, 92, 231, 0.6),
-      transparent);
+      transparent
+    );
   }
 
   .modal-header {
@@ -435,19 +497,19 @@
     justify-content: space-between;
     padding: 1.5rem 1.75rem;
     border-bottom: 1px solid rgba(108, 92, 231, 0.15);
-    background: linear-gradient(180deg,
-      rgba(108, 92, 231, 0.1) 0%,
-      rgba(108, 92, 231, 0.02) 100%);
+    background: linear-gradient(180deg, rgba(108, 92, 231, 0.1) 0%, rgba(108, 92, 231, 0.02) 100%);
   }
 
   .modal-header h2 {
     font-size: 1.375rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -469,7 +531,11 @@
   }
 
   .close-btn:hover {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.25) 0%, rgba(255, 107, 107, 0.1) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.25) 0%,
+      rgba(255, 107, 107, 0.1) 100%
+    );
     border-color: rgba(255, 107, 107, 0.4);
     color: var(--color-red);
     transform: rotate(90deg) scale(1.1);
@@ -826,13 +892,16 @@
   /* Mobile */
   @media (max-width: 640px) {
     .modal-backdrop {
-      padding: calc(env(safe-area-inset-top, 20px) + 1rem) 1rem calc(80px + env(safe-area-inset-bottom, 0) + 1rem) 1rem;
+      padding: calc(env(safe-area-inset-top, 20px) + 1rem) 1rem
+        calc(80px + env(safe-area-inset-bottom, 0) + 1rem) 1rem;
       align-items: center;
     }
 
     .modal {
       max-width: 100%;
-      max-height: calc(100vh - env(safe-area-inset-top, 20px) - 80px - env(safe-area-inset-bottom, 0) - 2rem);
+      max-height: calc(
+        100vh - env(safe-area-inset-top, 20px) - 80px - env(safe-area-inset-bottom, 0) - 2rem
+      );
       border-radius: var(--radius-xl);
       margin-bottom: 0;
     }

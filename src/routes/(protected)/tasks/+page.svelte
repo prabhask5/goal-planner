@@ -7,7 +7,13 @@
     dailyTasksStore,
     longTermTasksStore
   } from '$lib/stores/data';
-  import type { TaskCategory, Commitment, DailyTask, LongTermTaskWithCategory, CommitmentSection } from '$lib/types';
+  import type {
+    TaskCategory,
+    Commitment,
+    DailyTask,
+    LongTermTaskWithCategory,
+    CommitmentSection
+  } from '$lib/types';
   import { formatDate } from '$lib/utils/dates';
   import { calculateNewOrder } from '$lib/utils/reorder';
 
@@ -45,7 +51,11 @@
   let returnToTagsModal = $state(false); // Track if we should return to Tags modal
 
   // Saved task form state (for when switching to category creation)
-  let savedTaskFormState = $state<{ name: string; dueDate: string; categoryId: string | null } | null>(null);
+  let savedTaskFormState = $state<{
+    name: string;
+    dueDate: string;
+    categoryId: string | null;
+  } | null>(null);
 
   // Keep backdrop visible during modal transitions
   let modalTransitioning = $state(false);
@@ -56,17 +66,17 @@
   // Subscribe to stores
   $effect(() => {
     const unsubs = [
-      taskCategoriesStore.subscribe(v => categories = v),
-      taskCategoriesStore.loading.subscribe(v => categoriesLoading = v),
-      commitmentsStore.subscribe(v => commitments = v),
-      commitmentsStore.loading.subscribe(v => commitmentsLoading = v),
-      dailyTasksStore.subscribe(v => dailyTasks = v),
-      dailyTasksStore.loading.subscribe(v => dailyTasksLoading = v),
-      longTermTasksStore.subscribe(v => longTermTasks = v),
-      longTermTasksStore.loading.subscribe(v => longTermTasksLoading = v)
+      taskCategoriesStore.subscribe((v) => (categories = v)),
+      taskCategoriesStore.loading.subscribe((v) => (categoriesLoading = v)),
+      commitmentsStore.subscribe((v) => (commitments = v)),
+      commitmentsStore.loading.subscribe((v) => (commitmentsLoading = v)),
+      dailyTasksStore.subscribe((v) => (dailyTasks = v)),
+      dailyTasksStore.loading.subscribe((v) => (dailyTasksLoading = v)),
+      longTermTasksStore.subscribe((v) => (longTermTasks = v)),
+      longTermTasksStore.loading.subscribe((v) => (longTermTasksLoading = v))
     ];
 
-    return () => unsubs.forEach(u => u());
+    return () => unsubs.forEach((u) => u());
   });
 
   onMount(async () => {
@@ -83,26 +93,24 @@
 
   const overdueTasks = $derived(
     longTermTasks
-      .filter(t => t.due_date < today && !t.completed)
+      .filter((t) => t.due_date < today && !t.completed)
       .sort((a, b) => a.due_date.localeCompare(b.due_date))
   );
 
   const dueTodayTasks = $derived(
     longTermTasks
-      .filter(t => t.due_date === today && !t.completed)
+      .filter((t) => t.due_date === today && !t.completed)
       .sort((a, b) => a.name.localeCompare(b.name))
   );
 
   const upcomingTasks = $derived(
     longTermTasks
-      .filter(t => t.due_date > today && !t.completed)
+      .filter((t) => t.due_date > today && !t.completed)
       .sort((a, b) => a.due_date.localeCompare(b.due_date))
   );
 
   const completedTasks = $derived(
-    longTermTasks
-      .filter(t => t.completed)
-      .sort((a, b) => a.due_date.localeCompare(b.due_date)) // Earliest to latest
+    longTermTasks.filter((t) => t.completed).sort((a, b) => a.due_date.localeCompare(b.due_date)) // Earliest to latest
   );
 
   // Helper to get user ID
@@ -159,7 +167,7 @@
   async function handleUpdateCategory(id: string, updates: { name?: string; color?: string }) {
     await taskCategoriesStore.update(id, updates);
     // Immediately update tasks in UI to reflect the category changes
-    longTermTasks = longTermTasks.map(task =>
+    longTermTasks = longTermTasks.map((task) =>
       task.category_id === id && task.category
         ? { ...task, category: { ...task.category, ...updates } }
         : task
@@ -169,16 +177,18 @@
   async function handleDeleteCategory(id: string) {
     await taskCategoriesStore.delete(id);
     // Immediately update tasks in UI to remove the deleted category reference
-    longTermTasks = longTermTasks.map(task =>
-      task.category_id === id
-        ? { ...task, category_id: null, category: undefined }
-        : task
+    longTermTasks = longTermTasks.map((task) =>
+      task.category_id === id ? { ...task, category_id: null, category: undefined } : task
     );
   }
 
   // Modal swapping for category creation
   // Simple approach: open new modal BEFORE closing old one, so backdrops overlap
-  function handleRequestCreateCategory(formState: { name: string; dueDate: string; categoryId: string | null }) {
+  function handleRequestCreateCategory(formState: {
+    name: string;
+    dueDate: string;
+    categoryId: string | null;
+  }) {
     savedTaskFormState = formState;
     // Open category modal first (its backdrop appears)
     showCategoryCreate = true;
@@ -204,13 +214,20 @@
   }
 
   // Long-term task handlers
-  async function handleCreateLongTermTask(name: string, dueDate: string, categoryId: string | null) {
+  async function handleCreateLongTermTask(
+    name: string,
+    dueDate: string,
+    categoryId: string | null
+  ) {
     const userId = getUserId();
     if (!userId) return;
     await longTermTasksStore.create(name, dueDate, categoryId, userId);
   }
 
-  async function handleUpdateLongTermTask(id: string, updates: { name?: string; due_date?: string; category_id?: string | null }) {
+  async function handleUpdateLongTermTask(
+    id: string,
+    updates: { name?: string; due_date?: string; category_id?: string | null }
+  ) {
     await longTermTasksStore.update(id, updates);
   }
 
@@ -248,7 +265,7 @@
     <header class="section-header">
       <h2 class="section-title">Today's Tasks</h2>
       <div class="section-actions">
-        <button class="btn btn-secondary btn-sm" onclick={() => showCommitmentsModal = true}>
+        <button class="btn btn-secondary btn-sm" onclick={() => (showCommitmentsModal = true)}>
           Commitments
         </button>
       </div>
@@ -271,14 +288,9 @@
           {/each}
         </div>
       {:else if dailyTasks.length === 0}
-        <div class="empty-inline">
-          No tasks yet. Add one above.
-        </div>
+        <div class="empty-inline">No tasks yet. Add one above.</div>
       {:else}
-        <DraggableList
-          items={dailyTasks}
-          onReorder={handleReorderDailyTask}
-        >
+        <DraggableList items={dailyTasks} onReorder={handleReorderDailyTask}>
           {#snippet renderItem({ item, dragHandleProps })}
             <TaskItem
               task={item}
@@ -297,11 +309,17 @@
     <header class="section-header">
       <h2 class="section-title">Long-term Tasks</h2>
       <div class="section-actions">
-        <button class="btn btn-secondary btn-sm btn-tags" onclick={() => showTagsModal = true}>
+        <button class="btn btn-secondary btn-sm btn-tags" onclick={() => (showTagsModal = true)}>
           <span class="btn-tags-full">View Tags</span>
           <span class="btn-tags-short">Tags</span>
         </button>
-        <button class="btn btn-primary btn-sm" onclick={() => { defaultTaskDate = undefined; showTaskForm = true; }}>
+        <button
+          class="btn btn-primary btn-sm"
+          onclick={() => {
+            defaultTaskDate = undefined;
+            showTaskForm = true;
+          }}
+        >
           + New Task
         </button>
       </div>
@@ -389,7 +407,13 @@
             title="No long-term tasks"
             description="Add tasks with due dates to track them on the calendar"
           >
-            <button class="btn btn-primary" onclick={() => { defaultTaskDate = undefined; showTaskForm = true; }}>
+            <button
+              class="btn btn-primary"
+              onclick={() => {
+                defaultTaskDate = undefined;
+                showTaskForm = true;
+              }}
+            >
               Add First Task
             </button>
           </EmptyState>
@@ -403,7 +427,7 @@
 <CommitmentsModal
   open={showCommitmentsModal}
   {commitments}
-  onClose={() => showCommitmentsModal = false}
+  onClose={() => (showCommitmentsModal = false)}
   onCreate={handleCreateCommitment}
   onUpdate={handleUpdateCommitment}
   onDelete={handleDeleteCommitment}
@@ -416,7 +440,10 @@
   defaultDate={savedTaskFormState?.dueDate ?? defaultTaskDate}
   initialName={savedTaskFormState?.name ?? ''}
   initialCategoryId={savedTaskFormState?.categoryId ?? null}
-  onClose={() => { showTaskForm = false; savedTaskFormState = null; }}
+  onClose={() => {
+    showTaskForm = false;
+    savedTaskFormState = null;
+  }}
   onCreate={handleCreateLongTermTask}
   onDeleteCategory={handleDeleteCategory}
   onRequestCreateCategory={handleRequestCreateCategory}
@@ -450,7 +477,7 @@
   open={showTagsModal}
   {categories}
   tasks={longTermTasks}
-  onClose={() => showTagsModal = false}
+  onClose={() => (showTagsModal = false)}
   onTaskClick={(task) => {
     // Mark that we should return to Tags modal when task modal closes
     returnToTagsModal = true;
@@ -521,10 +548,12 @@
   .section-title {
     font-size: 1.5rem;
     font-weight: 700;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -565,9 +594,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.875rem 1rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.15);
     border-radius: var(--radius-lg);
     position: relative;
@@ -593,10 +620,12 @@
   .task-skeleton-title {
     flex: 1;
     height: 1rem;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(108, 92, 231, 0.12) 0%,
       rgba(108, 92, 231, 0.2) 50%,
-      rgba(108, 92, 231, 0.12) 100%);
+      rgba(108, 92, 231, 0.12) 100%
+    );
     border-radius: var(--radius-sm);
   }
 
@@ -609,10 +638,12 @@
 
   /* Mini Calendar Skeleton */
   .calendar-skeleton-mini {
-    background: linear-gradient(165deg,
+    background: linear-gradient(
+      165deg,
       rgba(15, 15, 30, 0.95) 0%,
       rgba(10, 10, 22, 0.98) 50%,
-      rgba(15, 15, 30, 0.95) 100%);
+      rgba(15, 15, 30, 0.95) 100%
+    );
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-xl);
     overflow: hidden;
@@ -639,10 +670,12 @@
     width: 140px;
     height: 1.25rem;
     border-radius: var(--radius-md);
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(108, 92, 231, 0.15) 0%,
       rgba(108, 92, 231, 0.25) 50%,
-      rgba(108, 92, 231, 0.15) 100%);
+      rgba(108, 92, 231, 0.15) 100%
+    );
   }
 
   .calendar-skeleton-grid {
@@ -674,9 +707,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.875rem 1rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.15);
     border-radius: var(--radius-lg);
     position: relative;
@@ -702,10 +733,12 @@
   .long-task-skeleton-title {
     width: 65%;
     height: 1rem;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(108, 92, 231, 0.12) 0%,
       rgba(108, 92, 231, 0.2) 50%,
-      rgba(108, 92, 231, 0.12) 100%);
+      rgba(108, 92, 231, 0.12) 100%
+    );
     border-radius: var(--radius-sm);
   }
 
@@ -746,13 +779,22 @@
   }
 
   @keyframes skeletonPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 200%; }
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 200%;
+    }
   }
 
   .empty-inline {

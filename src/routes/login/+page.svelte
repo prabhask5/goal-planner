@@ -2,7 +2,13 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
-  import { signIn, signUp, getSession, resendConfirmationEmail, isSessionExpired } from '$lib/supabase/auth';
+  import {
+    signIn,
+    signUp,
+    getSession,
+    resendConfirmationEmail,
+    isSessionExpired
+  } from '$lib/supabase/auth';
   import { getOfflineCredentials, verifyOfflineCredentials } from '$lib/auth/offlineCredentials';
   import { createOfflineSession, getValidOfflineSession } from '$lib/auth/offlineSession';
   import { isOnline } from '$lib/stores/network';
@@ -198,7 +204,8 @@
           error = 'No saved credentials found. Please connect to the internet to sign in.';
           break;
         case 'no_stored_password':
-          error = 'Saved credentials are incomplete. Please connect to the internet to sign in again.';
+          error =
+            'Saved credentials are incomplete. Please connect to the internet to sign in again.';
           break;
         case 'user_mismatch':
         case 'email_mismatch':
@@ -302,16 +309,30 @@
     <div class="brand">
       <div class="brand-icon">
         <svg width="48" height="48" viewBox="0 0 100 100" fill="none">
-          <circle cx="50" cy="50" r="45" stroke="url(#loginBrandGrad)" stroke-width="5" fill="none"/>
-          <path d="M30 52 L45 67 L72 35" stroke="url(#loginCheckGrad)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle
+            cx="50"
+            cy="50"
+            r="45"
+            stroke="url(#loginBrandGrad)"
+            stroke-width="5"
+            fill="none"
+          />
+          <path
+            d="M30 52 L45 67 L72 35"
+            stroke="url(#loginCheckGrad)"
+            stroke-width="6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+          />
           <defs>
             <linearGradient id="loginBrandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#6c5ce7"/>
-              <stop offset="100%" stop-color="#ff79c6"/>
+              <stop offset="0%" stop-color="#6c5ce7" />
+              <stop offset="100%" stop-color="#ff79c6" />
             </linearGradient>
             <linearGradient id="loginCheckGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#26de81"/>
-              <stop offset="100%" stop-color="#00d4ff"/>
+              <stop offset="0%" stop-color="#26de81" />
+              <stop offset="100%" stop-color="#00d4ff" />
             </linearGradient>
           </defs>
         </svg>
@@ -325,7 +346,16 @@
       <div class="login-card">
         <div class="offline-message">
           <div class="offline-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <line x1="1" y1="1" x2="23" y2="23"></line>
               <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
               <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
@@ -337,12 +367,13 @@
           </div>
           <h2 class="card-title">Internet Required</h2>
           <p class="offline-description">
-            Please connect to the internet to sign in. Once you've signed in online first, you'll be able to sign in offline in the future.
+            Please connect to the internet to sign in. Once you've signed in online first, you'll be
+            able to sign in offline in the future.
           </p>
         </div>
       </div>
 
-    <!-- Offline Login Form (offline with cached credentials) -->
+      <!-- Offline Login Form (offline with cached credentials) -->
     {:else if isOfflineLoginMode && cachedCredentials}
       <div class="login-card">
         <div class="offline-user-info">
@@ -370,18 +401,38 @@
               <button
                 type="button"
                 class="password-toggle"
-                onclick={() => showPassword = !showPassword}
+                onclick={() => (showPassword = !showPassword)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {#if showPassword}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                    />
+                    <line x1="1" y1="1" x2="23" y2="23" />
                   </svg>
                 {:else}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
                   </svg>
                 {/if}
               </button>
@@ -389,7 +440,16 @@
           </div>
 
           <p class="offline-hint">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <line x1="1" y1="1" x2="23" y2="23"></line>
               <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
               <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
@@ -413,7 +473,16 @@
         </form>
 
         <div class="offline-switch-account">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -423,7 +492,7 @@
         </div>
       </div>
 
-    <!-- Normal Online Login/Signup Form -->
+      <!-- Normal Online Login/Signup Form -->
     {:else}
       <div class="login-card">
         <h2 class="card-title">{mode === 'login' ? 'Welcome Back' : 'Sign up'}</h2>
@@ -483,18 +552,38 @@
               <button
                 type="button"
                 class="password-toggle"
-                onclick={() => showPassword = !showPassword}
+                onclick={() => (showPassword = !showPassword)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {#if showPassword}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                    />
+                    <line x1="1" y1="1" x2="23" y2="23" />
                   </svg>
                 {:else}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
                   </svg>
                 {/if}
               </button>
@@ -508,9 +597,19 @@
           {#if success}
             <div class="message success">
               <div class="success-content">
-                <svg class="success-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
+                <svg
+                  class="success-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
                 <span>{success}</span>
               </div>
@@ -554,7 +653,16 @@
               <button type="button" class="link-btn" onclick={toggleMode}>Create account</button>
             {:else}
               <span class="signup-disabled">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <line x1="1" y1="1" x2="23" y2="23"></line>
                   <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
                   <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
@@ -589,10 +697,12 @@
     align-items: center;
     justify-content: center;
     overflow-y: auto; /* Allow scrolling when content is larger than viewport */
-    background: radial-gradient(ellipse at center,
+    background: radial-gradient(
+      ellipse at center,
       rgba(15, 15, 35, 1) 0%,
       rgba(5, 5, 16, 1) 50%,
-      rgba(0, 0, 5, 1) 100%);
+      rgba(0, 0, 5, 1) 100%
+    );
   }
 
   /* Background effects container - clips decorative elements without affecting content */
@@ -649,17 +759,28 @@
       radial-gradient(2.5px 2.5px at 75% 75%, rgba(108, 92, 231, 1) 0%, transparent 100%),
       radial-gradient(2px 2px at 50% 90%, rgba(255, 121, 198, 0.9) 0%, transparent 100%);
     background-size: 400px 400px;
-    animation: starsTwinkle 4s ease-in-out infinite, starsDrift 200s linear infinite;
+    animation:
+      starsTwinkle 4s ease-in-out infinite,
+      starsDrift 200s linear infinite;
   }
 
   @keyframes starsDrift {
-    from { transform: translateY(0) translateX(0); }
-    to { transform: translateY(-100px) translateX(-50px); }
+    from {
+      transform: translateY(0) translateX(0);
+    }
+    to {
+      transform: translateY(-100px) translateX(-50px);
+    }
   }
 
   @keyframes starsTwinkle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -680,7 +801,9 @@
     top: -250px;
     right: -200px;
     background: radial-gradient(ellipse, rgba(108, 92, 231, 0.6) 0%, transparent 70%);
-    animation: nebulaPulse 8s ease-in-out infinite, nebulaFloat 20s ease-in-out infinite;
+    animation:
+      nebulaPulse 8s ease-in-out infinite,
+      nebulaFloat 20s ease-in-out infinite;
   }
 
   .nebula-2 {
@@ -689,7 +812,9 @@
     bottom: -200px;
     left: -150px;
     background: radial-gradient(ellipse, rgba(255, 121, 198, 0.5) 0%, transparent 70%);
-    animation: nebulaPulse 10s ease-in-out infinite 2s, nebulaFloat 25s ease-in-out infinite reverse;
+    animation:
+      nebulaPulse 10s ease-in-out infinite 2s,
+      nebulaFloat 25s ease-in-out infinite reverse;
   }
 
   .nebula-3 {
@@ -703,14 +828,28 @@
   }
 
   @keyframes nebulaPulse {
-    0%, 100% { opacity: 0.4; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.1); }
+    0%,
+    100% {
+      opacity: 0.4;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.1);
+    }
   }
 
   @keyframes nebulaFloat {
-    0%, 100% { transform: translate(0, 0); }
-    33% { transform: translate(30px, -20px); }
-    66% { transform: translate(-20px, 30px); }
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    33% {
+      transform: translate(30px, -20px);
+    }
+    66% {
+      transform: translate(-20px, 30px);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -755,8 +894,12 @@
   }
 
   @keyframes orbitRotate {
-    from { transform: translate(-50%, -50%) rotate(0deg); }
-    to { transform: translate(-50%, -50%) rotate(360deg); }
+    from {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
   }
 
   .orbit-particle {
@@ -770,13 +913,17 @@
 
   .particle-1 {
     background: var(--color-primary);
-    box-shadow: 0 0 15px var(--color-primary-glow), 0 0 30px var(--color-primary-glow);
+    box-shadow:
+      0 0 15px var(--color-primary-glow),
+      0 0 30px var(--color-primary-glow);
     animation: orbitParticle1 40s linear infinite;
   }
 
   .particle-2 {
     background: var(--color-accent);
-    box-shadow: 0 0 15px var(--color-accent-glow), 0 0 30px var(--color-accent-glow);
+    box-shadow:
+      0 0 15px var(--color-accent-glow),
+      0 0 30px var(--color-accent-glow);
     animation: orbitParticle2 60s linear infinite reverse;
     width: 4px;
     height: 4px;
@@ -784,25 +931,39 @@
 
   .particle-3 {
     background: var(--color-success);
-    box-shadow: 0 0 15px var(--color-success-glow), 0 0 30px var(--color-success-glow);
+    box-shadow:
+      0 0 15px var(--color-success-glow),
+      0 0 30px var(--color-success-glow);
     animation: orbitParticle3 80s linear infinite;
     width: 5px;
     height: 5px;
   }
 
   @keyframes orbitParticle1 {
-    from { transform: rotate(0deg) translateX(200px) rotate(0deg); }
-    to { transform: rotate(360deg) translateX(200px) rotate(-360deg); }
+    from {
+      transform: rotate(0deg) translateX(200px) rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg) translateX(200px) rotate(-360deg);
+    }
   }
 
   @keyframes orbitParticle2 {
-    from { transform: rotate(0deg) translateX(300px) rotate(0deg); }
-    to { transform: rotate(360deg) translateX(300px) rotate(-360deg); }
+    from {
+      transform: rotate(0deg) translateX(300px) rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg) translateX(300px) rotate(-360deg);
+    }
   }
 
   @keyframes orbitParticle3 {
-    from { transform: rotate(0deg) translateX(400px) rotate(0deg); }
-    to { transform: rotate(360deg) translateX(400px) rotate(-360deg); }
+    from {
+      transform: rotate(0deg) translateX(400px) rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg) translateX(400px) rotate(-360deg);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -813,10 +974,12 @@
     position: absolute;
     width: 120px;
     height: 2px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(255, 255, 255, 0) 0%,
       rgba(255, 255, 255, 0.8) 50%,
-      rgba(108, 92, 231, 1) 100%);
+      rgba(108, 92, 231, 1) 100%
+    );
     border-radius: 100px;
     opacity: 0;
     pointer-events: none;
@@ -837,10 +1000,23 @@
   }
 
   @keyframes shootingStar {
-    0%, 90%, 100% { opacity: 0; transform: rotate(-35deg) translateX(0); }
-    92% { opacity: 1; }
-    95% { opacity: 1; transform: rotate(-35deg) translateX(350px); }
-    96% { opacity: 0; transform: rotate(-35deg) translateX(400px); }
+    0%,
+    90%,
+    100% {
+      opacity: 0;
+      transform: rotate(-35deg) translateX(0);
+    }
+    92% {
+      opacity: 1;
+    }
+    95% {
+      opacity: 1;
+      transform: rotate(-35deg) translateX(350px);
+    }
+    96% {
+      opacity: 0;
+      transform: rotate(-35deg) translateX(400px);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -867,10 +1043,21 @@
   }
 
   @keyframes particleFloat {
-    0%, 100% { transform: translateY(0) translateX(0); opacity: var(--opacity); }
-    25% { transform: translateY(-30px) translateX(15px); }
-    50% { transform: translateY(-50px) translateX(-10px); opacity: calc(var(--opacity) * 1.5); }
-    75% { transform: translateY(-20px) translateX(20px); }
+    0%,
+    100% {
+      transform: translateY(0) translateX(0);
+      opacity: var(--opacity);
+    }
+    25% {
+      transform: translateY(-30px) translateX(15px);
+    }
+    50% {
+      transform: translateY(-50px) translateX(-10px);
+      opacity: calc(var(--opacity) * 1.5);
+    }
+    75% {
+      transform: translateY(-20px) translateX(20px);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -893,8 +1080,14 @@
   }
 
   @keyframes contentReveal {
-    0% { opacity: 0; transform: translateY(30px) scale(0.95); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+    0% {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -915,17 +1108,24 @@
   }
 
   @keyframes brandFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
   }
 
   .brand-title {
     font-size: 2.5rem;
     font-weight: 800;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -936,8 +1136,12 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .brand-tagline {
@@ -955,9 +1159,7 @@
   .login-card {
     width: 100%;
     padding: 2.5rem;
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.9) 0%,
-      rgba(20, 20, 40, 0.85) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.9) 0%, rgba(20, 20, 40, 0.85) 100%);
     border: 1px solid rgba(108, 92, 231, 0.25);
     border-radius: var(--radius-2xl);
     backdrop-filter: blur(24px);
@@ -977,12 +1179,14 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.5),
       rgba(255, 255, 255, 0.3),
       rgba(255, 121, 198, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   .card-title {
@@ -1072,7 +1276,11 @@
   }
 
   .error {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(255, 107, 107, 0.06) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.2) 0%,
+      rgba(255, 107, 107, 0.06) 100%
+    );
     color: var(--color-red);
     border: 1px solid rgba(255, 107, 107, 0.4);
     box-shadow: 0 0 20px rgba(255, 107, 107, 0.1);
@@ -1171,7 +1379,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .toggle-mode {
@@ -1227,13 +1437,31 @@
       padding: 3rem;
     }
 
-    .orbit-1 { width: 500px; height: 500px; }
-    .orbit-2 { width: 750px; height: 750px; }
-    .orbit-3 { width: 1000px; height: 1000px; }
+    .orbit-1 {
+      width: 500px;
+      height: 500px;
+    }
+    .orbit-2 {
+      width: 750px;
+      height: 750px;
+    }
+    .orbit-3 {
+      width: 1000px;
+      height: 1000px;
+    }
 
-    .nebula-1 { width: 800px; height: 800px; }
-    .nebula-2 { width: 700px; height: 700px; }
-    .nebula-3 { width: 600px; height: 600px; }
+    .nebula-1 {
+      width: 800px;
+      height: 800px;
+    }
+    .nebula-2 {
+      width: 700px;
+      height: 700px;
+    }
+    .nebula-3 {
+      width: 600px;
+      height: 600px;
+    }
   }
 
   /* Tablets */
@@ -1288,28 +1516,58 @@
       margin-bottom: 1.75rem;
     }
 
-    .orbit-1 { width: 320px; height: 320px; }
-    .orbit-2 { width: 480px; height: 480px; }
-    .orbit-3 { width: 640px; height: 640px; }
+    .orbit-1 {
+      width: 320px;
+      height: 320px;
+    }
+    .orbit-2 {
+      width: 480px;
+      height: 480px;
+    }
+    .orbit-3 {
+      width: 640px;
+      height: 640px;
+    }
 
     @keyframes orbitParticle1 {
-      from { transform: rotate(0deg) translateX(160px) rotate(0deg); }
-      to { transform: rotate(360deg) translateX(160px) rotate(-360deg); }
+      from {
+        transform: rotate(0deg) translateX(160px) rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg) translateX(160px) rotate(-360deg);
+      }
     }
 
     @keyframes orbitParticle2 {
-      from { transform: rotate(0deg) translateX(240px) rotate(0deg); }
-      to { transform: rotate(360deg) translateX(240px) rotate(-360deg); }
+      from {
+        transform: rotate(0deg) translateX(240px) rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg) translateX(240px) rotate(-360deg);
+      }
     }
 
     @keyframes orbitParticle3 {
-      from { transform: rotate(0deg) translateX(320px) rotate(0deg); }
-      to { transform: rotate(360deg) translateX(320px) rotate(-360deg); }
+      from {
+        transform: rotate(0deg) translateX(320px) rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg) translateX(320px) rotate(-360deg);
+      }
     }
 
-    .nebula-1 { width: 500px; height: 500px; }
-    .nebula-2 { width: 450px; height: 450px; }
-    .nebula-3 { width: 400px; height: 400px; }
+    .nebula-1 {
+      width: 500px;
+      height: 500px;
+    }
+    .nebula-2 {
+      width: 450px;
+      height: 450px;
+    }
+    .nebula-3 {
+      width: 400px;
+      height: 400px;
+    }
   }
 
   /* iPhone 16 Pro / 15 Pro / 14 Pro (393px width) */
@@ -1451,28 +1709,58 @@
       padding: 0.625rem;
     }
 
-    .orbit-1 { width: 240px; height: 240px; }
-    .orbit-2 { width: 360px; height: 360px; }
-    .orbit-3 { width: 480px; height: 480px; }
+    .orbit-1 {
+      width: 240px;
+      height: 240px;
+    }
+    .orbit-2 {
+      width: 360px;
+      height: 360px;
+    }
+    .orbit-3 {
+      width: 480px;
+      height: 480px;
+    }
 
     @keyframes orbitParticle1 {
-      from { transform: rotate(0deg) translateX(120px) rotate(0deg); }
-      to { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
+      from {
+        transform: rotate(0deg) translateX(120px) rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg) translateX(120px) rotate(-360deg);
+      }
     }
 
     @keyframes orbitParticle2 {
-      from { transform: rotate(0deg) translateX(180px) rotate(0deg); }
-      to { transform: rotate(360deg) translateX(180px) rotate(-360deg); }
+      from {
+        transform: rotate(0deg) translateX(180px) rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg) translateX(180px) rotate(-360deg);
+      }
     }
 
     @keyframes orbitParticle3 {
-      from { transform: rotate(0deg) translateX(240px) rotate(0deg); }
-      to { transform: rotate(360deg) translateX(240px) rotate(-360deg); }
+      from {
+        transform: rotate(0deg) translateX(240px) rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg) translateX(240px) rotate(-360deg);
+      }
     }
 
-    .nebula-1 { width: 350px; height: 350px; }
-    .nebula-2 { width: 300px; height: 300px; }
-    .nebula-3 { width: 250px; height: 250px; }
+    .nebula-1 {
+      width: 350px;
+      height: 350px;
+    }
+    .nebula-2 {
+      width: 300px;
+      height: 300px;
+    }
+    .nebula-3 {
+      width: 250px;
+      height: 250px;
+    }
   }
 
   /* Reduced motion */

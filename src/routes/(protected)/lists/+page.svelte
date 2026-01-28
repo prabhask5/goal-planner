@@ -84,9 +84,7 @@
 <div class="container">
   <header class="page-header">
     <h1>Goal Lists</h1>
-    <button class="btn btn-primary" onclick={() => (showCreateModal = true)}>
-      + New List
-    </button>
+    <button class="btn btn-primary" onclick={() => (showCreateModal = true)}> + New List </button>
   </header>
 
   {#if error}
@@ -135,7 +133,10 @@
             <h3 class="list-name">{list.name}</h3>
             <button
               class="delete-btn"
-              onclick={(e) => { e.stopPropagation(); handleDeleteList(list.id); }}
+              onclick={(e) => {
+                e.stopPropagation();
+                handleDeleteList(list.id);
+              }}
               aria-label="Delete list"
             >
               ×
@@ -188,10 +189,12 @@
   .page-header h1 {
     font-size: 2.25rem;
     font-weight: 800;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -201,12 +204,20 @@
   }
 
   @keyframes textShimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
   }
 
   .error-banner {
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.18) 0%, rgba(255, 107, 107, 0.06) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 107, 0.18) 0%,
+      rgba(255, 107, 107, 0.06) 100%
+    );
     border: 1px solid rgba(255, 107, 107, 0.4);
     border-radius: var(--radius-xl);
     padding: 1.25rem 1.5rem;
@@ -233,9 +244,7 @@
 
   /* Skeleton Loading Cards */
   .skeleton-card {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     border: 1px solid rgba(108, 92, 231, 0.15);
     border-radius: var(--radius-2xl);
     padding: 1.75rem;
@@ -252,17 +261,24 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.2),
       rgba(255, 255, 255, 0.1),
       rgba(108, 92, 231, 0.2),
-      transparent);
+      transparent
+    );
   }
 
   @keyframes skeletonPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   .skeleton-header {
@@ -275,10 +291,12 @@
   .skeleton-title {
     height: 1.375rem;
     width: 65%;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba(108, 92, 231, 0.15) 0%,
       rgba(108, 92, 231, 0.25) 50%,
-      rgba(108, 92, 231, 0.15) 100%);
+      rgba(108, 92, 231, 0.15) 100%
+    );
     border-radius: var(--radius-md);
   }
 
@@ -324,8 +342,12 @@
   }
 
   @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 200%; }
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 200%;
+    }
   }
 
   .lists-grid {
@@ -335,9 +357,7 @@
   }
 
   .list-card {
-    background: linear-gradient(165deg,
-      rgba(15, 15, 30, 0.95) 0%,
-      rgba(20, 20, 40, 0.9) 100%);
+    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(108, 92, 231, 0.2);
@@ -357,12 +377,14 @@
     left: 15%;
     right: 15%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.4),
       rgba(255, 255, 255, 0.2),
       rgba(108, 92, 231, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   /* Hover nebula effect */

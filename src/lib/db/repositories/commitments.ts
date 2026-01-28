@@ -3,13 +3,17 @@ import type { Commitment, CommitmentSection } from '$lib/types';
 import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush, markEntityModified } from '$lib/sync/engine';
 
-export async function createCommitment(name: string, section: CommitmentSection, userId: string): Promise<Commitment> {
+export async function createCommitment(
+  name: string,
+  section: CommitmentSection,
+  userId: string
+): Promise<Commitment> {
   const timestamp = now();
 
   // Get the lowest order within the section to insert at the top (outside transaction for read)
   const existing = await db.commitments.where('user_id').equals(userId).toArray();
-  const sectionItems = existing.filter(c => c.section === section && !c.deleted);
-  const minOrder = sectionItems.length > 0 ? Math.min(...sectionItems.map(c => c.order)) - 1 : 0;
+  const sectionItems = existing.filter((c) => c.section === section && !c.deleted);
+  const minOrder = sectionItems.length > 0 ? Math.min(...sectionItems.map((c) => c.order)) - 1 : 0;
 
   const newCommitment: Commitment = {
     id: generateId(),
@@ -39,7 +43,10 @@ export async function createCommitment(name: string, section: CommitmentSection,
   return newCommitment;
 }
 
-export async function updateCommitment(id: string, updates: Partial<Pick<Commitment, 'name' | 'section'>>): Promise<Commitment | undefined> {
+export async function updateCommitment(
+  id: string,
+  updates: Partial<Pick<Commitment, 'name' | 'section'>>
+): Promise<Commitment | undefined> {
   const timestamp = now();
 
   // Use transaction to ensure atomicity
@@ -78,7 +85,10 @@ export async function deleteCommitment(id: string): Promise<void> {
   scheduleSyncPush();
 }
 
-export async function reorderCommitment(id: string, newOrder: number): Promise<Commitment | undefined> {
+export async function reorderCommitment(
+  id: string,
+  newOrder: number
+): Promise<Commitment | undefined> {
   const timestamp = now();
 
   // Use transaction to ensure atomicity

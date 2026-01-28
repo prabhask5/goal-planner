@@ -168,20 +168,20 @@ export interface LongTermTaskWithCategory extends LongTermTask {
 // ============================================================
 
 export interface OfflineCredentials {
-  id: string;              // 'current_user' - singleton pattern
-  userId: string;          // Supabase user ID
+  id: string; // 'current_user' - singleton pattern
+  userId: string; // Supabase user ID
   email: string;
-  password: string;        // Plaintext password (user's own password, stored locally)
+  password: string; // Plaintext password (user's own password, stored locally)
   firstName: string;
   lastName: string;
-  cachedAt: string;        // ISO timestamp when credentials were cached
+  cachedAt: string; // ISO timestamp when credentials were cached
 }
 
 export interface OfflineSession {
-  id: string;              // 'current_session' - singleton pattern
-  userId: string;          // Supabase user ID
-  offlineToken: string;    // UUID token for offline session
-  createdAt: string;       // ISO timestamp
+  id: string; // 'current_session' - singleton pattern
+  userId: string; // Supabase user ID
+  offlineToken: string; // UUID token for offline session
+  createdAt: string; // ISO timestamp
   // Note: No expiresAt - sessions don't expire automatically
   // They are only revoked on: (1) successful online re-auth, (2) logout
 }
@@ -198,9 +198,9 @@ export type FocusStatus = 'running' | 'paused' | 'stopped';
 export interface FocusSettings {
   id: string;
   user_id: string;
-  focus_duration: number;        // minutes (default: 25)
-  break_duration: number;        // minutes (default: 5)
-  long_break_duration: number;   // minutes (default: 15)
+  focus_duration: number; // minutes (default: 25)
+  break_duration: number; // minutes (default: 5)
+  long_break_duration: number; // minutes (default: 15)
   cycles_before_long_break: number;
   auto_start_breaks: boolean;
   auto_start_focus: boolean;
@@ -240,7 +240,7 @@ export interface BlockList {
   id: string;
   user_id: string;
   name: string;
-  active_days: DayOfWeek[] | null;  // null = all days
+  active_days: DayOfWeek[] | null; // null = all days
   is_enabled: boolean;
   order: number;
   created_at: string;

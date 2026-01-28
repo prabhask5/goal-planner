@@ -10,10 +10,8 @@ export async function createDailyTask(name: string, userId: string): Promise<Dai
   // This is backwards-compatible: existing items (order 0,1,2...) stay in place,
   // new items get -1,-2,-3... and appear first when sorted ascending
   const existing = await db.dailyTasks.where('user_id').equals(userId).toArray();
-  const activeItems = existing.filter(t => !t.deleted);
-  const minOrder = activeItems.length > 0
-    ? Math.min(...activeItems.map(t => t.order))
-    : 0;
+  const activeItems = existing.filter((t) => !t.deleted);
+  const minOrder = activeItems.length > 0 ? Math.min(...activeItems.map((t) => t.order)) : 0;
   const nextOrder = minOrder - 1;
 
   const newTask: DailyTask = {
@@ -44,7 +42,10 @@ export async function createDailyTask(name: string, userId: string): Promise<Dai
   return newTask;
 }
 
-export async function updateDailyTask(id: string, updates: Partial<Pick<DailyTask, 'name' | 'completed'>>): Promise<DailyTask | undefined> {
+export async function updateDailyTask(
+  id: string,
+  updates: Partial<Pick<DailyTask, 'name' | 'completed'>>
+): Promise<DailyTask | undefined> {
   const timestamp = now();
 
   // Use transaction to ensure atomicity
@@ -114,7 +115,10 @@ export async function deleteDailyTask(id: string): Promise<void> {
   scheduleSyncPush();
 }
 
-export async function reorderDailyTask(id: string, newOrder: number): Promise<DailyTask | undefined> {
+export async function reorderDailyTask(
+  id: string,
+  newOrder: number
+): Promise<DailyTask | undefined> {
   const timestamp = now();
 
   // Use transaction to ensure atomicity
@@ -146,7 +150,7 @@ export async function clearCompletedDailyTasks(userId: string): Promise<void> {
 
   // Get tasks outside transaction for read
   const tasks = await db.dailyTasks.where('user_id').equals(userId).toArray();
-  const completedTasks = tasks.filter(t => t.completed && !t.deleted);
+  const completedTasks = tasks.filter((t) => t.completed && !t.deleted);
 
   if (completedTasks.length === 0) return;
 

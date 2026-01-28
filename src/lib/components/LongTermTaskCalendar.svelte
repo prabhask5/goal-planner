@@ -39,13 +39,15 @@
 
   const isViewingCurrentMonth = $derived(() => {
     const today = new Date();
-    return currentDate.getMonth() === today.getMonth() &&
-           currentDate.getFullYear() === today.getFullYear();
+    return (
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getFullYear() === today.getFullYear()
+    );
   });
 
   function getTasksForDate(date: Date): LongTermTaskWithCategory[] {
     const dateStr = formatDate(date);
-    return tasks.filter(t => t.due_date === dateStr && !t.completed);
+    return tasks.filter((t) => t.due_date === dateStr && !t.completed);
   }
 
   function isOverdue(task: LongTermTaskWithCategory): boolean {
@@ -59,20 +61,34 @@
 <div class="calendar">
   <div class="calendar-header">
     <button class="nav-btn" onclick={goToPreviousMonth} aria-label="Previous month">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+      >
         <polyline points="15 18 9 12 15 6" />
       </svg>
     </button>
     <div class="month-title-wrapper">
       <h2 class="month-title">{formatMonthYear(currentDate)}</h2>
       {#if !isViewingCurrentMonth()}
-        <button class="today-btn" onclick={goToToday}>
-          Today
-        </button>
+        <button class="today-btn" onclick={goToToday}> Today </button>
       {/if}
     </div>
     <button class="nav-btn" onclick={goToNextMonth} aria-label="Next month">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+      >
         <polyline points="9 18 15 12 9 6" />
       </svg>
     </button>
@@ -112,7 +128,10 @@
                 class="task-chip"
                 class:overdue={isOverdue(task)}
                 style="--chip-color: {task.category?.color || '#6c5ce7'}"
-                onclick={(e) => { e.stopPropagation(); onTaskClick(task); }}
+                onclick={(e) => {
+                  e.stopPropagation();
+                  onTaskClick(task);
+                }}
                 title={task.name}
               >
                 {task.name}
@@ -130,10 +149,12 @@
 
 <style>
   .calendar {
-    background: linear-gradient(165deg,
+    background: linear-gradient(
+      165deg,
       rgba(15, 15, 30, 0.95) 0%,
       rgba(10, 10, 22, 0.98) 50%,
-      rgba(15, 15, 30, 0.95) 100%);
+      rgba(15, 15, 30, 0.95) 100%
+    );
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(108, 92, 231, 0.25);
@@ -153,12 +174,14 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       transparent,
       rgba(108, 92, 231, 0.5),
       rgba(255, 255, 255, 0.3),
       rgba(255, 121, 198, 0.4),
-      transparent);
+      transparent
+    );
   }
 
   .calendar-header {
@@ -204,10 +227,12 @@
   .month-title {
     font-size: 1.375rem;
     font-weight: 700;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -272,9 +297,7 @@
     flex-direction: column;
     align-items: flex-start;
     padding: 0.5rem;
-    background: linear-gradient(145deg,
-      rgba(20, 20, 40, 0.95) 0%,
-      rgba(15, 15, 32, 0.9) 100%);
+    background: linear-gradient(145deg, rgba(20, 20, 40, 0.95) 0%, rgba(15, 15, 32, 0.9) 100%);
     position: relative;
     transition: all 0.3s var(--ease-out);
     border-radius: var(--radius-md);
@@ -349,8 +372,13 @@
   }
 
   @keyframes overdueGlow {
-    0%, 100% { box-shadow: 0 0 5px rgba(255, 107, 107, 0.5); }
-    50% { box-shadow: 0 0 15px rgba(255, 107, 107, 0.8); }
+    0%,
+    100% {
+      box-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(255, 107, 107, 0.8);
+    }
   }
 
   .more-tasks {

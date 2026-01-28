@@ -5,7 +5,9 @@
   interface Props {
     items: T[];
     onReorder: (itemId: string, newOrder: number) => Promise<void>;
-    renderItem: Snippet<[{ item: T; dragHandleProps: { onpointerdown: (e: PointerEvent) => void } }]>;
+    renderItem: Snippet<
+      [{ item: T; dragHandleProps: { onpointerdown: (e: PointerEvent) => void } }]
+    >;
     disabled?: boolean;
   }
 
@@ -122,19 +124,33 @@
     animation: fadeInUp 0.4s var(--ease-out) backwards;
   }
 
-  .draggable-item-wrapper:nth-child(1) { animation-delay: 0s; }
-  .draggable-item-wrapper:nth-child(2) { animation-delay: 0.06s; }
-  .draggable-item-wrapper:nth-child(3) { animation-delay: 0.12s; }
-  .draggable-item-wrapper:nth-child(4) { animation-delay: 0.18s; }
-  .draggable-item-wrapper:nth-child(5) { animation-delay: 0.24s; }
-  .draggable-item-wrapper:nth-child(6) { animation-delay: 0.3s; }
+  .draggable-item-wrapper:nth-child(1) {
+    animation-delay: 0s;
+  }
+  .draggable-item-wrapper:nth-child(2) {
+    animation-delay: 0.06s;
+  }
+  .draggable-item-wrapper:nth-child(3) {
+    animation-delay: 0.12s;
+  }
+  .draggable-item-wrapper:nth-child(4) {
+    animation-delay: 0.18s;
+  }
+  .draggable-item-wrapper:nth-child(5) {
+    animation-delay: 0.24s;
+  }
+  .draggable-item-wrapper:nth-child(6) {
+    animation-delay: 0.3s;
+  }
 
   .draggable-item-wrapper.dragging {
     opacity: 0.7;
     z-index: 100;
     transform: scale(1.03) rotate(0.5deg);
     filter: brightness(1.15);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 60px var(--color-primary-glow);
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.4),
+      0 0 60px var(--color-primary-glow);
   }
 
   .draggable-item-wrapper.drop-above::before {
@@ -146,7 +162,9 @@
     height: 4px;
     background: var(--gradient-primary);
     border-radius: var(--radius-full);
-    box-shadow: 0 0 25px var(--color-primary-glow), 0 0 50px rgba(108, 92, 231, 0.3);
+    box-shadow:
+      0 0 25px var(--color-primary-glow),
+      0 0 50px rgba(108, 92, 231, 0.3);
     animation: dropIndicatorPulse 1s var(--ease-smooth) infinite;
   }
 
@@ -159,18 +177,25 @@
     height: 4px;
     background: var(--gradient-primary);
     border-radius: var(--radius-full);
-    box-shadow: 0 0 25px var(--color-primary-glow), 0 0 50px rgba(108, 92, 231, 0.3);
+    box-shadow:
+      0 0 25px var(--color-primary-glow),
+      0 0 50px rgba(108, 92, 231, 0.3);
     animation: dropIndicatorPulse 1s var(--ease-smooth) infinite;
   }
 
   @keyframes dropIndicatorPulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
-      box-shadow: 0 0 25px var(--color-primary-glow), 0 0 50px rgba(108, 92, 231, 0.3);
+      box-shadow:
+        0 0 25px var(--color-primary-glow),
+        0 0 50px rgba(108, 92, 231, 0.3);
     }
     50% {
       opacity: 0.8;
-      box-shadow: 0 0 35px var(--color-primary-glow), 0 0 70px rgba(108, 92, 231, 0.4);
+      box-shadow:
+        0 0 35px var(--color-primary-glow),
+        0 0 70px rgba(108, 92, 231, 0.4);
     }
   }
 

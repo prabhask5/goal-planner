@@ -48,13 +48,7 @@
 >
   <div class="form-group">
     <label for="goal-name">Goal Name</label>
-    <input
-      id="goal-name"
-      type="text"
-      bind:value={name}
-      placeholder="Enter goal name..."
-      required
-    />
+    <input id="goal-name" type="text" bind:value={name} placeholder="Enter goal name..." required />
   </div>
 
   <div class="form-group">
@@ -84,21 +78,13 @@
   {#if type === 'incremental'}
     <div class="form-group">
       <label for="target-value">Target Value</label>
-      <input
-        id="target-value"
-        type="number"
-        bind:value={targetValue}
-        min="1"
-        required
-      />
+      <input id="target-value" type="number" bind:value={targetValue} min="1" required />
     </div>
   {/if}
 
   <div class="form-actions">
     {#if onCancel}
-      <button type="button" class="btn btn-secondary" onclick={onCancel}>
-        Cancel
-      </button>
+      <button type="button" class="btn btn-secondary" onclick={onCancel}> Cancel </button>
     {/if}
     <button type="submit" class="btn btn-primary">
       {submitLabel}
@@ -139,9 +125,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1.25rem 1rem;
-    background: linear-gradient(145deg,
-      rgba(20, 20, 40, 0.9) 0%,
-      rgba(15, 15, 32, 0.95) 100%);
+    background: linear-gradient(145deg, rgba(20, 20, 40, 0.9) 0%, rgba(15, 15, 32, 0.95) 100%);
     border: 2px solid rgba(108, 92, 231, 0.2);
     border-radius: var(--radius-xl);
     transition: all 0.35s var(--ease-out);
@@ -172,9 +156,7 @@
 
   .type-btn.active {
     border-color: var(--color-primary);
-    background: linear-gradient(145deg,
-      rgba(108, 92, 231, 0.2) 0%,
-      rgba(15, 15, 32, 0.95) 100%);
+    background: linear-gradient(145deg, rgba(108, 92, 231, 0.2) 0%, rgba(15, 15, 32, 0.95) 100%);
     box-shadow:
       0 0 40px var(--color-primary-glow),
       inset 0 0 40px rgba(108, 92, 231, 0.1),
@@ -202,8 +184,13 @@
   }
 
   @keyframes iconGlow {
-    0%, 100% { filter: drop-shadow(0 0 15px var(--color-primary-glow)); }
-    50% { filter: drop-shadow(0 0 25px var(--color-primary-glow)); }
+    0%,
+    100% {
+      filter: drop-shadow(0 0 15px var(--color-primary-glow));
+    }
+    50% {
+      filter: drop-shadow(0 0 25px var(--color-primary-glow));
+    }
   }
 
   .type-btn span:last-child {

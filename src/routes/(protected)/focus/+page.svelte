@@ -42,21 +42,21 @@
   // Subscribe to stores
   $effect(() => {
     const unsubs = [
-      focusStore.subscribe(state => {
+      focusStore.subscribe((state) => {
         settings = state.settings;
         session = state.session;
         remainingMs = state.remainingMs;
         isRunning = state.isRunning;
       }),
-      focusStore.loading.subscribe(v => loading = v),
-      blockListStore.subscribe(v => blockLists = v),
+      focusStore.loading.subscribe((v) => (loading = v)),
+      blockListStore.subscribe((v) => (blockLists = v)),
       // Refresh focus time when it's updated (e.g., after phase completion)
       focusTimeUpdated.subscribe(() => {
         loadTodayFocusTime();
       })
     ];
 
-    return () => unsubs.forEach(u => u());
+    return () => unsubs.forEach((u) => u());
   });
 
   // Focus time tick interval for live updates
@@ -147,10 +147,19 @@
   <!-- Header -->
   <header class="page-header">
     <h1 class="page-title">Focus</h1>
-    <button class="settings-btn" onclick={() => showSettings = true} aria-label="Focus settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    <button class="settings-btn" onclick={() => (showSettings = true)} aria-label="Focus settings">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        width="20"
+        height="20"
+      >
+        <circle cx="12" cy="12" r="3" />
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+        />
       </svg>
     </button>
   </header>
@@ -172,12 +181,7 @@
   {:else}
     <!-- Timer Section -->
     <section class="timer-section">
-      <FocusTimer
-        {session}
-        {settings}
-        {remainingMs}
-        {isRunning}
-      />
+      <FocusTimer {session} {settings} {remainingMs} {isRunning} />
 
       <FocusControls
         {session}
@@ -215,7 +219,7 @@
 <FocusSettingsModal
   {settings}
   isOpen={showSettings}
-  onClose={() => showSettings = false}
+  onClose={() => (showSettings = false)}
   onSave={handleSaveSettings}
 />
 
@@ -230,10 +234,12 @@
   .page-title {
     font-size: 1.75rem;
     font-weight: 700;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+      135deg,
       var(--color-text) 0%,
       var(--color-primary-light) 50%,
-      var(--color-text) 100%);
+      var(--color-text) 100%
+    );
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -364,8 +370,13 @@
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/routes/**/*.{svelte,ts,js}",
+    "src/lib/**/*.{svelte,ts,js}",
+    "src/hooks.{server,client}.{ts,js}"
+  ],
+  "project": [
+    "src/**/*.{svelte,ts,js}"
+  ],
+  "ignore": [
+    "src/app.d.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "sveltekit": {
+    "config": "svelte.config.js"
+  }
+}

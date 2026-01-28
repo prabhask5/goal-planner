@@ -134,11 +134,16 @@
   const statusLabel = $derived(() => {
     const state = displayState();
     switch (state) {
-      case 'offline': return 'Offline';
-      case 'syncing': return 'Syncing';
-      case 'error': return 'Sync Error';
-      case 'pending': return 'Changes Pending';
-      default: return 'All Synced';
+      case 'offline':
+        return 'Offline';
+      case 'syncing':
+        return 'Syncing';
+      case 'error':
+        return 'Sync Error';
+      case 'pending':
+        return 'Changes Pending';
+      default:
+        return 'All Synced';
     }
   });
 
@@ -146,10 +151,14 @@
   const realtimeLabel = $derived(() => {
     if (!online) return null;
     switch (realtimeState) {
-      case 'connected': return 'Live';
-      case 'connecting': return 'Connecting...';
-      case 'error': return 'Using polling';
-      default: return null;
+      case 'connected':
+        return 'Live';
+      case 'connecting':
+        return 'Connecting...';
+      case 'error':
+        return 'Using polling';
+      default:
+        return null;
     }
   });
 
@@ -160,7 +169,7 @@
 
     switch (state) {
       case 'offline':
-        return 'Changes will sync when you\'re back online.';
+        return "Changes will sync when you're back online.";
       case 'syncing':
         return 'Syncing your data...';
       case 'error':
@@ -177,26 +186,34 @@
 
   // Format table name for display
   function formatTableName(table: string): string {
-    return table.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return table.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   // Format operation name for display
   function formatOperation(op: string): string {
     switch (op) {
-      case 'create': return 'Create';
-      case 'update': return 'Update';
-      case 'delete': return 'Delete';
-      default: return op;
+      case 'create':
+        return 'Create';
+      case 'update':
+        return 'Update';
+      case 'delete':
+        return 'Delete';
+      default:
+        return op;
     }
   }
 
   // Get operation color
   function getOperationColor(op: string): string {
     switch (op) {
-      case 'create': return 'var(--color-green)';
-      case 'update': return 'var(--color-primary-light)';
-      case 'delete': return 'var(--color-red)';
-      default: return 'var(--color-text-muted)';
+      case 'create':
+        return 'var(--color-green)';
+      case 'update':
+        return 'var(--color-primary-light)';
+      case 'delete':
+        return 'var(--color-red)';
+      default:
+        return 'var(--color-text-muted)';
     }
   }
 </script>
@@ -228,25 +245,38 @@
       <svg
         class="icon icon-offline"
         class:active={displayState() === 'offline'}
-        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       >
-        <line x1="1" y1="1" x2="23" y2="23"/>
-        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
-        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
-        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
-        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
-        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-        <line x1="12" y1="20" x2="12.01" y2="20"/>
+        <line x1="1" y1="1" x2="23" y2="23" />
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9" />
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+        <line x1="12" y1="20" x2="12.01" y2="20" />
       </svg>
 
       <!-- Syncing Spinner -->
       <svg
         class="icon icon-syncing"
         class:active={displayState() === 'syncing'}
-        width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
       >
-        <circle class="spinner-track" cx="12" cy="12" r="9" stroke-opacity="0.2"/>
-        <path class="spinner-arc" d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        <circle class="spinner-track" cx="12" cy="12" r="9" stroke-opacity="0.2" />
+        <path class="spinner-arc" d="M21 12a9 9 0 1 1-6.219-8.56" />
       </svg>
 
       <!-- Success Checkmark -->
@@ -254,10 +284,17 @@
         class="icon icon-synced"
         class:active={displayState() === 'synced'}
         class:morph-in={isTransitioning && displayState() === 'synced'}
-        width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       >
-        <circle class="check-circle" cx="12" cy="12" r="9"/>
-        <polyline class="check-mark" points="8 12 11 15 16 9"/>
+        <circle class="check-circle" cx="12" cy="12" r="9" />
+        <polyline class="check-mark" points="8 12 11 15 16 9" />
       </svg>
 
       <!-- Error Icon -->
@@ -265,20 +302,34 @@
         class="icon icon-error"
         class:active={displayState() === 'error'}
         class:morph-in={isTransitioning && displayState() === 'error'}
-        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
       >
-        <circle class="error-circle" cx="12" cy="12" r="9"/>
-        <line class="error-line" x1="12" y1="8" x2="12" y2="12"/>
-        <line class="error-dot" x1="12" y1="16" x2="12.01" y2="16"/>
+        <circle class="error-circle" cx="12" cy="12" r="9" />
+        <line class="error-line" x1="12" y1="8" x2="12" y2="12" />
+        <line class="error-dot" x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
 
       <!-- Pending Icon -->
       <svg
         class="icon icon-pending"
         class:active={displayState() === 'pending'}
-        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
       >
-        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        <path
+          d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+        />
       </svg>
     </span>
 
@@ -300,15 +351,30 @@
 
   <!-- Beautiful Tooltip -->
   {#if showTooltip}
-    <div class="tooltip" class:error={displayState() === 'error'} class:has-errors={syncErrors.length > 0}>
+    <div
+      class="tooltip"
+      class:error={displayState() === 'error'}
+      class:has-errors={syncErrors.length > 0}
+    >
       <div class="tooltip-arrow"></div>
       <div class="tooltip-content">
         <!-- Status Header -->
         <div class="tooltip-header">
-          <div class="status-dot" class:offline={displayState() === 'offline'} class:syncing={displayState() === 'syncing'} class:error={displayState() === 'error'} class:pending={displayState() === 'pending'} class:synced={displayState() === 'synced'}></div>
+          <div
+            class="status-dot"
+            class:offline={displayState() === 'offline'}
+            class:syncing={displayState() === 'syncing'}
+            class:error={displayState() === 'error'}
+            class:pending={displayState() === 'pending'}
+            class:synced={displayState() === 'synced'}
+          ></div>
           <span class="status-label">{statusLabel()}</span>
           {#if realtimeLabel() && displayState() !== 'offline'}
-            <span class="realtime-badge" class:live={realtimeState === 'connected'} class:connecting={realtimeState === 'connecting'}>
+            <span
+              class="realtime-badge"
+              class:live={realtimeState === 'connected'}
+              class:connecting={realtimeState === 'connecting'}
+            >
               {#if realtimeState === 'connected'}
                 <span class="realtime-dot"></span>
               {/if}
@@ -327,7 +393,10 @@
         {#if displayState() === 'error' && (syncErrors.length > 0 || lastErrorDetails)}
           <button
             class="details-toggle"
-            onclick={(e) => { e.stopPropagation(); showDetails = !showDetails; }}
+            onclick={(e) => {
+              e.stopPropagation();
+              showDetails = !showDetails;
+            }}
           >
             <span>{showDetails ? 'Hide' : 'Show'} error details</span>
             <svg
@@ -342,7 +411,7 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <polyline points="6 9 12 15 18 9"/>
+              <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
 
@@ -353,7 +422,10 @@
                   {#each syncErrors as error, i}
                     <div class="error-item" style="animation-delay: {i * 50}ms">
                       <div class="error-item-header">
-                        <span class="error-operation" style="color: {getOperationColor(error.operation)}">
+                        <span
+                          class="error-operation"
+                          style="color: {getOperationColor(error.operation)}"
+                        >
                           {formatOperation(error.operation)}
                         </span>
                         <span class="error-table">{formatTableName(error.table)}</span>
@@ -382,8 +454,19 @@
         {#if displayState() === 'error' || displayState() === 'pending'}
           <div class="tooltip-action">
             <span class="action-hint">Tap to sync now</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              />
             </svg>
           </div>
         {/if}
@@ -406,9 +489,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(145deg,
-      rgba(20, 20, 40, 0.9) 0%,
-      rgba(15, 15, 32, 0.95) 100%);
+    background: linear-gradient(145deg, rgba(20, 20, 40, 0.9) 0%, rgba(15, 15, 32, 0.95) 100%);
     border: 1.5px solid rgba(108, 92, 231, 0.25);
     cursor: pointer;
     transition: all 0.4s var(--ease-spring);
@@ -434,9 +515,15 @@
   }
 
   @keyframes transitionPulse {
-    0% { transform: scale(1); }
-    30% { transform: scale(1.15); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+    30% {
+      transform: scale(1.15);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 
   /* The animated ring around the indicator */
@@ -500,8 +587,12 @@
   }
 
   @keyframes spinnerRotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .sync-indicator.syncing .indicator-ring {
@@ -511,8 +602,12 @@
   }
 
   @keyframes ringSpinPurple {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -573,7 +668,8 @@
   }
 
   @keyframes ringPulseGreen {
-    0%, 100% {
+    0%,
+    100% {
       transform: scale(1);
       opacity: 1;
       border-color: rgba(38, 222, 129, 0.2);
@@ -658,7 +754,8 @@
   }
 
   @keyframes ringPulseRed {
-    0%, 100% {
+    0%,
+    100% {
       transform: scale(1);
       opacity: 1;
     }
@@ -704,9 +801,15 @@
   }
 
   @keyframes badgePop {
-    0% { transform: scale(0); }
-    70% { transform: scale(1.2); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(0);
+    }
+    70% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
@@ -727,7 +830,8 @@
   }
 
   @keyframes ringPulseYellow {
-    0%, 100% {
+    0%,
+    100% {
       transform: scale(1);
       opacity: 1;
       border-color: rgba(255, 217, 61, 0.2);
@@ -775,9 +879,15 @@
   }
 
   @keyframes liveIndicatorPop {
-    0% { transform: scale(0.6) rotate(-45deg); }
-    50% { transform: scale(1.2) rotate(10deg); }
-    100% { transform: scale(1) rotate(0deg); }
+    0% {
+      transform: scale(0.6) rotate(-45deg);
+    }
+    50% {
+      transform: scale(1.2) rotate(10deg);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
   }
 
   .live-dot {
@@ -805,7 +915,8 @@
   }
 
   @keyframes liveDotPulse {
-    0%, 100% {
+    0%,
+    100% {
       transform: scale(1);
       box-shadow:
         0 0 4px rgba(16, 185, 129, 0.6),
@@ -820,8 +931,15 @@
   }
 
   @keyframes liveDotConnecting {
-    0%, 100% { opacity: 0.4; transform: scale(0.9); }
-    50% { opacity: 1; transform: scale(1.1); }
+    0%,
+    100% {
+      opacity: 0.4;
+      transform: scale(0.9);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
   }
 
   .live-ring {
@@ -894,9 +1012,7 @@
     min-width: 240px;
     max-width: 340px;
     padding: 14px 16px;
-    background: linear-gradient(145deg,
-      rgba(20, 20, 35, 0.98) 0%,
-      rgba(15, 15, 28, 0.99) 100%);
+    background: linear-gradient(145deg, rgba(20, 20, 35, 0.98) 0%, rgba(15, 15, 28, 0.99) 100%);
     border: 1px solid rgba(108, 92, 231, 0.2);
     border-radius: 16px;
     backdrop-filter: blur(40px) saturate(180%);
@@ -909,9 +1025,7 @@
 
   .tooltip.error .tooltip-content {
     border-color: rgba(255, 107, 107, 0.3);
-    background: linear-gradient(145deg,
-      rgba(35, 18, 22, 0.98) 0%,
-      rgba(25, 15, 18, 0.99) 100%);
+    background: linear-gradient(145deg, rgba(35, 18, 22, 0.98) 0%, rgba(25, 15, 18, 0.99) 100%);
   }
 
   .tooltip.has-errors .tooltip-content {
@@ -946,8 +1060,15 @@
   }
 
   @keyframes dotPulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(0.85); }
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(0.85);
+    }
   }
 
   .status-dot.error {
@@ -1016,8 +1137,15 @@
   }
 
   @keyframes realtimeDotPulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(0.85); }
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(0.85);
+    }
   }
 
   .tooltip-description {
@@ -1282,9 +1410,7 @@
     }
 
     .icon-synced.morph-in,
-    .icon-error.morph-in,
-    .icon-pending.morph-in,
-    .icon-syncing.morph-in.active {
+    .icon-error.morph-in {
       animation: none;
     }
 

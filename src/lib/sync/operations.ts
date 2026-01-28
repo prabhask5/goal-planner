@@ -27,8 +27,8 @@ export function operationToMutation(
         mutationType: 'insert',
         payload: {
           id: operation.entityId,
-          ...(operation.value as Record<string, unknown>),
-        },
+          ...(operation.value as Record<string, unknown>)
+        }
       };
 
     case 'delete':
@@ -36,8 +36,8 @@ export function operationToMutation(
         mutationType: 'update',
         payload: {
           deleted: true,
-          updated_at: operation.timestamp,
-        },
+          updated_at: operation.timestamp
+        }
       };
 
     case 'increment': {
@@ -55,8 +55,8 @@ export function operationToMutation(
         mutationType: 'update',
         payload: {
           [operation.field]: newValue,
-          updated_at: operation.timestamp,
-        },
+          updated_at: operation.timestamp
+        }
       };
     }
 
@@ -68,8 +68,8 @@ export function operationToMutation(
           mutationType: 'update',
           payload: {
             [operation.field]: operation.value,
-            updated_at: operation.timestamp,
-          },
+            updated_at: operation.timestamp
+          }
         };
       } else {
         // Full payload set
@@ -77,8 +77,8 @@ export function operationToMutation(
           mutationType: 'update',
           payload: {
             ...(operation.value as Record<string, unknown>),
-            updated_at: operation.timestamp,
-          },
+            updated_at: operation.timestamp
+          }
         };
       }
     }
@@ -126,7 +126,7 @@ export function createIncrementOperation(
     field,
     value: delta,
     timestamp,
-    retries: 0,
+    retries: 0
   };
 }
 
@@ -147,7 +147,7 @@ export function createSetOperation(
     field,
     value,
     timestamp,
-    retries: 0,
+    retries: 0
   };
 }
 
@@ -166,7 +166,7 @@ export function createMultiFieldSetOperation(
     operationType: 'set',
     value: fields,
     timestamp,
-    retries: 0,
+    retries: 0
   };
 }
 
@@ -185,7 +185,7 @@ export function createCreateOperation(
     operationType: 'create',
     value: payload,
     timestamp,
-    retries: 0,
+    retries: 0
   };
 }
 
@@ -202,7 +202,7 @@ export function createDeleteOperation(
     entityId,
     operationType: 'delete',
     timestamp,
-    retries: 0,
+    retries: 0
   };
 }
 
@@ -272,7 +272,7 @@ export function coalesceOperations(
     return {
       ...older,
       // Keep older's id and timestamp for queue management and backoff
-      value: summedDelta,
+      value: summedDelta
     };
   }
 
@@ -281,6 +281,6 @@ export function coalesceOperations(
     ...newer,
     id: older.id,
     // Keep oldest timestamp for backoff calculation
-    timestamp: older.timestamp,
+    timestamp: older.timestamp
   };
 }
