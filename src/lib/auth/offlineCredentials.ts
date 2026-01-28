@@ -56,16 +56,6 @@ export async function getOfflineCredentials(): Promise<OfflineCredentials | null
     return null;
   }
 
-  // MIGRATION: Detect old-format credentials that used password hashing
-  // Old format had 'passwordHash' and 'salt' fields instead of 'password'
-  // These cannot be migrated (can't unhash), so we clear them and force re-login
-  const legacyCredentials = credentials as Record<string, unknown>;
-  if (legacyCredentials.passwordHash || legacyCredentials.salt || !credentials.password) {
-    console.warn('[Auth] Detected old-format credentials (hashed password) - clearing and requiring fresh login');
-    await db.offlineCredentials.delete(CREDENTIALS_ID);
-    return null;
-  }
-
   return credentials;
 }
 

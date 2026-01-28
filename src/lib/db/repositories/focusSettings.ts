@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { FocusSettings } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 // Default focus settings
@@ -43,7 +43,7 @@ async function createFocusSettings(userId: string): Promise<FocusSettings> {
 
   await db.transaction('rw', [db.focusSettings, db.syncQueue], async () => {
     await db.focusSettings.add(newSettings);
-    await queueSyncDirect('focus_settings', 'create', newSettings.id, {
+    await queueCreateOperation('focus_settings', newSettings.id, {
       user_id: userId,
       ...DEFAULT_FOCUS_SETTINGS,
       created_at: timestamp,
@@ -67,7 +67,12 @@ export async function updateFocusSettings(
     await db.focusSettings.update(id, { ...updates, updated_at: timestamp });
     updated = await db.focusSettings.get(id);
     if (updated) {
-      await queueSyncDirect('focus_settings', 'update', id, { ...updates, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'focus_settings',
+        entityId: id,
+        operationType: 'set',
+        value: { ...updates, updated_at: timestamp }
+      });
     }
   });
 

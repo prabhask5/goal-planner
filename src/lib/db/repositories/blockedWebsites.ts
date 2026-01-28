@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { BlockedWebsite } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function getBlockedWebsites(blockListId: string): Promise<BlockedWebsite[]> {
@@ -31,7 +31,7 @@ export async function createBlockedWebsite(
 
   await db.transaction('rw', [db.blockedWebsites, db.syncQueue], async () => {
     await db.blockedWebsites.add(newWebsite);
-    await queueSyncDirect('blocked_websites', 'create', newWebsite.id, {
+    await queueCreateOperation('blocked_websites', newWebsite.id, {
       block_list_id: blockListId,
       domain: normalizedDomain,
       created_at: timestamp,
@@ -56,7 +56,13 @@ export async function updateBlockedWebsite(
     await db.blockedWebsites.update(id, { domain: normalizedDomain, updated_at: timestamp });
     updated = await db.blockedWebsites.get(id);
     if (updated) {
-      await queueSyncDirect('blocked_websites', 'update', id, { domain: normalizedDomain, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'blocked_websites',
+        entityId: id,
+        operationType: 'set',
+        field: 'domain',
+        value: normalizedDomain
+      });
     }
   });
 
@@ -72,7 +78,7 @@ export async function deleteBlockedWebsite(id: string): Promise<void> {
 
   await db.transaction('rw', [db.blockedWebsites, db.syncQueue], async () => {
     await db.blockedWebsites.update(id, { deleted: true, updated_at: timestamp });
-    await queueSyncDirect('blocked_websites', 'delete', id, { updated_at: timestamp });
+    await queueDeleteOperation('blocked_websites', id);
   });
 
   scheduleSyncPush();

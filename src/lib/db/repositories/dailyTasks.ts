@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { DailyTask } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createDailyTask(name: string, userId: string): Promise<DailyTask> {
@@ -29,7 +29,7 @@ export async function createDailyTask(name: string, userId: string): Promise<Dai
   // Use transaction to ensure atomicity of local write + queue operation
   await db.transaction('rw', [db.dailyTasks, db.syncQueue], async () => {
     await db.dailyTasks.add(newTask);
-    await queueSyncDirect('daily_tasks', 'create', newTask.id, {
+    await queueCreateOperation('daily_tasks', newTask.id, {
       name,
       order: nextOrder,
       completed: false,
@@ -52,7 +52,12 @@ export async function updateDailyTask(id: string, updates: Partial<Pick<DailyTas
     await db.dailyTasks.update(id, { ...updates, updated_at: timestamp });
     updated = await db.dailyTasks.get(id);
     if (updated) {
-      await queueSyncDirect('daily_tasks', 'update', id, { ...updates, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'daily_tasks',
+        entityId: id,
+        operationType: 'set',
+        value: { ...updates, updated_at: timestamp }
+      });
     }
   });
 
@@ -76,7 +81,13 @@ export async function toggleDailyTaskComplete(id: string): Promise<DailyTask | u
     await db.dailyTasks.update(id, { completed: newCompleted, updated_at: timestamp });
     updated = await db.dailyTasks.get(id);
     if (updated) {
-      await queueSyncDirect('daily_tasks', 'update', id, { completed: newCompleted, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'daily_tasks',
+        entityId: id,
+        operationType: 'set',
+        field: 'completed',
+        value: newCompleted
+      });
     }
   });
 
@@ -94,7 +105,7 @@ export async function deleteDailyTask(id: string): Promise<void> {
   await db.transaction('rw', [db.dailyTasks, db.syncQueue], async () => {
     // Tombstone delete
     await db.dailyTasks.update(id, { deleted: true, updated_at: timestamp });
-    await queueSyncDirect('daily_tasks', 'delete', id, { updated_at: timestamp });
+    await queueDeleteOperation('daily_tasks', id);
   });
   scheduleSyncPush();
 }
@@ -108,7 +119,13 @@ export async function reorderDailyTask(id: string, newOrder: number): Promise<Da
     await db.dailyTasks.update(id, { order: newOrder, updated_at: timestamp });
     updated = await db.dailyTasks.get(id);
     if (updated) {
-      await queueSyncDirect('daily_tasks', 'update', id, { order: newOrder, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'daily_tasks',
+        entityId: id,
+        operationType: 'set',
+        field: 'order',
+        value: newOrder
+      });
     }
   });
 
@@ -132,7 +149,7 @@ export async function clearCompletedDailyTasks(userId: string): Promise<void> {
   await db.transaction('rw', [db.dailyTasks, db.syncQueue], async () => {
     for (const task of completedTasks) {
       await db.dailyTasks.update(task.id, { deleted: true, updated_at: timestamp });
-      await queueSyncDirect('daily_tasks', 'delete', task.id, { updated_at: timestamp });
+      await queueDeleteOperation('daily_tasks', task.id);
     }
   });
 

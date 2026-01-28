@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { TaskCategory } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createTaskCategory(name: string, color: string, userId: string): Promise<TaskCategory> {
@@ -23,7 +23,7 @@ export async function createTaskCategory(name: string, color: string, userId: st
   // Use transaction to ensure atomicity of local write + queue operation
   await db.transaction('rw', [db.taskCategories, db.syncQueue], async () => {
     await db.taskCategories.add(newCategory);
-    await queueSyncDirect('task_categories', 'create', newCategory.id, {
+    await queueCreateOperation('task_categories', newCategory.id, {
       name,
       color,
       order: minOrder,
@@ -46,7 +46,12 @@ export async function updateTaskCategory(id: string, updates: Partial<Pick<TaskC
     await db.taskCategories.update(id, { ...updates, updated_at: timestamp });
     updated = await db.taskCategories.get(id);
     if (updated) {
-      await queueSyncDirect('task_categories', 'update', id, { ...updates, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'task_categories',
+        entityId: id,
+        operationType: 'set',
+        value: { ...updates, updated_at: timestamp }
+      });
     }
   });
 
@@ -67,12 +72,18 @@ export async function deleteTaskCategory(id: string): Promise<void> {
   await db.transaction('rw', [db.taskCategories, db.longTermTasks, db.syncQueue], async () => {
     // Tombstone delete the category
     await db.taskCategories.update(id, { deleted: true, updated_at: timestamp });
-    await queueSyncDirect('task_categories', 'delete', id, { updated_at: timestamp });
+    await queueDeleteOperation('task_categories', id);
 
     // Update any long_term_tasks that reference this category to have null category_id
     for (const task of tasks) {
       await db.longTermTasks.update(task.id, { category_id: null, updated_at: timestamp });
-      await queueSyncDirect('long_term_tasks', 'update', task.id, { category_id: null, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'long_term_tasks',
+        entityId: task.id,
+        operationType: 'set',
+        field: 'category_id',
+        value: null
+      });
     }
   });
 
@@ -88,7 +99,13 @@ export async function reorderTaskCategory(id: string, newOrder: number): Promise
     await db.taskCategories.update(id, { order: newOrder, updated_at: timestamp });
     updated = await db.taskCategories.get(id);
     if (updated) {
-      await queueSyncDirect('task_categories', 'update', id, { order: newOrder, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'task_categories',
+        entityId: id,
+        operationType: 'set',
+        field: 'order',
+        value: newOrder
+      });
     }
   });
 

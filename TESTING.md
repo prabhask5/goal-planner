@@ -687,6 +687,41 @@ Comprehensive test plan covering features, edge cases, offline behavior, synchro
 | Retry with backoff | Cause sync failure | Retries with exponential backoff |
 | Max retry exhaustion | Fail 5+ times | Item removed, error shown |
 
+### 13.5 Intent-Based Operations
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Increment operation queued | Click + on incremental goal | Queue item has `operationType: 'increment'`, `field: 'current_value'`, `value: 1` |
+| Set operation queued | Rename a goal | Queue item has `operationType: 'set'`, correct field and value |
+| Create operation queued | Create new goal | Queue item has `operationType: 'create'`, full payload in value |
+| Delete operation queued | Delete a goal | Queue item has `operationType: 'delete'`, no payload needed |
+| Increment sync | Increment goal, let sync | Server receives correct incremented value |
+| Multiple increments coalesce | Click + 10 times rapidly | Set operations merge; increment operations stay separate |
+| Set operations coalesce | Change name twice quickly | Single merged set operation in queue |
+
+#### Debug: Inspect Queue in Browser Console
+
+```javascript
+// Open IndexedDB and check syncQueue table
+const db = await indexedDB.open('GoalPlannerDB');
+const tx = db.transaction('syncQueue', 'readonly');
+const store = tx.objectStore('syncQueue');
+const items = await store.getAll();
+console.log(items);
+
+// Each item should have structure:
+// {
+//   id: number,
+//   table: 'goals' | 'daily_goal_progress' | etc,
+//   entityId: string (UUID),
+//   operationType: 'increment' | 'set' | 'create' | 'delete',
+//   field?: string,
+//   value?: unknown,
+//   timestamp: string (ISO),
+//   retries: number
+// }
+```
+
 ### 13.5 Cursor-Based Sync
 
 | Test Case | Steps | Expected Result |

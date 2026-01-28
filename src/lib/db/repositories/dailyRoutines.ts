@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { DailyRoutineGoal, GoalType, DayOfWeek } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createDailyRoutineGoal(
@@ -45,7 +45,7 @@ export async function createDailyRoutineGoal(
   // Use transaction to ensure atomicity of local write + queue operation
   await db.transaction('rw', [db.dailyRoutineGoals, db.syncQueue], async () => {
     await db.dailyRoutineGoals.add(newRoutine);
-    await queueSyncDirect('daily_routine_goals', 'create', newRoutine.id, {
+    await queueCreateOperation('daily_routine_goals', newRoutine.id, {
       user_id: userId,
       name,
       type,
@@ -75,7 +75,12 @@ export async function updateDailyRoutineGoal(
     await db.dailyRoutineGoals.update(id, { ...updates, updated_at: timestamp });
     updated = await db.dailyRoutineGoals.get(id);
     if (updated) {
-      await queueSyncDirect('daily_routine_goals', 'update', id, { ...updates, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'daily_routine_goals',
+        entityId: id,
+        operationType: 'set',
+        value: { ...updates, updated_at: timestamp }
+      });
     }
   });
 
@@ -100,12 +105,12 @@ export async function deleteDailyRoutineGoal(id: string): Promise<void> {
     // Soft delete all progress records for this routine and queue sync
     for (const progress of progressRecords) {
       await db.dailyGoalProgress.update(progress.id, { deleted: true, updated_at: timestamp });
-      await queueSyncDirect('daily_goal_progress', 'delete', progress.id, { updated_at: timestamp });
+      await queueDeleteOperation('daily_goal_progress', progress.id);
     }
 
     // Tombstone delete the routine and queue sync
     await db.dailyRoutineGoals.update(id, { deleted: true, updated_at: timestamp });
-    await queueSyncDirect('daily_routine_goals', 'delete', id, { updated_at: timestamp });
+    await queueDeleteOperation('daily_routine_goals', id);
   });
 
   scheduleSyncPush();
@@ -120,7 +125,13 @@ export async function reorderDailyRoutineGoal(id: string, newOrder: number): Pro
     await db.dailyRoutineGoals.update(id, { order: newOrder, updated_at: timestamp });
     updated = await db.dailyRoutineGoals.get(id);
     if (updated) {
-      await queueSyncDirect('daily_routine_goals', 'update', id, { order: newOrder, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'daily_routine_goals',
+        entityId: id,
+        operationType: 'set',
+        field: 'order',
+        value: newOrder
+      });
     }
   });
 

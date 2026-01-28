@@ -209,23 +209,43 @@ Each user has a sync cursor stored in localStorage (`lastSyncCursor_{userId}`). 
 
 The sync queue implements the transactional outbox pattern, ensuring reliable delivery of local changes to the server.
 
+### Intent-Based Operations
+
+The sync queue uses intent-preserving operations rather than state snapshots. This design enables proper multi-device conflict resolution by preserving the user's intent (e.g., "increment by 1") rather than just the final state (e.g., "current_value: 50").
+
 ### Queue Item Structure
 
-```
-{
-  id: auto-increment
-  table: target table name
-  operation: 'create' | 'update' | 'delete'
-  entityId: UUID of the entity
-  payload: full entity data
-  timestamp: ISO timestamp (for backoff calculation)
-  retries: attempt count
+```typescript
+interface SyncOperationItem {
+  id?: number;                    // Auto-increment ID
+  table: SyncEntityType;          // Target table (e.g., 'goals', 'daily_tasks')
+  entityId: string;               // UUID of the entity
+  operationType: OperationType;   // 'increment' | 'set' | 'create' | 'delete'
+  field?: string;                 // Field being modified (for increment/set)
+  value?: unknown;                // Delta (increment), new value (set), or payload (create)
+  timestamp: string;              // ISO timestamp (for backoff calculation)
+  retries: number;                // Attempt count
 }
 ```
 
+### Operation Types
+
+| Type | Purpose | Example |
+|------|---------|---------|
+| `increment` | Add delta to numeric field | Goal counter +1, progress +5 |
+| `set` | Set field to specific value | Rename goal, change target |
+| `create` | Create new entity | New goal, new routine |
+| `delete` | Soft delete entity | Delete goal (sets deleted=true) |
+
 ### Queue Coalescing
 
-Before pushing, the sync engine coalesces pending operations to reduce network requests. Multiple updates to the same entity are merged into a single operation, keeping only the latest payload. This optimization is transparent and maintains data integrity.
+Before pushing, the sync engine coalesces pending operations to reduce network requests:
+
+- **Set operations**: Multiple sets to the same entity are merged, keeping the combined payload
+- **Increment operations**: Not coalesced in the current phase (future phases will sum deltas)
+- **Create/delete operations**: Never coalesced (would lose intent)
+
+This optimization is transparent and maintains data integrity.
 
 ### Exponential Backoff
 

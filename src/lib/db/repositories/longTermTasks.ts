@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { LongTermTask } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createLongTermTask(
@@ -25,7 +25,7 @@ export async function createLongTermTask(
   // Use transaction to ensure atomicity of local write + queue operation
   await db.transaction('rw', [db.longTermTasks, db.syncQueue], async () => {
     await db.longTermTasks.add(newTask);
-    await queueSyncDirect('long_term_tasks', 'create', newTask.id, {
+    await queueCreateOperation('long_term_tasks', newTask.id, {
       name,
       due_date: dueDate,
       category_id: categoryId,
@@ -52,7 +52,12 @@ export async function updateLongTermTask(
     await db.longTermTasks.update(id, { ...updates, updated_at: timestamp });
     updated = await db.longTermTasks.get(id);
     if (updated) {
-      await queueSyncDirect('long_term_tasks', 'update', id, { ...updates, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'long_term_tasks',
+        entityId: id,
+        operationType: 'set',
+        value: { ...updates, updated_at: timestamp }
+      });
     }
   });
 
@@ -76,7 +81,13 @@ export async function toggleLongTermTaskComplete(id: string): Promise<LongTermTa
     await db.longTermTasks.update(id, { completed: newCompleted, updated_at: timestamp });
     updated = await db.longTermTasks.get(id);
     if (updated) {
-      await queueSyncDirect('long_term_tasks', 'update', id, { completed: newCompleted, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'long_term_tasks',
+        entityId: id,
+        operationType: 'set',
+        field: 'completed',
+        value: newCompleted
+      });
     }
   });
 
@@ -94,7 +105,7 @@ export async function deleteLongTermTask(id: string): Promise<void> {
   await db.transaction('rw', [db.longTermTasks, db.syncQueue], async () => {
     // Tombstone delete
     await db.longTermTasks.update(id, { deleted: true, updated_at: timestamp });
-    await queueSyncDirect('long_term_tasks', 'delete', id, { updated_at: timestamp });
+    await queueDeleteOperation('long_term_tasks', id);
   });
   scheduleSyncPush();
 }

@@ -52,18 +52,9 @@ export interface DailyGoalProgress {
   deleted?: boolean; // Tombstone flag
 }
 
-// Sync-related types
-export type SyncOperation = 'create' | 'update' | 'delete';
-
-export interface SyncQueueItem {
-  id?: number;
-  table: 'goal_lists' | 'goals' | 'daily_routine_goals' | 'daily_goal_progress' | 'task_categories' | 'commitments' | 'daily_tasks' | 'long_term_tasks' | 'focus_settings' | 'focus_sessions' | 'block_lists' | 'blocked_websites';
-  operation: SyncOperation;
-  entityId: string;
-  payload: Record<string, unknown>;
-  timestamp: string;
-  retries: number;
-}
+// Sync-related types - re-export from dedicated module
+export type { OperationType, SyncEntityType, SyncOperationItem } from './sync/types';
+export { isOperationItem } from './sync/types';
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
 

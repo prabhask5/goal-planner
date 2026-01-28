@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { Goal, GoalType } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createGoal(
@@ -41,7 +41,7 @@ export async function createGoal(
   // Use transaction to ensure atomicity of local write + queue operation
   await db.transaction('rw', [db.goals, db.syncQueue], async () => {
     await db.goals.add(newGoal);
-    await queueSyncDirect('goals', 'create', newGoal.id, {
+    await queueCreateOperation('goals', newGoal.id, {
       goal_list_id: goalListId,
       name,
       type,
@@ -70,7 +70,12 @@ export async function updateGoal(
     await db.goals.update(id, { ...updates, updated_at: timestamp });
     updated = await db.goals.get(id);
     if (updated) {
-      await queueSyncDirect('goals', 'update', id, { ...updates, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'goals',
+        entityId: id,
+        operationType: 'set',
+        value: { ...updates, updated_at: timestamp }
+      });
     }
   });
 
@@ -88,7 +93,7 @@ export async function deleteGoal(id: string): Promise<void> {
   await db.transaction('rw', [db.goals, db.syncQueue], async () => {
     // Tombstone delete: mark as deleted instead of actually deleting
     await db.goals.update(id, { deleted: true, updated_at: timestamp });
-    await queueSyncDirect('goals', 'delete', id, { updated_at: timestamp });
+    await queueDeleteOperation('goals', id);
   });
 
   scheduleSyncPush();
@@ -108,10 +113,13 @@ export async function incrementGoal(id: string, amount: number = 1): Promise<Goa
     await db.goals.update(id, { current_value: newValue, completed, updated_at: timestamp });
     updated = await db.goals.get(id);
     if (updated) {
-      await queueSyncDirect('goals', 'update', id, {
-        current_value: newValue,
-        completed,
-        updated_at: timestamp
+      // Use increment operation to preserve intent for multi-device conflict resolution
+      await queueSyncOperation({
+        table: 'goals',
+        entityId: id,
+        operationType: 'increment',
+        field: 'current_value',
+        value: amount  // Store the delta, not the final value
       });
     }
   });
@@ -132,7 +140,13 @@ export async function reorderGoal(id: string, newOrder: number): Promise<Goal | 
     await db.goals.update(id, { order: newOrder, updated_at: timestamp });
     updated = await db.goals.get(id);
     if (updated) {
-      await queueSyncDirect('goals', 'update', id, { order: newOrder, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'goals',
+        entityId: id,
+        operationType: 'set',
+        field: 'order',
+        value: newOrder
+      });
     }
   });
 
@@ -142,4 +156,3 @@ export async function reorderGoal(id: string, newOrder: number): Promise<Goal | 
 
   return updated;
 }
-

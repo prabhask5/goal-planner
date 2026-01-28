@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { FocusSession, FocusPhase } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function getActiveSession(userId: string): Promise<FocusSession | null> {
@@ -49,7 +49,7 @@ export async function createFocusSession(
 
   await db.transaction('rw', [db.focusSessions, db.syncQueue], async () => {
     await db.focusSessions.add(newSession);
-    await queueSyncDirect('focus_sessions', 'create', newSession.id, {
+    await queueCreateOperation('focus_sessions', newSession.id, {
       user_id: userId,
       started_at: timestamp,
       ended_at: null,
@@ -83,7 +83,12 @@ export async function updateFocusSession(
     await db.focusSessions.update(id, { ...updates, updated_at: timestamp });
     updated = await db.focusSessions.get(id);
     if (updated) {
-      await queueSyncDirect('focus_sessions', 'update', id, { ...updates, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'focus_sessions',
+        entityId: id,
+        operationType: 'set',
+        value: { ...updates, updated_at: timestamp }
+      });
     }
   });
 
@@ -133,13 +138,18 @@ export async function stopFocusSession(id: string, currentFocusElapsedMinutes?: 
     });
     updated = await db.focusSessions.get(id);
     if (updated) {
-      await queueSyncDirect('focus_sessions', 'update', id, {
-        status: 'stopped',
-        ended_at: timestamp,
-        phase: 'idle',
-        elapsed_duration: elapsedDuration,
-        deleted: true,
-        updated_at: timestamp
+      await queueSyncOperation({
+        table: 'focus_sessions',
+        entityId: id,
+        operationType: 'set',
+        value: {
+          status: 'stopped',
+          ended_at: timestamp,
+          phase: 'idle',
+          elapsed_duration: elapsedDuration,
+          deleted: true,
+          updated_at: timestamp
+        }
       });
     }
   });

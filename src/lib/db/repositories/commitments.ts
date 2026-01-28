@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { Commitment, CommitmentSection } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createCommitment(name: string, section: CommitmentSection, userId: string): Promise<Commitment> {
@@ -24,7 +24,7 @@ export async function createCommitment(name: string, section: CommitmentSection,
   // Use transaction to ensure atomicity of local write + queue operation
   await db.transaction('rw', [db.commitments, db.syncQueue], async () => {
     await db.commitments.add(newCommitment);
-    await queueSyncDirect('commitments', 'create', newCommitment.id, {
+    await queueCreateOperation('commitments', newCommitment.id, {
       name,
       section,
       order: minOrder,
@@ -47,7 +47,12 @@ export async function updateCommitment(id: string, updates: Partial<Pick<Commitm
     await db.commitments.update(id, { ...updates, updated_at: timestamp });
     updated = await db.commitments.get(id);
     if (updated) {
-      await queueSyncDirect('commitments', 'update', id, { ...updates, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'commitments',
+        entityId: id,
+        operationType: 'set',
+        value: { ...updates, updated_at: timestamp }
+      });
     }
   });
 
@@ -65,7 +70,7 @@ export async function deleteCommitment(id: string): Promise<void> {
   await db.transaction('rw', [db.commitments, db.syncQueue], async () => {
     // Tombstone delete
     await db.commitments.update(id, { deleted: true, updated_at: timestamp });
-    await queueSyncDirect('commitments', 'delete', id, { updated_at: timestamp });
+    await queueDeleteOperation('commitments', id);
   });
   scheduleSyncPush();
 }
@@ -79,7 +84,13 @@ export async function reorderCommitment(id: string, newOrder: number): Promise<C
     await db.commitments.update(id, { order: newOrder, updated_at: timestamp });
     updated = await db.commitments.get(id);
     if (updated) {
-      await queueSyncDirect('commitments', 'update', id, { order: newOrder, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'commitments',
+        entityId: id,
+        operationType: 'set',
+        field: 'order',
+        value: newOrder
+      });
     }
   });
 

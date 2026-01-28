@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { GoalList } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function createGoalList(name: string, userId: string): Promise<GoalList> {
@@ -16,7 +16,7 @@ export async function createGoalList(name: string, userId: string): Promise<Goal
   // Use transaction to ensure atomicity of local write + queue operation
   await db.transaction('rw', [db.goalLists, db.syncQueue], async () => {
     await db.goalLists.add(newList);
-    await queueSyncDirect('goal_lists', 'create', newList.id, {
+    await queueCreateOperation('goal_lists', newList.id, {
       name,
       user_id: userId,
       created_at: timestamp,
@@ -37,7 +37,13 @@ export async function updateGoalList(id: string, name: string): Promise<GoalList
     await db.goalLists.update(id, { name, updated_at: timestamp });
     updated = await db.goalLists.get(id);
     if (updated) {
-      await queueSyncDirect('goal_lists', 'update', id, { name, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'goal_lists',
+        entityId: id,
+        operationType: 'set',
+        field: 'name',
+        value: name
+      });
     }
   });
 
@@ -59,12 +65,12 @@ export async function deleteGoalList(id: string): Promise<void> {
     // Tombstone delete all goals in this list
     for (const goal of goals) {
       await db.goals.update(goal.id, { deleted: true, updated_at: timestamp });
-      await queueSyncDirect('goals', 'delete', goal.id, { updated_at: timestamp });
+      await queueDeleteOperation('goals', goal.id);
     }
 
     // Tombstone delete the list
     await db.goalLists.update(id, { deleted: true, updated_at: timestamp });
-    await queueSyncDirect('goal_lists', 'delete', id, { updated_at: timestamp });
+    await queueDeleteOperation('goal_lists', id);
   });
 
   scheduleSyncPush();

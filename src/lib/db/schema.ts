@@ -1,12 +1,12 @@
 import Dexie, { type Table } from 'dexie';
-import type { Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, SyncQueueItem, TaskCategory, Commitment, DailyTask, LongTermTask, OfflineCredentials, OfflineSession, FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
+import type { Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, SyncOperationItem, TaskCategory, Commitment, DailyTask, LongTermTask, OfflineCredentials, OfflineSession, FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
 
 export class GoalPlannerDB extends Dexie {
   goalLists!: Table<GoalList, string>;
   goals!: Table<Goal, string>;
   dailyRoutineGoals!: Table<DailyRoutineGoal, string>;
   dailyGoalProgress!: Table<DailyGoalProgress, string>;
-  syncQueue!: Table<SyncQueueItem, number>;
+  syncQueue!: Table<SyncOperationItem, number>;
   taskCategories!: Table<TaskCategory, string>;
   commitments!: Table<Commitment, string>;
   dailyTasks!: Table<DailyTask, string>;

@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { BlockList, DayOfWeek } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueDeleteOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 export async function getBlockLists(userId: string): Promise<BlockList[]> {
@@ -52,7 +52,7 @@ export async function createBlockList(
 
   await db.transaction('rw', [db.blockLists, db.syncQueue], async () => {
     await db.blockLists.add(newList);
-    await queueSyncDirect('block_lists', 'create', newList.id, {
+    await queueCreateOperation('block_lists', newList.id, {
       user_id: userId,
       name,
       active_days: activeDays,
@@ -79,7 +79,12 @@ export async function updateBlockList(
     await db.blockLists.update(id, { ...updates, updated_at: timestamp });
     updated = await db.blockLists.get(id);
     if (updated) {
-      await queueSyncDirect('block_lists', 'update', id, { ...updates, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'block_lists',
+        entityId: id,
+        operationType: 'set',
+        value: { ...updates, updated_at: timestamp }
+      });
     }
   });
 
@@ -110,12 +115,12 @@ export async function deleteBlockList(id: string): Promise<void> {
     // Soft delete all websites in this list
     for (const website of websites) {
       await db.blockedWebsites.update(website.id, { deleted: true, updated_at: timestamp });
-      await queueSyncDirect('blocked_websites', 'delete', website.id, { updated_at: timestamp });
+      await queueDeleteOperation('blocked_websites', website.id);
     }
 
     // Soft delete the list
     await db.blockLists.update(id, { deleted: true, updated_at: timestamp });
-    await queueSyncDirect('block_lists', 'delete', id, { updated_at: timestamp });
+    await queueDeleteOperation('block_lists', id);
   });
 
   scheduleSyncPush();
@@ -130,7 +135,13 @@ export async function reorderBlockList(id: string, newOrder: number): Promise<Bl
     await db.blockLists.update(id, { order: newOrder, updated_at: timestamp });
     updated = await db.blockLists.get(id);
     if (updated) {
-      await queueSyncDirect('block_lists', 'update', id, { order: newOrder, updated_at: timestamp });
+      await queueSyncOperation({
+        table: 'block_lists',
+        entityId: id,
+        operationType: 'set',
+        field: 'order',
+        value: newOrder
+      });
     }
   });
 

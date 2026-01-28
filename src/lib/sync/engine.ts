@@ -1,7 +1,8 @@
 import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/db/client';
 import { getPendingSync, removeSyncItem, incrementRetry, getPendingEntityIds, cleanupFailedItems, coalescePendingOps } from './queue';
-import type { SyncQueueItem, Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress, TaskCategory, Commitment, DailyTask, LongTermTask, LongTermTaskWithCategory, FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
+import type { Goal, GoalList, DailyRoutineGoal, DailyGoalProgress, GoalListWithProgress, TaskCategory, Commitment, DailyTask, LongTermTask, LongTermTaskWithCategory, FocusSettings, FocusSession, BlockList, BlockedWebsite } from '$lib/types';
+import type { SyncOperationItem } from './types';
 import { syncStatusStore } from '$lib/stores/sync';
 import { calculateGoalProgressCapped } from '$lib/utils/colors';
 import { isRoutineActiveOnDate } from '$lib/utils/dates';
@@ -1024,7 +1025,7 @@ async function pushPendingOps(): Promise<PushStats> {
           const errorInfo = {
             message: extractErrorMessage(error),
             table: item.table,
-            operation: item.operation,
+            operation: item.operationType,
             entityId: item.entityId
           };
           pushErrors.push(errorInfo);
@@ -1115,12 +1116,14 @@ function isTransientError(error: unknown): boolean {
   return false;
 }
 
-// Process a single sync item
-async function processSyncItem(item: SyncQueueItem): Promise<void> {
-  const { table, operation, entityId, payload } = item;
+// Process a single sync item (intent-based operation format)
+async function processSyncItem(item: SyncOperationItem): Promise<void> {
+  const { table, entityId, operationType, field, value, timestamp } = item;
 
-  switch (operation) {
+  switch (operationType) {
     case 'create': {
+      // Create: insert the full payload
+      const payload = value as Record<string, unknown>;
       const { error } = await supabase
         .from(table)
         .insert({ id: entityId, ...payload });
@@ -1130,27 +1133,84 @@ async function processSyncItem(item: SyncQueueItem): Promise<void> {
       }
       break;
     }
-    case 'update': {
-      const { error } = await supabase
-        .from(table)
-        .update(payload)
-        .eq('id', entityId);
-      if (error) throw error;
-      break;
-    }
+
     case 'delete': {
-      // Soft delete on Supabase - set deleted=true so other devices can pull the deletion
-      // This replaces the old hard delete which broke multi-device sync
+      // Delete: soft delete with tombstone
       const { error } = await supabase
         .from(table)
-        .update({ deleted: true, updated_at: new Date().toISOString() })
+        .update({ deleted: true, updated_at: timestamp })
         .eq('id', entityId);
-      // Ignore "not found" errors - item may already be deleted by another device
+      // Ignore "not found" errors - item may already be deleted
       if (error && !isNotFoundError(error)) {
         throw error;
       }
       break;
     }
+
+    case 'increment': {
+      // Increment: we need to read current value, add delta, and update
+      // This is done atomically by reading from local DB (which has the current state)
+      // The value we push is already the final computed value from local
+      if (!field) {
+        throw new Error('Increment operation requires a field');
+      }
+
+      // For increment, the local DB already has the final value after increment
+      // We need to read it to get what to push to the server
+      const localEntity = await db.table(table).get(entityId);
+      if (!localEntity) {
+        // Entity was deleted locally, skip this increment
+        console.warn(`[SYNC] Skipping increment for deleted entity: ${table}/${entityId}`);
+        return;
+      }
+
+      const currentValue = localEntity[field];
+      const updatePayload: Record<string, unknown> = {
+        [field]: currentValue,
+        updated_at: timestamp,
+      };
+
+      // Also sync completed status if this is a goal/progress increment
+      if ('completed' in localEntity) {
+        updatePayload.completed = localEntity.completed;
+      }
+
+      const { error } = await supabase
+        .from(table)
+        .update(updatePayload)
+        .eq('id', entityId);
+      if (error) throw error;
+      break;
+    }
+
+    case 'set': {
+      // Set: update the field(s) with the new value(s)
+      let updatePayload: Record<string, unknown>;
+
+      if (field) {
+        // Single field set
+        updatePayload = {
+          [field]: value,
+          updated_at: timestamp,
+        };
+      } else {
+        // Multi-field set (value is the full payload)
+        updatePayload = {
+          ...(value as Record<string, unknown>),
+          updated_at: timestamp,
+        };
+      }
+
+      const { error } = await supabase
+        .from(table)
+        .update(updatePayload)
+        .eq('id', entityId);
+      if (error) throw error;
+      break;
+    }
+
+    default:
+      throw new Error(`Unknown operation type: ${operationType}`);
   }
 }
 
@@ -1353,7 +1413,7 @@ export async function runFullSync(quiet: boolean = false): Promise<void> {
         } else {
           // Items in retry backoff - no specific errors this cycle
           // Show pending retry info instead of clearing error details
-          const retryInfo = remaining.map(item => `${item.table} (${item.operation})`).slice(0, 3);
+          const retryInfo = remaining.map(item => `${item.table} (${item.operationType})`).slice(0, 3);
           const moreCount = remaining.length - retryInfo.length;
           const details = moreCount > 0
             ? `${retryInfo.join(', ')} and ${moreCount} more`
@@ -1662,7 +1722,7 @@ async function cleanupLocalTombstones(): Promise<number> {
       ];
 
       for (const { table, name } of tables) {
-        const count = await table.filter(item => item.deleted && item.updated_at < cutoffStr).delete();
+        const count = await table.filter(item => item.deleted === true && item.updated_at < cutoffStr).delete();
         if (count > 0) {
           console.log(`[Tombstone] Cleaned ${count} old records from local ${name}`);
           totalDeleted += count;

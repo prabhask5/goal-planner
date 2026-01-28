@@ -1,6 +1,6 @@
 import { db, generateId, now } from '../client';
 import type { DailyGoalProgress } from '$lib/types';
-import { queueSyncDirect } from '$lib/sync/queue';
+import { queueCreateOperation, queueSyncOperation } from '$lib/sync/queue';
 import { scheduleSyncPush } from '$lib/sync/engine';
 
 async function getProgressForRoutineAndDate(
@@ -39,10 +39,15 @@ export async function upsertDailyProgress(
       });
       updated = await db.dailyGoalProgress.get(existing.id);
       if (updated) {
-        await queueSyncDirect('daily_goal_progress', 'update', existing.id, {
-          current_value: currentValue,
-          completed,
-          updated_at: timestamp
+        await queueSyncOperation({
+          table: 'daily_goal_progress',
+          entityId: existing.id,
+          operationType: 'set',
+          value: {
+            current_value: currentValue,
+            completed,
+            updated_at: timestamp
+          }
         });
       }
     });
@@ -66,7 +71,7 @@ export async function upsertDailyProgress(
   // Use transaction to ensure atomicity of local write + queue operation
   await db.transaction('rw', [db.dailyGoalProgress, db.syncQueue], async () => {
     await db.dailyGoalProgress.add(newProgress);
-    await queueSyncDirect('daily_goal_progress', 'create', newProgress.id, {
+    await queueCreateOperation('daily_goal_progress', newProgress.id, {
       daily_routine_goal_id: dailyRoutineGoalId,
       date,
       current_value: currentValue,
@@ -105,10 +110,13 @@ export async function incrementDailyProgress(
       });
       updated = await db.dailyGoalProgress.get(existing.id);
       if (updated) {
-        await queueSyncDirect('daily_goal_progress', 'update', existing.id, {
-          current_value: newValue,
-          completed,
-          updated_at: timestamp
+        // Use increment operation to preserve intent for multi-device conflict resolution
+        await queueSyncOperation({
+          table: 'daily_goal_progress',
+          entityId: existing.id,
+          operationType: 'increment',
+          field: 'current_value',
+          value: amount  // Store the delta, not the final value
         });
       }
     });
@@ -132,7 +140,7 @@ export async function incrementDailyProgress(
   // Use transaction to ensure atomicity of local write + queue operation
   await db.transaction('rw', [db.dailyGoalProgress, db.syncQueue], async () => {
     await db.dailyGoalProgress.add(newProgress);
-    await queueSyncDirect('daily_goal_progress', 'create', newProgress.id, {
+    await queueCreateOperation('daily_goal_progress', newProgress.id, {
       daily_routine_goal_id: dailyRoutineGoalId,
       date,
       current_value: newValue,
