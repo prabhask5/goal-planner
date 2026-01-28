@@ -16,6 +16,7 @@ import {
   cleanupRealtimeTracking,
   isRealtimeHealthy,
   pauseRealtime,
+  wasRecentlyProcessedByRealtime,
   type RealtimeConnectionState
 } from './realtime';
 
@@ -839,6 +840,9 @@ async function pullRemoteChanges(minCursor?: string): Promise<{ bytes: number; r
       // Skip recently modified entities (protects against race conditions)
       // Note: We no longer skip entities with pending ops - conflict resolution handles them
       if (isRecentlyModified(remote.id)) continue;
+
+      // Skip entities that were just processed by realtime (prevents duplicate processing)
+      if (wasRecentlyProcessedByRealtime(remote.id)) continue;
 
       const local = await table.get(remote.id);
 
@@ -2009,11 +2013,8 @@ export async function startSyncEngine(): Promise<void> {
       // Update sync store with realtime connection state
       syncStatusStore.setRealtimeState(connectionState);
 
-      // Update sync status based on realtime connection
-      if (connectionState === 'error' && navigator.onLine) {
-        // Realtime failed but we're online - will fall back to polling
-        console.log('[SYNC] Realtime connection failed, falling back to polling');
-      }
+      // Note: 'error' state means max reconnect attempts exhausted
+      // Polling will automatically pick up the slack (periodic sync runs when realtime unhealthy)
     });
 
     // Start realtime subscriptions

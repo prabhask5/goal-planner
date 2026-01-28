@@ -6,12 +6,13 @@
  *
  * Design decisions:
  * - Uses Supabase Realtime PostgreSQL Changes for all entity tables
- * - Skips changes from own device using recently-modified tracking
- * - Respects recently-modified protection window (2 seconds)
+ * - Skips echo (own changes) by comparing device_id in the payload
+ * - Tracks recently processed entities to prevent duplicate processing with polling
  * - Applies changes through existing conflict resolution engine
- * - Falls back to polling if WebSocket connection fails
+ * - Falls back to polling if WebSocket connection fails (max 5 reconnect attempts)
  * - Single channel per user with filter by user_id for efficiency
  * - Pauses reconnection attempts while offline (waits for online event)
+ * - Uses reconnectScheduled flag to prevent duplicate reconnect attempts
  */
 
 import { supabase } from '$lib/supabase/client';
@@ -58,8 +59,9 @@ const TABLE_MAP: Record<RealtimeTable, keyof typeof db> = {
 // Protection window for recently modified entities (matches engine.ts)
 const RECENTLY_MODIFIED_TTL_MS = 2000;
 
-// Track recently modified entities (shared with engine.ts via export)
-const recentlyModifiedByRealtime: Map<string, number> = new Map();
+// Track entities that realtime has just processed (to prevent duplicate processing with polling)
+// This is separate from engine.ts's recentlyModifiedEntities (which tracks local writes)
+const recentlyProcessedByRealtime: Map<string, number> = new Map();
 
 // Connection state
 export type RealtimeConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -96,6 +98,9 @@ const RECONNECT_BASE_DELAY = 1000;
 // Lock to prevent concurrent start/stop operations
 let operationInProgress = false;
 
+// Flag to track if reconnect is already scheduled (prevents duplicate scheduling)
+let reconnectScheduled = false;
+
 /**
  * Subscribe to connection state changes
  */
@@ -122,16 +127,16 @@ export function getConnectionState(): RealtimeConnectionState {
 }
 
 /**
- * Check if an entity was recently modified via realtime
- * Used to prevent duplicate processing
+ * Check if an entity was recently processed via realtime
+ * Used by engine.ts to prevent duplicate processing during polling
  */
-export function wasRecentlyUpdatedByRealtime(entityId: string): boolean {
-  const modifiedAt = recentlyModifiedByRealtime.get(entityId);
-  if (!modifiedAt) return false;
+export function wasRecentlyProcessedByRealtime(entityId: string): boolean {
+  const processedAt = recentlyProcessedByRealtime.get(entityId);
+  if (!processedAt) return false;
 
-  const age = Date.now() - modifiedAt;
+  const age = Date.now() - processedAt;
   if (age > RECENTLY_MODIFIED_TTL_MS) {
-    recentlyModifiedByRealtime.delete(entityId);
+    recentlyProcessedByRealtime.delete(entityId);
     return false;
   }
   return true;
@@ -167,14 +172,27 @@ function notifyDataUpdate(table: string, entityId: string): void {
 }
 
 /**
- * Check if entity was recently modified locally (prevent overwriting fresh local changes)
+ * Check if this change came from our own device (skip to prevent echo)
  */
-function isRecentlyModifiedLocally(entityId: string): boolean {
-  const rtModified = recentlyModifiedByRealtime.get(entityId);
-  if (rtModified && Date.now() - rtModified < RECENTLY_MODIFIED_TTL_MS) {
-    return true;
+function isOwnDeviceChange(record: Record<string, unknown> | null): boolean {
+  if (!record) return false;
+  const recordDeviceId = record.device_id as string | undefined;
+  return recordDeviceId === state.deviceId;
+}
+
+/**
+ * Check if entity was recently processed by realtime (prevent duplicate processing)
+ */
+function wasRecentlyProcessed(entityId: string): boolean {
+  const processedAt = recentlyProcessedByRealtime.get(entityId);
+  if (!processedAt) return false;
+
+  const age = Date.now() - processedAt;
+  if (age > RECENTLY_MODIFIED_TTL_MS) {
+    recentlyProcessedByRealtime.delete(entityId);
+    return false;
   }
-  return false;
+  return true;
 }
 
 /**
@@ -197,9 +215,13 @@ async function handleRealtimeChange(
     return;
   }
 
-  // Skip if this was our own change (prevents echo)
-  // Check if this entity was recently modified locally by us
-  if (isRecentlyModifiedLocally(entityId)) {
+  // Skip if this change came from our own device (prevents echo)
+  if (isOwnDeviceChange(newRecord)) {
+    return;
+  }
+
+  // Skip if we just processed this entity (prevents rapid duplicate processing)
+  if (wasRecentlyProcessed(entityId)) {
     return;
   }
 
@@ -258,8 +280,8 @@ async function handleRealtimeChange(
           }
         }
 
-        // Mark as recently updated to prevent duplicate processing
-        recentlyModifiedByRealtime.set(entityId, Date.now());
+        // Mark as recently processed to prevent duplicate processing by polling
+        recentlyProcessedByRealtime.set(entityId, Date.now());
 
         // Notify subscribers
         notifyDataUpdate(table, entityId);
@@ -287,6 +309,11 @@ async function handleRealtimeChange(
  * Only schedules if online - no point reconnecting while offline
  */
 function scheduleReconnect(): void {
+  // Prevent duplicate scheduling from multiple event callbacks
+  if (reconnectScheduled) {
+    return;
+  }
+
   if (state.reconnectTimeout) {
     clearTimeout(state.reconnectTimeout);
     state.reconnectTimeout = null;
@@ -305,10 +332,12 @@ function scheduleReconnect(): void {
     return;
   }
 
+  reconnectScheduled = true;
   const delay = RECONNECT_BASE_DELAY * Math.pow(2, state.reconnectAttempts);
   console.log(`[Realtime] Scheduling reconnect attempt ${state.reconnectAttempts + 1} in ${delay}ms`);
 
   state.reconnectTimeout = setTimeout(async () => {
+    reconnectScheduled = false;
     // Double-check we're still online before attempting
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       console.log('[Realtime] Went offline during backoff, cancelling reconnect');
@@ -325,11 +354,12 @@ function scheduleReconnect(): void {
  * Internal stop function (doesn't check operation lock)
  */
 async function stopRealtimeSubscriptionsInternal(): Promise<void> {
-  // Clear reconnect timeout
+  // Clear reconnect timeout and flag
   if (state.reconnectTimeout) {
     clearTimeout(state.reconnectTimeout);
     state.reconnectTimeout = null;
   }
+  reconnectScheduled = false;
 
   // Unsubscribe from channel
   if (state.channel) {
@@ -394,22 +424,30 @@ export async function startRealtimeSubscriptions(userId: string): Promise<void> 
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          handleRealtimeChange(table, payload as RealtimePostgresChangesPayload<Record<string, unknown>>);
+          // Handle async function properly - catch errors to prevent unhandled rejections
+          handleRealtimeChange(table, payload as RealtimePostgresChangesPayload<Record<string, unknown>>)
+            .catch(error => {
+              console.error(`[Realtime] Error processing ${table} change:`, error);
+            });
         }
       );
     }
 
     // Subscribe to the channel
     state.channel.subscribe((status, err) => {
+      // Release the operation lock once we get any response
+      operationInProgress = false;
+
       switch (status) {
         case 'SUBSCRIBED':
           console.log('[Realtime] Connected and subscribed');
           state.reconnectAttempts = 0;
+          reconnectScheduled = false;
           setConnectionState('connected');
           break;
 
         case 'CHANNEL_ERROR':
-          console.error('[Realtime] Channel error:', err);
+          console.error('[Realtime] Channel error:', err?.message || 'Unknown error');
           setConnectionState('error', err?.message || 'Channel error');
           scheduleReconnect();
           break;
@@ -422,22 +460,22 @@ export async function startRealtimeSubscriptions(userId: string): Promise<void> 
 
         case 'CLOSED':
           console.log('[Realtime] Channel closed');
-          if (state.connectionState !== 'disconnected') {
+          // Only try to reconnect if:
+          // 1. We weren't intentionally disconnected
+          // 2. We have a user
+          // 3. We're not already scheduled for reconnect (prevents duplicate from CHANNEL_ERROR + CLOSED)
+          if (state.connectionState !== 'disconnected' && state.userId && !reconnectScheduled) {
             setConnectionState('disconnected');
-            // Only reconnect if this wasn't an intentional close and we have a user
-            if (state.userId) {
-              scheduleReconnect();
-            }
+            scheduleReconnect();
           }
           break;
       }
     });
   } catch (error) {
+    operationInProgress = false;
     console.error('[Realtime] Failed to start subscriptions:', error);
     setConnectionState('error', error instanceof Error ? error.message : 'Failed to connect');
     scheduleReconnect();
-  } finally {
-    operationInProgress = false;
   }
 }
 
@@ -456,8 +494,8 @@ export async function stopRealtimeSubscriptions(): Promise<void> {
   try {
     await stopRealtimeSubscriptionsInternal();
     state.userId = null;
-    // Clear recently modified tracking
-    recentlyModifiedByRealtime.clear();
+    // Clear recently processed tracking
+    recentlyProcessedByRealtime.clear();
   } finally {
     operationInProgress = false;
   }
@@ -468,11 +506,12 @@ export async function stopRealtimeSubscriptions(): Promise<void> {
  * Called by sync engine when offline event fires
  */
 export function pauseRealtime(): void {
-  // Clear any pending reconnect attempts
+  // Clear any pending reconnect attempts and reset flags
   if (state.reconnectTimeout) {
     clearTimeout(state.reconnectTimeout);
     state.reconnectTimeout = null;
   }
+  reconnectScheduled = false;
   // Reset reconnect attempts so we get fresh attempts when coming online
   state.reconnectAttempts = 0;
   setConnectionState('disconnected');
@@ -487,13 +526,13 @@ export function isRealtimeHealthy(): boolean {
 }
 
 /**
- * Clean up expired entries from recently modified tracking
+ * Clean up expired entries from recently processed tracking
  */
 export function cleanupRealtimeTracking(): void {
   const now = Date.now();
-  for (const [entityId, modifiedAt] of recentlyModifiedByRealtime) {
-    if (now - modifiedAt > RECENTLY_MODIFIED_TTL_MS) {
-      recentlyModifiedByRealtime.delete(entityId);
+  for (const [entityId, processedAt] of recentlyProcessedByRealtime) {
+    if (now - processedAt > RECENTLY_MODIFIED_TTL_MS) {
+      recentlyProcessedByRealtime.delete(entityId);
     }
   }
 }
