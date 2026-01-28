@@ -1,10 +1,13 @@
 <script lang="ts">
   import type { DayOfWeek } from '$lib/types';
+  import { trackEditing } from '$lib/actions/remoteChange';
 
   interface Props {
     name?: string;
     activeDays?: DayOfWeek[] | null;
     submitLabel?: string;
+    // For trackEditing - existing entity being edited
+    entityId?: string | null;
     onSubmit: (data: { name: string; activeDays: DayOfWeek[] | null }) => void;
     onCancel?: () => void;
   }
@@ -13,6 +16,7 @@
     name: initialName = '',
     activeDays: initialActiveDays = null,
     submitLabel = 'Create',
+    entityId = null,
     onSubmit,
     onCancel
   }: Props = $props();
@@ -94,7 +98,11 @@
   }
 </script>
 
-<form class="block-list-form" onsubmit={handleSubmit}>
+<form
+  class="block-list-form"
+  onsubmit={handleSubmit}
+  use:trackEditing={{ entityId: entityId ?? 'new', entityType: 'block_lists', formType: 'manual-save' }}
+>
   <div class="form-group">
     <label for="block-list-name">Block List Name</label>
     <input

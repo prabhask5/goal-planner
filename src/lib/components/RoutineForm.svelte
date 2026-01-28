@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { GoalType, DayOfWeek } from '$lib/types';
   import { formatDate } from '$lib/utils/dates';
+  import { trackEditing } from '$lib/actions/remoteChange';
 
   interface Props {
     name?: string;
@@ -10,6 +11,9 @@
     endDate?: string | null;
     activeDays?: DayOfWeek[] | null;
     submitLabel?: string;
+    // For trackEditing - existing entity being edited
+    entityId?: string | null;
+    entityType?: string;
     onSubmit: (data: {
       name: string;
       type: GoalType;
@@ -29,6 +33,8 @@
     endDate: initialEndDate = null,
     activeDays: initialActiveDays = null,
     submitLabel = 'Create',
+    entityId = null,
+    entityType = 'routines',
     onSubmit,
     onCancel
   }: Props = $props();
@@ -119,7 +125,11 @@
   }
 </script>
 
-<form class="routine-form" onsubmit={handleSubmit}>
+<form
+  class="routine-form"
+  onsubmit={handleSubmit}
+  use:trackEditing={{ entityId: entityId ?? 'new', entityType, formType: 'manual-save' }}
+>
   <div class="form-group">
     <label for="routine-name">Routine Name</label>
     <input

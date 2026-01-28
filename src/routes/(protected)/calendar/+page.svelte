@@ -9,6 +9,7 @@
   import Modal from '$lib/components/Modal.svelte';
   import RoutineForm from '$lib/components/RoutineForm.svelte';
   import DraggableList from '$lib/components/DraggableList.svelte';
+  import { remoteChangeAnimation } from '$lib/actions/remoteChange';
 
   let currentDate = $state(new Date());
   let loading = $state(true);
@@ -279,7 +280,10 @@
           <h3>Active ({activeRoutines.length})</h3>
           <DraggableList items={activeRoutines} onReorder={handleReorderRoutine}>
             {#snippet renderItem({ item: routine, dragHandleProps })}
-              <div class="routine-with-handle">
+              <div
+                class="routine-with-handle"
+                use:remoteChangeAnimation={{ entityId: routine.id, entityType: 'daily_routine_goals' }}
+              >
                 <button class="drag-handle" {...dragHandleProps} aria-label="Drag to reorder">
                   ⋮⋮
                 </button>
@@ -326,7 +330,10 @@
           <h3>Inactive ({inactiveRoutines.length})</h3>
           <DraggableList items={inactiveRoutines} onReorder={handleReorderRoutine}>
             {#snippet renderItem({ item: routine, dragHandleProps })}
-              <div class="routine-with-handle">
+              <div
+                class="routine-with-handle"
+                use:remoteChangeAnimation={{ entityId: routine.id, entityType: 'daily_routine_goals' }}
+              >
                 <button class="drag-handle" {...dragHandleProps} aria-label="Drag to reorder">
                   ⋮⋮
                 </button>

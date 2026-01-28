@@ -4,12 +4,25 @@
   import { blockListStore, blockedWebsitesStore } from '$lib/stores/focus';
   import Modal from '$lib/components/Modal.svelte';
   import BlockListForm from './BlockListForm.svelte';
+  import { remoteChangeAnimation, triggerLocalAnimation } from '$lib/actions/remoteChange';
 
   interface Props {
     userId: string;
   }
 
   let { userId }: Props = $props();
+
+  // Track element references by list id for local animations
+  let listElements: Record<string, HTMLElement> = {};
+
+  function registerListElement(node: HTMLElement, id: string) {
+    listElements[id] = node;
+    return {
+      destroy() {
+        delete listElements[id];
+      }
+    };
+  }
 
   // Day labels for display
   const dayLabels: { short: string; full: string; value: DayOfWeek }[] = [
@@ -71,6 +84,10 @@
   }
 
   async function toggleList(id: string) {
+    const element = listElements[id];
+    if (element) {
+      triggerLocalAnimation(element, 'toggle');
+    }
     await blockListStore.toggle(id);
   }
 
@@ -154,8 +171,12 @@
         </button>
 
         <div class="lists">
-          {#each $blockListStore as list}
-            <div class="list-item">
+          {#each $blockListStore as list (list.id)}
+            <div
+              class="list-item"
+              use:registerListElement={list.id}
+              use:remoteChangeAnimation={{ entityId: list.id, entityType: 'block_lists' }}
+            >
               <button
                 class="toggle-btn"
                 class:active={list.is_enabled}

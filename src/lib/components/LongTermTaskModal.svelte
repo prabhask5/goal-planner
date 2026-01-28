@@ -2,6 +2,7 @@
   import Modal from './Modal.svelte';
   import type { LongTermTaskWithCategory, TaskCategory } from '$lib/types';
   import { parseDateString } from '$lib/utils/dates';
+  import { remoteChangeAnimation, trackEditing } from '$lib/actions/remoteChange';
 
   interface Props {
     open: boolean;
@@ -111,7 +112,11 @@
 
 <Modal {open} title="Task Details" onClose={onClose}>
   {#if task}
-    <div class="task-details">
+    <div
+      class="task-details"
+      use:remoteChangeAnimation={{ entityId: task.id, entityType: 'long_term_tasks' }}
+      use:trackEditing={{ entityId: task.id, entityType: 'long_term_tasks', formType: 'auto-save' }}
+    >
       <div class="field">
         <label class="field-label">Name</label>
         {#if editingName}

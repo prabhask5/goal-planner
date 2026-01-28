@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { syncStatusStore, type SyncError } from '$lib/stores/sync';
+  import { syncStatusStore, type SyncError, type RealtimeState } from '$lib/stores/sync';
   import { isOnline } from '$lib/stores/network';
   import { performSync } from '$lib/sync/engine';
   import type { SyncStatus } from '$lib/types';
@@ -12,6 +12,7 @@
   let syncErrors = $state<SyncError[]>([]);
   let lastSyncTime = $state<string | null>(null);
   let syncMessage = $state<string | null>(null);
+  let realtimeState = $state<RealtimeState>('disconnected');
   let showTooltip = $state(false);
   let showDetails = $state(false);
   let tooltipTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -19,7 +20,9 @@
 
   // Track previous state for transitions
   let prevDisplayState = $state<string>('idle');
+  let prevRealtimeState = $state<RealtimeState>('disconnected');
   let isTransitioning = $state(false);
+  let isRealtimeTransitioning = $state(false);
 
   // Subscribe to stores
   $effect(() => {
@@ -31,6 +34,16 @@
       syncErrors = value.syncErrors;
       lastSyncTime = value.lastSyncTime;
       syncMessage = value.syncMessage;
+
+      // Track realtime state changes for smooth animation
+      if (value.realtimeState !== prevRealtimeState) {
+        isRealtimeTransitioning = true;
+        setTimeout(() => {
+          isRealtimeTransitioning = false;
+        }, 400);
+        prevRealtimeState = value.realtimeState;
+      }
+      realtimeState = value.realtimeState;
     });
     const unsubOnline = isOnline.subscribe((value) => {
       online = value;
@@ -41,6 +54,11 @@
       unsubOnline();
       if (tooltipTimeout) clearTimeout(tooltipTimeout);
     };
+  });
+
+  // Derive if realtime is live (connected and healthy)
+  const isRealtimeLive = $derived(() => {
+    return online && realtimeState === 'connected';
   });
 
   function handleSyncClick() {
@@ -124,6 +142,17 @@
     }
   });
 
+  // Get realtime label for tooltip
+  const realtimeLabel = $derived(() => {
+    if (!online) return null;
+    switch (realtimeState) {
+      case 'connected': return 'Live';
+      case 'connecting': return 'Connecting...';
+      case 'error': return 'Using polling';
+      default: return null;
+    }
+  });
+
   // Get status description for tooltip
   const statusDescription = $derived(() => {
     const state = displayState();
@@ -139,6 +168,9 @@
       case 'pending':
         return `${pendingCount} change${pendingCount === 1 ? '' : 's'} waiting to sync.`;
       default:
+        if (isRealtimeLive()) {
+          return 'Live sync active. Changes sync instantly across devices.';
+        }
         return 'All your data is up to date.';
     }
   });
@@ -253,6 +285,17 @@
     {#if displayState() === 'pending'}
       <span class="pending-badge">{pendingCount}</span>
     {/if}
+
+    <!-- Live Indicator - Shows when realtime is connected -->
+    <span
+      class="live-indicator"
+      class:active={isRealtimeLive()}
+      class:connecting={online && realtimeState === 'connecting'}
+      class:transitioning={isRealtimeTransitioning}
+    >
+      <span class="live-dot"></span>
+      <span class="live-ring"></span>
+    </span>
   </button>
 
   <!-- Beautiful Tooltip -->
@@ -264,6 +307,14 @@
         <div class="tooltip-header">
           <div class="status-dot" class:offline={displayState() === 'offline'} class:syncing={displayState() === 'syncing'} class:error={displayState() === 'error'} class:pending={displayState() === 'pending'} class:synced={displayState() === 'synced'}></div>
           <span class="status-label">{statusLabel()}</span>
+          {#if realtimeLabel() && displayState() !== 'offline'}
+            <span class="realtime-badge" class:live={realtimeState === 'connected'} class:connecting={realtimeState === 'connecting'}>
+              {#if realtimeState === 'connected'}
+                <span class="realtime-dot"></span>
+              {/if}
+              {realtimeLabel()}
+            </span>
+          {/if}
           {#if formattedLastSync() && displayState() !== 'syncing'}
             <span class="last-sync">{formattedLastSync()}</span>
           {/if}
@@ -689,6 +740,115 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════════
+     LIVE INDICATOR - Subtle realtime connection indicator
+     ═══════════════════════════════════════════════════════════════════════════════════ */
+
+  .live-indicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0) rotate(-90deg);
+    transition:
+      opacity 0.4s var(--ease-spring),
+      transform 0.5s var(--ease-spring);
+  }
+
+  .live-indicator.active {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+
+  .live-indicator.connecting {
+    opacity: 0.6;
+    transform: scale(0.9) rotate(0deg);
+  }
+
+  .live-indicator.transitioning {
+    animation: liveIndicatorPop 0.5s var(--ease-spring);
+  }
+
+  @keyframes liveIndicatorPop {
+    0% { transform: scale(0.6) rotate(-45deg); }
+    50% { transform: scale(1.2) rotate(10deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    box-shadow:
+      0 0 4px rgba(16, 185, 129, 0.6),
+      0 0 8px rgba(16, 185, 129, 0.3);
+    position: relative;
+    z-index: 2;
+  }
+
+  .live-indicator.active .live-dot {
+    animation: liveDotPulse 2s ease-in-out infinite;
+  }
+
+  .live-indicator.connecting .live-dot {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    box-shadow:
+      0 0 4px rgba(99, 102, 241, 0.6),
+      0 0 8px rgba(99, 102, 241, 0.3);
+    animation: liveDotConnecting 1s ease-in-out infinite;
+  }
+
+  @keyframes liveDotPulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow:
+        0 0 4px rgba(16, 185, 129, 0.6),
+        0 0 8px rgba(16, 185, 129, 0.3);
+    }
+    50% {
+      transform: scale(1.1);
+      box-shadow:
+        0 0 6px rgba(16, 185, 129, 0.8),
+        0 0 12px rgba(16, 185, 129, 0.4);
+    }
+  }
+
+  @keyframes liveDotConnecting {
+    0%, 100% { opacity: 0.4; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+
+  .live-ring {
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(16, 185, 129, 0.4);
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  .live-indicator.active .live-ring {
+    animation: liveRingPulse 2s ease-out infinite;
+  }
+
+  @keyframes liveRingPulse {
+    0% {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(2);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════════════
      BEAUTIFUL TOOLTIP
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
@@ -818,6 +978,46 @@
     font-weight: 500;
     color: var(--color-text-muted);
     opacity: 0.7;
+  }
+
+  /* Realtime badge in tooltip */
+  .realtime-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background: rgba(100, 100, 120, 0.2);
+    color: var(--color-text-muted);
+    transition: all 0.4s var(--ease-spring);
+  }
+
+  .realtime-badge.live {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.1) 100%);
+    color: #34d399;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+  }
+
+  .realtime-badge.connecting {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+  }
+
+  .realtime-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: realtimeDotPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes realtimeDotPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
   }
 
   .tooltip-description {
@@ -1106,6 +1306,21 @@
     }
 
     .error-details-panel {
+      animation: none;
+    }
+
+    .live-indicator {
+      transition: opacity 0.2s ease;
+      transform: scale(1) rotate(0deg);
+    }
+
+    .live-indicator.transitioning {
+      animation: none;
+    }
+
+    .live-dot,
+    .live-ring,
+    .realtime-dot {
       animation: none;
     }
   }

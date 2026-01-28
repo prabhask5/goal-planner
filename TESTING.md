@@ -941,6 +941,69 @@ console.log(items);
 | Token refresh | Token expires | Subscription re-established |
 | Network flap | Network on/off rapidly | Handles gracefully, no duplicate subscriptions |
 
+### 16.7 Remote Change Animations
+
+Remote changes from other devices should trigger smooth visual animations to help users understand what changed.
+
+#### Action Type Detection
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Create animation | Create goal on device B | Device A shows slide-in with glow animation |
+| Delete animation | Delete goal on device B | Device A shows slide-out with fade animation |
+| Toggle animation | Toggle goal completion on device B | Device A shows green highlight with scale bounce |
+| Increment animation | Increment goal value on device B | Device A shows counter bounce up animation |
+| Decrement animation | Decrement goal value on device B | Device A shows counter bounce down animation |
+| Reorder animation | Reorder goals on device B | Device A shows subtle settle animation |
+| Rename animation | Rename goal on device B | Device A shows shimmer/highlight animation |
+| Update animation | Update other field on device B | Device A shows default highlight animation |
+
+#### Animation Timing
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Animation duration | Trigger remote change | Animation completes within specified duration (varies by type) |
+| No overlapping animations | Rapid remote changes on same item | Only one animation plays at a time |
+| Animation cleanup | Wait for animation to complete | Animation class removed after completion |
+| Fallback cleanup | Animation end event doesn't fire | Class removed via fallback timeout |
+
+#### Delete Animation Flow
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Delete delay | Delete on device B | Device A shows 500ms animation before DOM removal |
+| Pending delete indicator | Delete initiated on device B | Element has `item-deleting` class applied |
+| DOM removal after animation | Delete on device B, wait | Element removed after animation completes |
+
+#### Form Edit Protection
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Deferred while editing | Edit goal in modal, remote change arrives | Change deferred until form closes |
+| Deferred indicator | Have deferred changes waiting | Form shows visual indicator |
+| Apply on close | Close form with deferred changes | Changes applied, callback fired |
+| Auto-save elements | Toggle goal, remote change arrives | Change applies immediately with animation |
+
+#### Component Coverage
+
+| Entity Type | Component | Animation Wired |
+|-------------|-----------|-----------------|
+| Goal Lists | Lists page cards | ✓ |
+| Goals | GoalItem component | ✓ |
+| Long-term Tasks | Task cards on calendar | ✓ |
+| Daily Tasks | TaskItem component | ✓ |
+| Commitments | CommitmentsModal items | ✓ |
+| Block Lists | BlockListManager items | ✓ |
+| Daily Routines | Routine page items | ✓ |
+| Daily Progress | Progress items in routine view | ✓ |
+
+#### Reduced Motion
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| Prefers reduced motion | Enable OS reduced motion setting | Animations disabled or minimized |
+| Animation disabled | Check CSS media query | `prefers-reduced-motion` respected |
+
 ---
 
 ## 17. Error Handling Tests

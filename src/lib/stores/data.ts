@@ -5,6 +5,7 @@ import * as sync from '$lib/sync/engine';
 import { calculateGoalProgressCapped } from '$lib/utils/colors';
 import { isRoutineActiveOnDate } from '$lib/utils/dates';
 import { browser } from '$app/environment';
+import { remoteChangesStore } from '$lib/stores/remoteChanges';
 
 // ============================================================
 // LOCAL-FIRST STORES
@@ -44,6 +45,8 @@ function createGoalListsStore() {
     create: async (name: string, userId: string) => {
       // Write to local DB immediately
       const newList = await repo.createGoalList(name, userId);
+      // Record for animation before updating store (so element mounts with animation)
+      remoteChangesStore.recordLocalChange(newList.id, 'goal_lists', 'create');
       update(lists => [
         { ...newList, totalGoals: 0, completedGoals: 0, completionPercentage: 0 },
         ...lists
@@ -107,6 +110,8 @@ function createGoalListStore() {
     },
     addGoal: async (goalListId: string, name: string, type: 'completion' | 'incremental', targetValue: number | null) => {
       const newGoal = await repo.createGoal(goalListId, name, type, targetValue);
+      // Record for animation before updating store
+      remoteChangesStore.recordLocalChange(newGoal.id, 'goals', 'create');
       // Prepend to top (new items have lower order values)
       update(list => list ? { ...list, goals: [newGoal, ...list.goals] } : null);
       return newGoal;
@@ -197,6 +202,8 @@ function createDailyRoutinesStore() {
       activeDays: DailyRoutineGoal['active_days'] = null
     ) => {
       const newRoutine = await repo.createDailyRoutineGoal(name, type, targetValue, startDate, endDate, userId, activeDays);
+      // Record for animation before updating store
+      remoteChangesStore.recordLocalChange(newRoutine.id, 'daily_routine_goals', 'create');
       update(routines => [newRoutine, ...routines]);
       return newRoutine;
     },
@@ -536,6 +543,8 @@ function createTaskCategoriesStore() {
     },
     create: async (name: string, color: string, userId: string) => {
       const newCategory = await repo.createTaskCategory(name, color, userId);
+      // Record for animation before updating store
+      remoteChangesStore.recordLocalChange(newCategory.id, 'task_categories', 'create');
       update(categories => [newCategory, ...categories]);
       return newCategory;
     },
@@ -597,6 +606,8 @@ function createCommitmentsStore() {
     },
     create: async (name: string, section: CommitmentSection, userId: string) => {
       const newCommitment = await repo.createCommitment(name, section, userId);
+      // Record for animation before updating store
+      remoteChangesStore.recordLocalChange(newCommitment.id, 'commitments', 'create');
       update(commitments => [newCommitment, ...commitments]);
       return newCommitment;
     },
@@ -658,6 +669,8 @@ function createDailyTasksStore() {
     },
     create: async (name: string, userId: string) => {
       const newTask = await repo.createDailyTask(name, userId);
+      // Record for animation before updating store
+      remoteChangesStore.recordLocalChange(newTask.id, 'daily_tasks', 'create');
       // Prepend to top (new items have lower order values)
       update(tasks => [newTask, ...tasks]);
       return newTask;
@@ -731,6 +744,8 @@ function createLongTermTasksStore() {
     },
     create: async (name: string, dueDate: string, categoryId: string | null, userId: string) => {
       const newTask = await repo.createLongTermTask(name, dueDate, categoryId, userId);
+      // Record for animation before updating store
+      remoteChangesStore.recordLocalChange(newTask.id, 'long_term_tasks', 'create');
       // Fetch the task with category for the store
       const taskWithCategory = await sync.getLongTermTask(newTask.id);
       if (taskWithCategory) {

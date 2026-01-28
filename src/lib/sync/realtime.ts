@@ -20,6 +20,7 @@ import { db } from '$lib/db/client';
 import { getDeviceId } from './deviceId';
 import { resolveConflicts, storeConflictHistory, getPendingOpsForEntity } from './conflicts';
 import { getPendingEntityIds } from './queue';
+import { remoteChangesStore } from '$lib/stores/remoteChanges';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 // Tables that support real-time sync
@@ -237,18 +238,35 @@ async function handleRealtimeChange(
       case 'UPDATE': {
         if (!newRecord) return;
 
+        // Check if entity is being edited in a manual-save form
+        const isBeingEdited = remoteChangesStore.isEditing(entityId, table);
+
         // Get local entity if it exists
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const localEntity = await (db[dexieTable] as any).get(entityId);
+
+        // Determine which fields changed
+        const changedFields: string[] = [];
+        if (localEntity && newRecord) {
+          for (const key of Object.keys(newRecord)) {
+            if (key === 'updated_at' || key === '_version') continue;
+            if (JSON.stringify(localEntity[key]) !== JSON.stringify(newRecord[key])) {
+              changedFields.push(key);
+            }
+          }
+        }
 
         // Check for pending operations
         const pendingEntityIds = await getPendingEntityIds();
         const hasPendingOps = pendingEntityIds.has(entityId);
 
+        let applied = false;
+
         if (!localEntity) {
           // New entity - just insert it
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (db[dexieTable] as any).put(newRecord);
+          applied = true;
         } else if (!hasPendingOps) {
           // No pending ops - check if remote is newer
           const localUpdatedAt = new Date(localEntity.updated_at as string).getTime();
@@ -258,6 +276,7 @@ async function handleRealtimeChange(
             // Remote is newer, accept it
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await (db[dexieTable] as any).put(newRecord);
+            applied = true;
           }
         } else {
           // Has pending operations - use conflict resolution
@@ -273,10 +292,49 @@ async function handleRealtimeChange(
           // Store merged entity
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (db[dexieTable] as any).put(resolution.mergedEntity);
+          applied = true;
 
           // Store conflict history if there were conflicts
           if (resolution.hasConflicts) {
             await storeConflictHistory(resolution);
+          }
+        }
+
+        // Calculate value delta for increment/decrement detection
+        let valueDelta: number | undefined;
+        if (changedFields.includes('current_value') && localEntity && newRecord) {
+          const oldValue = localEntity.current_value as number || 0;
+          const newValue = newRecord.current_value as number || 0;
+          valueDelta = newValue - oldValue;
+        }
+
+        // Record the remote change for UI animation
+        // If entity is being edited in a form, the change will be deferred
+        // We pass the eventType so the store can detect the action type
+        if (changedFields.length > 0 || !localEntity) {
+          remoteChangesStore.recordRemoteChange(
+            entityId,
+            table,
+            changedFields.length > 0 ? changedFields : ['*'],
+            applied,
+            eventType as 'INSERT' | 'UPDATE',
+            valueDelta
+          );
+
+          // Special case: daily_goal_progress changes should also animate
+          // the parent daily_routine_goal item in the UI
+          if (table === 'daily_goal_progress' && newRecord) {
+            const routineGoalId = newRecord.daily_routine_goal_id as string | undefined;
+            if (routineGoalId) {
+              remoteChangesStore.recordRemoteChange(
+                routineGoalId,
+                'daily_routine_goals',
+                changedFields,
+                applied,
+                eventType as 'INSERT' | 'UPDATE',
+                valueDelta
+              );
+            }
           }
         }
 
@@ -292,8 +350,26 @@ async function handleRealtimeChange(
         // For soft-delete systems, this would be an UPDATE with deleted=true
         // But if hard delete happens, we should remove locally too
         if (oldRecord) {
+          // Record the delete for UI animation before removing
+          remoteChangesStore.recordRemoteChange(
+            entityId,
+            table,
+            ['*'],
+            true,
+            'DELETE'
+          );
+
+          // Mark as pending delete and wait for animation to complete
+          // This allows the UI to play the delete animation before DOM removal
+          await remoteChangesStore.markPendingDelete(entityId, table);
+
+          // Now actually delete from database (triggers reactive DOM removal)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (db[dexieTable] as any).delete(entityId);
+
+          // Mark as recently processed
+          recentlyProcessedByRealtime.set(entityId, Date.now());
+
           notifyDataUpdate(table, entityId);
         }
         break;
@@ -447,7 +523,9 @@ export async function startRealtimeSubscriptions(userId: string): Promise<void> 
           break;
 
         case 'CHANNEL_ERROR':
-          console.error('[Realtime] Channel error:', err?.message || 'Unknown error');
+          if (err?.message) {
+            console.error('[Realtime] Channel error:', err?.message);
+          }
           setConnectionState('error', err?.message || 'Channel error');
           scheduleReconnect();
           break;

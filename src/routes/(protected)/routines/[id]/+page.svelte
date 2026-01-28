@@ -155,6 +155,8 @@
         endDate={routine.end_date}
         activeDays={routine.active_days}
         submitLabel={saving ? 'Saving...' : 'Save Changes'}
+        entityId={routine.id}
+        entityType="daily_routine_goals"
         onSubmit={handleUpdateRoutine}
         onCancel={() => goto('/calendar#manage-routines')}
       />

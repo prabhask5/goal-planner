@@ -5,6 +5,7 @@
   import { singleBlockListStore, blockedWebsitesStore } from '$lib/stores/focus';
   import type { BlockList, BlockedWebsite, DayOfWeek } from '$lib/types';
   import BlockListForm from '$lib/components/focus/BlockListForm.svelte';
+  import { remoteChangeAnimation } from '$lib/actions/remoteChange';
 
   let blockList = $state<BlockList | null>(null);
   let websites = $state<BlockedWebsite[]>([]);
@@ -170,6 +171,7 @@
         name={blockList.name}
         activeDays={blockList.active_days}
         submitLabel={saving ? 'Saving...' : 'Save Changes'}
+        entityId={blockList.id}
         onSubmit={handleUpdateBlockList}
         onCancel={() => goto('/focus')}
       />
@@ -202,8 +204,11 @@
         </div>
       {:else}
         <div class="website-list">
-          {#each websites as website}
-            <div class="website-item">
+          {#each websites as website (website.id)}
+            <div
+              class="website-item"
+              use:remoteChangeAnimation={{ entityId: website.id, entityType: 'blocked_websites' }}
+            >
               <span class="domain">{website.domain}</span>
               <button class="delete-btn" onclick={() => removeWebsite(website.id)} aria-label="Remove website">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">

@@ -1,11 +1,15 @@
 <script lang="ts">
   import type { GoalType } from '$lib/types';
+  import { trackEditing } from '$lib/actions/remoteChange';
 
   interface Props {
     name?: string;
     type?: GoalType;
     targetValue?: number | null;
     submitLabel?: string;
+    // For trackEditing - existing entity being edited
+    entityId?: string | null;
+    entityType?: string;
     onSubmit: (data: { name: string; type: GoalType; targetValue: number | null }) => void;
     onCancel?: () => void;
   }
@@ -15,6 +19,8 @@
     type: initialType = 'completion',
     targetValue: initialTargetValue = 10,
     submitLabel = 'Create',
+    entityId = null,
+    entityType = 'goals',
     onSubmit,
     onCancel
   }: Props = $props();
@@ -35,7 +41,11 @@
   }
 </script>
 
-<form class="goal-form" onsubmit={handleSubmit}>
+<form
+  class="goal-form"
+  onsubmit={handleSubmit}
+  use:trackEditing={{ entityId: entityId ?? 'new', entityType, formType: 'manual-save' }}
+>
   <div class="form-group">
     <label for="goal-name">Goal Name</label>
     <input

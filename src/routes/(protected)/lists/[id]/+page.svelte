@@ -296,6 +296,8 @@
       type={editingGoal.type}
       targetValue={editingGoal.target_value}
       submitLabel="Save Changes"
+      entityId={editingGoal.id}
+      entityType="goals"
       onSubmit={handleUpdateGoal}
       onCancel={() => (editingGoal = null)}
     />

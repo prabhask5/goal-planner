@@ -2,6 +2,7 @@
   import { fade, scale } from 'svelte/transition';
   import type { TaskCategory, LongTermTaskWithCategory } from '$lib/types';
   import { parseDateString } from '$lib/utils/dates';
+  import { remoteChangeAnimation } from '$lib/actions/remoteChange';
 
   // Available colors for categories (same as CategoryCreateModal)
   const CATEGORY_COLORS = [
@@ -213,7 +214,10 @@
           <div class="categories-list">
             {#each categories as category (category.id)}
               {@const categoryTasks = tasksByCategory().get(category.id) || []}
-              <div class="category-section">
+              <div
+                class="category-section"
+                use:remoteChangeAnimation={{ entityId: category.id, entityType: 'task_categories' }}
+              >
                 <div class="category-header">
                   <div class="category-info">
                     <!-- Color button with picker -->
@@ -272,7 +276,12 @@
                 {#if categoryTasks.length > 0}
                   <div class="tasks-list">
                     {#each categoryTasks as task (task.id)}
-                      <div class="task-row" class:overdue={isOverdue(task.due_date)} class:due-today={isDueToday(task.due_date)}>
+                      <div
+                        class="task-row"
+                        class:overdue={isOverdue(task.due_date)}
+                        class:due-today={isDueToday(task.due_date)}
+                        use:remoteChangeAnimation={{ entityId: task.id, entityType: 'long_term_tasks' }}
+                      >
                         <button
                           class="checkbox"
                           onclick={() => onToggle(task.id)}
@@ -315,7 +324,12 @@
 
                 <div class="tasks-list">
                   {#each untaggedTasks as task (task.id)}
-                    <div class="task-row" class:overdue={isOverdue(task.due_date)} class:due-today={isDueToday(task.due_date)}>
+                    <div
+                      class="task-row"
+                      class:overdue={isOverdue(task.due_date)}
+                      class:due-today={isDueToday(task.due_date)}
+                      use:remoteChangeAnimation={{ entityId: task.id, entityType: 'long_term_tasks' }}
+                    >
                       <button
                         class="checkbox"
                         onclick={() => onToggle(task.id)}

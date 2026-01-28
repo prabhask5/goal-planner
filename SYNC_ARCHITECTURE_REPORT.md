@@ -1263,6 +1263,60 @@ The only scenario where a separate tombstone would help is if a device is offlin
 | Constant polling egress | Near-zero egress when realtime healthy |
 | Tab return always syncs | Tab return skips sync if realtime connected |
 
+### Remote Change Animation System
+
+To provide visual feedback when remote changes arrive, a comprehensive animation system was implemented:
+
+#### Components
+
+1. **Remote Changes Store** (`/src/lib/stores/remoteChanges.ts`)
+   - Tracks recent remote changes with action type detection
+   - Manages active editing state to defer changes during form edits
+   - Handles pending deletes with animation delay
+   - Provides derived stores for UI components
+
+2. **Remote Change Action** (`/src/lib/actions/remoteChange.ts`)
+   - Svelte action (`use:remoteChangeAnimation`) for attaching animations
+   - Automatically detects action type and applies appropriate animation
+   - Handles create, delete, toggle, increment, decrement, reorder, rename, update
+   - Tracks editing state with `use:trackEditing`
+
+3. **CSS Animations** (`/src/app.css`)
+   - `.item-created`: Slide-in with blur and glow burst
+   - `.item-deleting`: Slide-out with fade and red flash
+   - `.item-toggled`: Green highlight with scale bounce
+   - `.counter-increment/.counter-decrement`: Value bounce animations
+   - `.item-reordering`: Subtle scale/opacity settle
+   - `.text-changed`: Shimmer gradient sweep
+   - `.item-changed`: Default highlight for generic updates
+
+#### Action Type Detection
+
+Since Supabase Realtime only sends INSERT/UPDATE/DELETE events, the system infers the specific action by analyzing which fields changed:
+
+| Event Type | Changed Fields | Detected Action |
+|------------|----------------|-----------------|
+| INSERT | - | `create` |
+| DELETE | - | `delete` |
+| UPDATE | `completed` or `is_enabled` | `toggle` |
+| UPDATE | `current_value` (positive delta) | `increment` |
+| UPDATE | `current_value` (negative delta) | `decrement` |
+| UPDATE | `order` only | `reorder` |
+| UPDATE | `name` (with ≤2 fields) | `rename` |
+| UPDATE | other fields | `update` |
+
+#### Delete Animation Flow
+
+Delete animations require special handling because Svelte removes elements from the DOM immediately when data changes. The solution:
+
+1. Remote DELETE event received
+2. `recordRemoteChange()` called with DELETE event type
+3. `markPendingDelete()` adds entity to pending deletes map and returns Promise
+4. UI components detect pending delete via `createPendingDeleteIndicator` store
+5. `item-deleting` CSS class applied for 500ms animation
+6. Promise resolves after animation duration
+7. Actual database delete occurs, DOM element removed
+
 ---
 
 ## Phase 6: Testing & Hardening

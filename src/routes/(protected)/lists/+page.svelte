@@ -7,6 +7,7 @@
   import ProgressBar from '$lib/components/ProgressBar.svelte';
   import Modal from '$lib/components/Modal.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
+  import { remoteChangeAnimation } from '$lib/actions/remoteChange';
 
   let error = $state<string | null>(null);
   let showCreateModal = $state(false);
@@ -121,8 +122,15 @@
     </EmptyState>
   {:else}
     <div class="lists-grid">
-      {#each lists as list}
-        <div class="list-card" role="button" tabindex="0" onclick={() => navigateToList(list.id)} onkeypress={(e) => e.key === 'Enter' && navigateToList(list.id)}>
+      {#each lists as list (list.id)}
+        <div
+          class="list-card"
+          role="button"
+          tabindex="0"
+          onclick={() => navigateToList(list.id)}
+          onkeypress={(e) => e.key === 'Enter' && navigateToList(list.id)}
+          use:remoteChangeAnimation={{ entityId: list.id, entityType: 'goal_lists' }}
+        >
           <div class="list-header">
             <h3 class="list-name">{list.name}</h3>
             <button

@@ -9,6 +9,7 @@ import {
   formatTime,
   DEFAULT_FOCUS_SETTINGS
 } from '$lib/utils/focus';
+import { remoteChangesStore } from '$lib/stores/remoteChanges';
 
 // ============================================================
 // FOCUS TIMER STORE
@@ -467,6 +468,8 @@ function createBlockListStore() {
     create: async (name: string) => {
       if (!currentUserId) return;
       const newList = await repo.createBlockList(name, currentUserId);
+      // Record for animation before updating store
+      remoteChangesStore.recordLocalChange(newList.id, 'block_lists', 'create');
       update(lists => [newList, ...lists]);
       return newList;
     },
@@ -557,6 +560,8 @@ function createBlockedWebsitesStore() {
     create: async (domain: string) => {
       if (!currentBlockListId) return;
       const newWebsite = await repo.createBlockedWebsite(currentBlockListId, domain);
+      // Record for animation before updating store
+      remoteChangesStore.recordLocalChange(newWebsite.id, 'blocked_websites', 'create');
       // Prepend to top
       update(websites => [newWebsite, ...websites]);
       return newWebsite;

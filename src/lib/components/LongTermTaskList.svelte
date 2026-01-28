@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { remoteChangeAnimation, triggerLocalAnimation } from '$lib/actions/remoteChange';
   import type { LongTermTaskWithCategory } from '$lib/types';
 
   interface Props {
@@ -12,6 +13,26 @@
 
   let { title, tasks, variant = 'upcoming', onTaskClick, onToggle, onDelete }: Props = $props();
 
+  // Track element references by task id
+  let taskElements: Record<string, HTMLElement> = {};
+
+  function registerElement(node: HTMLElement, id: string) {
+    taskElements[id] = node;
+    return {
+      destroy() {
+        delete taskElements[id];
+      }
+    };
+  }
+
+  function handleToggle(taskId: string) {
+    const element = taskElements[taskId];
+    if (element) {
+      triggerLocalAnimation(element, 'toggle');
+    }
+    onToggle(taskId);
+  }
+
   function formatDate(dateStr: string): string {
     const date = new Date(dateStr + 'T00:00:00');
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -23,11 +44,15 @@
     <h3 class="list-title">{title}</h3>
     <div class="items">
       {#each tasks as task (task.id)}
-        <div class="task-row">
+        <div
+          class="task-row"
+          use:registerElement={task.id}
+          use:remoteChangeAnimation={{ entityId: task.id, entityType: 'long_term_tasks' }}
+        >
           <button
             class="checkbox"
             class:checked={task.completed}
-            onclick={() => onToggle(task.id)}
+            onclick={() => handleToggle(task.id)}
             aria-label={task.completed ? 'Mark incomplete' : 'Mark complete'}
           >
             {#if task.completed}

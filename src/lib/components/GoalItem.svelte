@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getProgressColor, calculateGoalProgress, getOverflowColor } from '$lib/utils/colors';
+  import { remoteChangeAnimation, triggerLocalAnimation } from '$lib/actions/remoteChange';
   import type { Goal, DailyRoutineGoal, DailyGoalProgress } from '$lib/types';
 
   interface Props {
@@ -13,6 +14,26 @@
   }
 
   let { goal, onToggleComplete, onIncrement, onDecrement, onSetValue, onEdit, onDelete }: Props = $props();
+
+  // Determine entity type for remote change tracking
+  const entityType = $derived('goal_list_id' in goal ? 'goals' : 'daily_routine_goals');
+
+  let element: HTMLElement;
+
+  function handleToggle() {
+    triggerLocalAnimation(element, 'toggle');
+    onToggleComplete?.();
+  }
+
+  function handleIncrement() {
+    triggerLocalAnimation(element, 'increment');
+    onIncrement?.();
+  }
+
+  function handleDecrement() {
+    triggerLocalAnimation(element, 'decrement');
+    onDecrement?.();
+  }
 
   // Focus action for accessibility
   function focus(node: HTMLElement) {
@@ -75,16 +96,18 @@
 </script>
 
 <div
+  bind:this={element}
   class="goal-item"
   class:celebrating={isCelebrating}
   style="border-left-color: {progressColor}; --celebration-intensity: {celebrationIntensity}; --glow-color: {progressColor}"
+  use:remoteChangeAnimation={{ entityId: goal.id, entityType }}
 >
   <div class="goal-main">
     {#if goal.type === 'completion'}
       <button
         class="checkbox"
         class:checked={completed}
-        onclick={onToggleComplete}
+        onclick={handleToggle}
         style="border-color: {progressColor}; background-color: {completed ? progressColor : 'transparent'}"
         aria-label={completed ? 'Mark as incomplete' : 'Mark as complete'}
       >
@@ -94,7 +117,7 @@
       </button>
     {:else}
       <div class="increment-controls">
-        <button class="increment-btn" onclick={onDecrement} aria-label="Decrement">−</button>
+        <button class="increment-btn" onclick={handleDecrement} aria-label="Decrement">−</button>
         {#if editing}
           <input
             type="number"
@@ -116,7 +139,7 @@
             {currentValue}/{goal.target_value}
           </button>
         {/if}
-        <button class="increment-btn" onclick={onIncrement} aria-label="Increment">+</button>
+        <button class="increment-btn" onclick={handleIncrement} aria-label="Increment">+</button>
       </div>
     {/if}
 

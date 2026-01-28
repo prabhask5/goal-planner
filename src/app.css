@@ -1137,6 +1137,662 @@ input, textarea {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════
+   COMPREHENSIVE ANIMATION SYSTEM — Beautiful animations for every action
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/*
+ * This animation system provides beautiful, seamless animations for:
+ * - Remote changes from other devices (realtime sync)
+ * - Local actions (create, delete, toggle, reorder, rename)
+ * - Form interactions and state changes
+ *
+ * Design principles:
+ * - Subtle and non-jarring
+ * - Spring easing for organic feel
+ * - Consistent timing across actions
+ * - Graceful degradation with reduced-motion
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────────────
+   ITEM CHANGE ANIMATIONS — Local and remote sync updates
+   ───────────────────────────────────────────────────────────────────────────────── */
+
+/* Base class for items that can be animated */
+.syncable-item {
+  position: relative;
+  transition:
+    background-color 0.5s var(--ease-out),
+    box-shadow 0.5s var(--ease-out),
+    transform 0.3s var(--ease-spring),
+    opacity 0.3s var(--ease-out);
+}
+
+/* Applied when a change was just made (local or remote) */
+.item-changed {
+  animation: itemChangeHighlight 1.5s var(--ease-out);
+}
+
+/* Applied when a toggle action (completed, is_enabled) was made */
+.item-toggled {
+  animation: itemToggleHighlight 0.6s var(--ease-spring);
+}
+
+@keyframes itemToggleHighlight {
+  0% {
+    background-color: rgba(38, 222, 129, 0.2);
+    transform: scale(1);
+  }
+  30% {
+    background-color: rgba(38, 222, 129, 0.3);
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+@keyframes itemChangeHighlight {
+  0% {
+    background-color: rgba(16, 185, 129, 0.15);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3), inset 0 0 20px rgba(16, 185, 129, 0.1);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Subtle glow indicator for changed items */
+.item-changed::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid rgba(16, 185, 129, 0.4);
+  pointer-events: none;
+  animation: itemChangeBorder 1.5s var(--ease-out) forwards;
+}
+
+@keyframes itemChangeBorder {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+
+/* For items entering the list */
+.item-enter {
+  animation: itemEnter 0.5s var(--ease-spring);
+}
+
+@keyframes itemEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+    background-color: rgba(16, 185, 129, 0.1);
+  }
+  50% {
+    background-color: rgba(16, 185, 129, 0.15);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    background-color: transparent;
+  }
+}
+
+/* For items being removed */
+.item-exit {
+  animation: itemExit 0.4s var(--ease-out) forwards;
+}
+
+@keyframes itemExit {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    max-height: 200px;
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateX(-10px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+
+/* Field-level change indicator */
+.field-changed {
+  position: relative;
+  animation: fieldPulse 1.2s var(--ease-out);
+}
+
+@keyframes fieldPulse {
+  0% {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.2), transparent);
+    background-size: 200% 100%;
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+/* Indicator for deferred changes (entity being edited) */
+.has-deferred-changes {
+  position: relative;
+}
+
+.has-deferred-changes::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-orange);
+  box-shadow: 0 0 8px var(--color-orange-glow);
+  animation: deferredChangesPulse 2s ease-in-out infinite;
+  z-index: 10;
+}
+
+@keyframes deferredChangesPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────────
+   LOCAL ACTION ANIMATIONS — Creating, toggling, deleting, reordering
+   ───────────────────────────────────────────────────────────────────────────────── */
+
+/* === ITEM CREATION — New items appearing in lists === */
+
+.item-created {
+  animation: itemCreate 0.5s var(--ease-spring) forwards;
+}
+
+@keyframes itemCreate {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+    filter: blur(2px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.01);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Celebration burst for newly created items */
+.item-created::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: radial-gradient(circle at center, var(--color-primary-glow), transparent 70%);
+  opacity: 0;
+  animation: createBurst 0.6s var(--ease-out) forwards;
+  pointer-events: none;
+}
+
+@keyframes createBurst {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+/* === ITEM DELETION — Graceful removal from lists === */
+
+.item-deleting {
+  animation: itemDelete 0.4s var(--ease-out) forwards;
+  pointer-events: none;
+}
+
+@keyframes itemDelete {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+    max-height: 200px;
+  }
+  30% {
+    opacity: 0.7;
+    transform: scale(0.98) translateX(8px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateX(30px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    border-width: 0;
+  }
+}
+
+/* Red flash on delete */
+.item-deleting::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 107, 107, 0.2);
+  animation: deleteFade 0.3s var(--ease-out) forwards;
+  pointer-events: none;
+}
+
+@keyframes deleteFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* === CHECKBOX TOGGLE — Satisfying completion animation === */
+
+.checkbox-animating {
+  animation: checkboxPop 0.4s var(--ease-spring);
+}
+
+@keyframes checkboxPop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.3);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Checkmark drawing animation */
+.checkmark-animate {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: drawCheckmark 0.3s var(--ease-out) 0.1s forwards;
+}
+
+@keyframes drawCheckmark {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Task completion strike-through animation */
+.task-completing .task-name {
+  position: relative;
+}
+
+.task-completing .task-name::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 2px;
+  background: var(--color-green);
+  animation: strikeThrough 0.3s var(--ease-out) forwards;
+  box-shadow: 0 0 8px var(--color-green-glow);
+}
+
+@keyframes strikeThrough {
+  0% {
+    width: 0;
+    opacity: 1;
+  }
+  100% {
+    width: 100%;
+    opacity: 0.6;
+  }
+}
+
+/* Completion celebration ripple */
+.completion-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-green-glow), transparent 70%);
+  animation: completionRipple 0.6s var(--ease-out) forwards;
+  pointer-events: none;
+}
+
+@keyframes completionRipple {
+  0% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.5);
+  }
+}
+
+/* === DRAG AND REORDER — Smooth position changes === */
+
+.item-dragging {
+  z-index: 100;
+  cursor: grabbing !important;
+  transform: scale(1.03);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px var(--color-primary-glow);
+  transition: transform 0.15s var(--ease-spring), box-shadow 0.15s var(--ease-out);
+}
+
+.item-drag-over {
+  background-color: rgba(108, 92, 231, 0.15);
+  border-color: var(--color-primary) !important;
+  transform: translateY(4px);
+  transition: all 0.2s var(--ease-spring);
+}
+
+.item-reordering {
+  animation: reorderSlide 0.35s var(--ease-spring);
+}
+
+@keyframes reorderSlide {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Ghost placeholder during drag */
+.item-ghost {
+  opacity: 0.4;
+  border-style: dashed !important;
+  transform: scale(0.98);
+}
+
+/* === INLINE EDIT — Text change animations === */
+
+.field-editing {
+  animation: fieldFocusIn 0.3s var(--ease-out);
+}
+
+@keyframes fieldFocusIn {
+  0% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+  100% {
+    background-color: rgba(108, 92, 231, 0.1);
+    box-shadow: 0 0 0 2px var(--color-primary-glow);
+  }
+}
+
+.field-saved {
+  animation: fieldSaveFlash 0.5s var(--ease-out);
+}
+
+@keyframes fieldSaveFlash {
+  0% {
+    background-color: rgba(38, 222, 129, 0.2);
+    box-shadow: 0 0 0 2px var(--color-green-glow);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Text value change shimmer */
+.text-changed {
+  animation: textChangeShimmer 0.6s var(--ease-out);
+}
+
+@keyframes textChangeShimmer {
+  0% {
+    background: linear-gradient(90deg, transparent, rgba(108, 92, 231, 0.3), transparent);
+    background-size: 200% 100%;
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+/* === TOGGLE SWITCHES — Smooth state transitions === */
+
+.toggle-animating .toggle-knob {
+  animation: toggleBounce 0.35s var(--ease-spring);
+}
+
+@keyframes toggleBounce {
+  0% {
+    transform: translateX(var(--toggle-start, 0)) scale(1);
+  }
+  50% {
+    transform: translateX(var(--toggle-mid, 8px)) scale(1.15);
+  }
+  100% {
+    transform: translateX(var(--toggle-end, 16px)) scale(1);
+  }
+}
+
+/* === INCREMENT/DECREMENT — Counter animations === */
+
+.counter-increment {
+  animation: counterUp 0.3s var(--ease-spring);
+}
+
+@keyframes counterUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.counter-decrement {
+  animation: counterDown 0.3s var(--ease-spring);
+}
+
+@keyframes counterDown {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(8px);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Progress bar fill animation */
+.progress-animating {
+  transition: width 0.5s var(--ease-spring), background 0.3s var(--ease-out);
+}
+
+.progress-complete {
+  animation: progressComplete 0.6s var(--ease-spring);
+}
+
+@keyframes progressComplete {
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.5);
+    box-shadow: 0 0 20px var(--color-green-glow);
+  }
+  100% {
+    filter: brightness(1);
+    box-shadow: none;
+  }
+}
+
+/* === MODAL AND PANEL TRANSITIONS === */
+
+.panel-expanding {
+  animation: panelExpand 0.35s var(--ease-spring);
+}
+
+@keyframes panelExpand {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scaleY(0.95);
+    transform-origin: top;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+.panel-collapsing {
+  animation: panelCollapse 0.25s var(--ease-out) forwards;
+}
+
+@keyframes panelCollapse {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    transform-origin: top;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scaleY(0.95);
+  }
+}
+
+/* === BUTTON INTERACTIONS === */
+
+.btn-success-flash {
+  animation: buttonSuccessFlash 0.5s var(--ease-out);
+}
+
+@keyframes buttonSuccessFlash {
+  0% {
+    background: var(--color-green);
+    box-shadow: 0 0 30px var(--color-green-glow);
+  }
+  100% {
+    background: var(--gradient-primary);
+    box-shadow: 0 0 0 var(--color-primary-glow);
+  }
+}
+
+/* === FOCUS STATES WITH ANIMATION === */
+
+.focus-ring-animate {
+  animation: focusRingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes focusRingPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px var(--color-primary-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--color-primary-glow), 0 0 20px var(--color-primary-glow);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────────
+   REDUCED MOTION SUPPORT — Respect user preferences
+   ───────────────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Item changes */
+  .item-changed,
+  .item-enter,
+  .item-exit,
+  .field-changed {
+    animation: none;
+  }
+
+  .item-changed::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  .has-deferred-changes::before {
+    animation: none;
+  }
+
+  /* Local actions */
+  .item-created,
+  .item-deleting,
+  .checkbox-animating,
+  .checkmark-animate,
+  .item-dragging,
+  .item-reordering,
+  .field-editing,
+  .field-saved,
+  .text-changed,
+  .toggle-animating .toggle-knob,
+  .counter-increment,
+  .counter-decrement,
+  .progress-animating,
+  .progress-complete,
+  .panel-expanding,
+  .panel-collapsing,
+  .btn-success-flash,
+  .focus-ring-animate {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .item-created::after,
+  .item-deleting::before {
+    animation: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
    PRINT STYLES
    ═══════════════════════════════════════════════════════════════════════════════════ */
 

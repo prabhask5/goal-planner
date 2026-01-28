@@ -2,6 +2,7 @@
   import Modal from './Modal.svelte';
   import type { TaskCategory } from '$lib/types';
   import { getTodayDateString } from '$lib/utils/dates';
+  import { trackEditing } from '$lib/actions/remoteChange';
 
   interface Props {
     open: boolean;
@@ -108,7 +109,11 @@
 <svelte:window onkeydown={handleKeydown} onclick={handleClickOutside} />
 
 <Modal {open} title="New Long-term Task" {onClose}>
-  <form class="form" onsubmit={handleSubmit}>
+  <form
+    class="form"
+    onsubmit={handleSubmit}
+    use:trackEditing={{ entityId: 'new-long-term-task', entityType: 'long_term_tasks', formType: 'manual-save' }}
+  >
     <div class="field">
       <label class="field-label" for="task-name">Task Name</label>
       <input

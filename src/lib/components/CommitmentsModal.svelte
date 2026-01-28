@@ -1,5 +1,6 @@
 <script lang="ts">
   import Modal from './Modal.svelte';
+  import { remoteChangeAnimation } from '$lib/actions/remoteChange';
   import type { Commitment, CommitmentSection } from '$lib/types';
 
   interface Props {
@@ -174,6 +175,7 @@
               ondragstart={(e) => handleDragStart(e, commitment)}
               ondragover={(e) => handleDragOver(e, commitment.id)}
               ondragend={handleDragEnd}
+              use:remoteChangeAnimation={{ entityId: commitment.id, entityType: 'commitments' }}
             >
               <span class="drag-handle-icon">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">

@@ -2,7 +2,7 @@
 // Smart caching strategy: immutable assets cached forever, only changed files downloaded on deploy
 
 // Version is updated automatically on each build by vite.config.ts
-const APP_VERSION = 'mkxcr0cy';
+const APP_VERSION = 'mkyf7rsp';
 
 // Single persistent cache - we don't delete old assets since immutable files have unique hashes
 const CACHE_NAME = 'stellar-cache-v1';

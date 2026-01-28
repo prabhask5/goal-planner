@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { remoteChangeAnimation, triggerLocalAnimation } from '$lib/actions/remoteChange';
   import type { DailyTask } from '$lib/types';
 
   interface Props {
@@ -9,9 +10,21 @@
   }
 
   let { task, onToggle, onDelete, dragHandleProps }: Props = $props();
+
+  let element: HTMLElement;
+
+  function handleToggle() {
+    triggerLocalAnimation(element, 'toggle');
+    onToggle?.();
+  }
 </script>
 
-<div class="task-item" class:completed={task.completed}>
+<div
+  bind:this={element}
+  class="task-item"
+  class:completed={task.completed}
+  use:remoteChangeAnimation={{ entityId: task.id, entityType: 'daily_tasks' }}
+>
   {#if dragHandleProps}
     <button class="drag-handle" {...dragHandleProps} aria-label="Drag to reorder">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -28,7 +41,7 @@
   <button
     class="checkbox"
     class:checked={task.completed}
-    onclick={onToggle}
+    onclick={handleToggle}
     aria-label={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
   >
     {#if task.completed}
