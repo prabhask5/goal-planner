@@ -119,7 +119,7 @@ Trigger (timer/visibility/reconnect) → Acquire mutex lock → [
 ## Local Database Schema
 
 **Database:** IndexedDB via Dexie.js
-**Schema Version:** 7 (with upgrade migrations)
+**Schema Version:** 8 (with upgrade migrations)
 
 ### Entity Tables
 
@@ -138,6 +138,8 @@ Trigger (timer/visibility/reconnect) → Acquire mutex lock → [
 | `blockLists` | Website blocking lists | `user_id`, `order` |
 | `blockedWebsites` | Domains to block | `block_list_id` |
 
+All entity tables include `_version` column (INTEGER, default 1) for optimistic concurrency control.
+
 ### System Tables
 
 | Table | Purpose |
@@ -145,6 +147,15 @@ Trigger (timer/visibility/reconnect) → Acquire mutex lock → [
 | `syncQueue` | Outbox for pending sync operations |
 | `offlineCredentials` | Cached login credentials (hashed) |
 | `offlineSession` | Offline session token |
+
+### Supabase-Only Tables
+
+These tables exist only on the server for multi-device sync infrastructure:
+
+| Table | Purpose |
+|-------|---------|
+| `sync_operations` | Operation log for conflict auditing and replay |
+| `tombstones` | Tracks deleted entities for resurrection prevention |
 
 ### Atomic Transaction Pattern
 

@@ -725,3 +725,105 @@ alter publication supabase_realtime add table focus_settings;
 alter publication supabase_realtime add table focus_sessions;
 alter publication supabase_realtime add table block_lists;
 alter publication supabase_realtime add table blocked_websites;
+
+-- ============================================================
+-- VERSIONING: Add version columns to all entity tables
+-- These enable optimistic concurrency control for multi-device sync
+-- ============================================================
+
+alter table goal_lists add column if not exists _version integer default 1 not null;
+alter table goals add column if not exists _version integer default 1 not null;
+alter table daily_routine_goals add column if not exists _version integer default 1 not null;
+alter table daily_goal_progress add column if not exists _version integer default 1 not null;
+alter table task_categories add column if not exists _version integer default 1 not null;
+alter table commitments add column if not exists _version integer default 1 not null;
+alter table daily_tasks add column if not exists _version integer default 1 not null;
+alter table long_term_tasks add column if not exists _version integer default 1 not null;
+alter table focus_settings add column if not exists _version integer default 1 not null;
+alter table focus_sessions add column if not exists _version integer default 1 not null;
+alter table block_lists add column if not exists _version integer default 1 not null;
+alter table blocked_websites add column if not exists _version integer default 1 not null;
+
+-- ============================================================
+-- SYNC OPERATIONS LOG: Track all sync operations for conflict resolution
+-- This enables proper multi-device conflict resolution and auditing
+-- ============================================================
+
+create table if not exists sync_operations (
+  id uuid default uuid_generate_v4() primary key,
+  entity_type text not null,                       -- 'goals', 'daily_tasks', etc.
+  entity_id uuid not null,                         -- UUID of the affected entity
+  operation_type text not null check (operation_type in ('increment', 'set', 'create', 'delete')),
+  field text,                                       -- Field being modified (null for create/delete)
+  value jsonb,                                      -- Delta (increment), new value (set), or full payload (create)
+  base_version integer,                             -- Version this operation was based on
+  device_id text not null,                          -- Device that created this operation
+  user_id uuid references auth.users(id) on delete cascade not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Indexes for efficient querying
+create index if not exists idx_sync_operations_user_id on sync_operations(user_id);
+create index if not exists idx_sync_operations_entity on sync_operations(entity_type, entity_id);
+create index if not exists idx_sync_operations_created_at on sync_operations(created_at);
+
+-- RLS for sync_operations
+alter table sync_operations enable row level security;
+
+create policy "Users can view their own sync operations"
+  on sync_operations for select
+  using ((select auth.uid()) = user_id);
+
+create policy "Users can create their own sync operations"
+  on sync_operations for insert
+  with check ((select auth.uid()) = user_id);
+
+create policy "Users can delete their own sync operations"
+  on sync_operations for delete
+  using ((select auth.uid()) = user_id);
+
+-- ============================================================
+-- TOMBSTONES: Track deleted entities for resurrection prevention
+-- This enables proper multi-device delete synchronization
+-- ============================================================
+
+create table if not exists tombstones (
+  id uuid default uuid_generate_v4() primary key,
+  entity_id uuid not null,                         -- UUID of the deleted entity
+  entity_type text not null,                       -- 'goals', 'daily_tasks', etc.
+  deleted_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  deleted_by text not null,                        -- Device ID that deleted the entity
+  version integer,                                  -- Version at time of deletion
+  last_known_state jsonb,                           -- Snapshot for potential restore
+  user_id uuid references auth.users(id) on delete cascade not null,
+  unique(entity_id, entity_type)                   -- One tombstone per entity
+);
+
+-- Indexes for efficient querying
+create index if not exists idx_tombstones_user_id on tombstones(user_id);
+create index if not exists idx_tombstones_entity on tombstones(entity_type, entity_id);
+create index if not exists idx_tombstones_deleted_at on tombstones(deleted_at);
+
+-- RLS for tombstones
+alter table tombstones enable row level security;
+
+create policy "Users can view their own tombstones"
+  on tombstones for select
+  using ((select auth.uid()) = user_id);
+
+create policy "Users can create their own tombstones"
+  on tombstones for insert
+  with check ((select auth.uid()) = user_id);
+
+create policy "Users can delete their own tombstones"
+  on tombstones for delete
+  using ((select auth.uid()) = user_id);
+
+-- Trigger to auto-set user_id
+create trigger set_sync_operations_user_id
+  before insert on sync_operations
+  for each row execute function set_user_id();
+
+create trigger set_tombstones_user_id
+  before insert on tombstones
+  for each row execute function set_user_id();

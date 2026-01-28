@@ -12,6 +12,7 @@ export interface Goal {
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
+  _version?: number; // Optimistic concurrency version
 }
 
 export interface GoalList {
@@ -21,6 +22,7 @@ export interface GoalList {
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
+  _version?: number; // Optimistic concurrency version
   goals?: Goal[];
 }
 
@@ -40,6 +42,7 @@ export interface DailyRoutineGoal {
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
+  _version?: number; // Optimistic concurrency version
 }
 
 export interface DailyGoalProgress {
@@ -50,6 +53,7 @@ export interface DailyGoalProgress {
   completed: boolean;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
+  _version?: number; // Optimistic concurrency version
 }
 
 // Sync-related types - re-export from dedicated module
@@ -86,6 +90,7 @@ export interface TaskCategory {
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
+  _version?: number; // Optimistic concurrency version
 }
 
 export interface Commitment {
@@ -97,6 +102,7 @@ export interface Commitment {
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
+  _version?: number; // Optimistic concurrency version
 }
 
 export interface DailyTask {
@@ -108,6 +114,7 @@ export interface DailyTask {
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
+  _version?: number; // Optimistic concurrency version
 }
 
 export interface LongTermTask {
@@ -120,6 +127,7 @@ export interface LongTermTask {
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
+  _version?: number; // Optimistic concurrency version
 }
 
 export interface LongTermTaskWithCategory extends LongTermTask {
@@ -170,6 +178,7 @@ export interface FocusSettings {
   created_at: string;
   updated_at: string;
   deleted?: boolean;
+  _version?: number; // Optimistic concurrency version
 }
 
 export interface FocusSession {
@@ -189,6 +198,7 @@ export interface FocusSession {
   created_at: string;
   updated_at: string;
   deleted?: boolean;
+  _version?: number; // Optimistic concurrency version
 }
 
 // ============================================================
@@ -205,6 +215,7 @@ export interface BlockList {
   created_at: string;
   updated_at: string;
   deleted?: boolean;
+  _version?: number; // Optimistic concurrency version
 }
 
 export interface BlockedWebsite {
@@ -214,4 +225,5 @@ export interface BlockedWebsite {
   created_at: string;
   updated_at: string;
   deleted?: boolean;
+  _version?: number; // Optimistic concurrency version
 }

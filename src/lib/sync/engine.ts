@@ -211,18 +211,18 @@ if (typeof window !== 'undefined') {
 
 // Column definitions for each table (explicit to reduce egress vs select('*'))
 const COLUMNS = {
-  goal_lists: 'id,user_id,name,created_at,updated_at,deleted',
-  goals: 'id,goal_list_id,name,type,target_value,current_value,completed,order,created_at,updated_at,deleted',
-  daily_routine_goals: 'id,user_id,name,type,target_value,start_date,end_date,active_days,order,created_at,updated_at,deleted',
-  daily_goal_progress: 'id,daily_routine_goal_id,date,current_value,completed,updated_at,deleted',
-  task_categories: 'id,user_id,name,color,order,created_at,updated_at,deleted',
-  commitments: 'id,user_id,name,section,order,created_at,updated_at,deleted',
-  daily_tasks: 'id,user_id,name,order,completed,created_at,updated_at,deleted',
-  long_term_tasks: 'id,user_id,name,due_date,category_id,completed,created_at,updated_at,deleted',
-  focus_settings: 'id,user_id,focus_duration,break_duration,long_break_duration,cycles_before_long_break,auto_start_breaks,auto_start_focus,created_at,updated_at,deleted',
-  focus_sessions: 'id,user_id,started_at,ended_at,phase,status,current_cycle,total_cycles,focus_duration,break_duration,phase_started_at,phase_remaining_ms,elapsed_duration,created_at,updated_at,deleted',
-  block_lists: 'id,user_id,name,active_days,is_enabled,order,created_at,updated_at,deleted',
-  blocked_websites: 'id,block_list_id,domain,created_at,updated_at,deleted'
+  goal_lists: 'id,user_id,name,created_at,updated_at,deleted,_version',
+  goals: 'id,goal_list_id,name,type,target_value,current_value,completed,order,created_at,updated_at,deleted,_version',
+  daily_routine_goals: 'id,user_id,name,type,target_value,start_date,end_date,active_days,order,created_at,updated_at,deleted,_version',
+  daily_goal_progress: 'id,daily_routine_goal_id,date,current_value,completed,updated_at,deleted,_version',
+  task_categories: 'id,user_id,name,color,order,created_at,updated_at,deleted,_version',
+  commitments: 'id,user_id,name,section,order,created_at,updated_at,deleted,_version',
+  daily_tasks: 'id,user_id,name,order,completed,created_at,updated_at,deleted,_version',
+  long_term_tasks: 'id,user_id,name,due_date,category_id,completed,created_at,updated_at,deleted,_version',
+  focus_settings: 'id,user_id,focus_duration,break_duration,long_break_duration,cycles_before_long_break,auto_start_breaks,auto_start_focus,created_at,updated_at,deleted,_version',
+  focus_sessions: 'id,user_id,started_at,ended_at,phase,status,current_cycle,total_cycles,focus_duration,break_duration,phase_started_at,phase_remaining_ms,elapsed_duration,created_at,updated_at,deleted,_version',
+  block_lists: 'id,user_id,name,active_days,is_enabled,order,created_at,updated_at,deleted,_version',
+  blocked_websites: 'id,block_list_id,domain,created_at,updated_at,deleted,_version'
 } as const;
 
 let syncTimeout: ReturnType<typeof setTimeout> | null = null;

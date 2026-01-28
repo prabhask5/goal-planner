@@ -108,6 +108,43 @@ export class GoalPlannerDB extends Dexie {
       blockLists: 'id, user_id, order, updated_at',
       blockedWebsites: 'id, block_list_id, updated_at'
     });
+
+    // Version 8: Add _version column to all entity tables for optimistic concurrency control
+    // The _version column is not indexed (only used for conflict detection, not queries)
+    // This upgrade sets _version = 1 for all existing records
+    this.version(8).stores({
+      goalLists: 'id, user_id, created_at, updated_at',
+      goals: 'id, goal_list_id, order, created_at, updated_at',
+      dailyRoutineGoals: 'id, user_id, order, start_date, end_date, created_at, updated_at',
+      dailyGoalProgress: 'id, daily_routine_goal_id, date, [daily_routine_goal_id+date], updated_at',
+      syncQueue: '++id, table, entityId, timestamp',
+      taskCategories: 'id, user_id, order, created_at, updated_at',
+      commitments: 'id, user_id, section, order, created_at, updated_at',
+      dailyTasks: 'id, user_id, order, created_at, updated_at',
+      longTermTasks: 'id, user_id, due_date, category_id, created_at, updated_at',
+      offlineCredentials: 'id',
+      offlineSession: 'id',
+      focusSettings: 'id, user_id, updated_at',
+      focusSessions: 'id, user_id, started_at, ended_at, status, updated_at',
+      blockLists: 'id, user_id, order, updated_at',
+      blockedWebsites: 'id, block_list_id, updated_at'
+    }).upgrade(async (tx) => {
+      // Set _version = 1 for all existing records in entity tables
+      const tables = [
+        'goalLists', 'goals', 'dailyRoutineGoals', 'dailyGoalProgress',
+        'taskCategories', 'commitments', 'dailyTasks', 'longTermTasks',
+        'focusSettings', 'focusSessions', 'blockLists', 'blockedWebsites'
+      ];
+
+      for (const tableName of tables) {
+        const records = await tx.table(tableName).toArray();
+        for (const record of records) {
+          if (record._version === undefined) {
+            await tx.table(tableName).update(record.id, { _version: 1 });
+          }
+        }
+      }
+    });
   }
 }
 
