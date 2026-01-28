@@ -2,11 +2,17 @@
  * Stellar Focus Extension - Background Service Worker
  * Handles focus session polling and website blocking
  * CRITICAL: Only blocks websites when ONLINE and authenticated
+ *
+ * EGRESS OPTIMIZATIONS:
+ * - Single consolidated realtime channel (instead of 3 separate)
+ * - Explicit column selection (no SELECT *)
+ * - Uses realtime payload data directly (avoids re-fetching)
+ * - Uses session.user instead of separate getUser() calls
  */
 
 import browser from 'webextension-polyfill';
 import { type RealtimeChannel } from '@supabase/supabase-js';
-import { getSupabase, getSession, getUser } from '../auth/supabase';
+import { getSupabase, getSession } from '../auth/supabase';
 import { blockListsCache, blockedWebsitesCache, focusSessionCacheStore, type FocusSessionCache } from '../lib/storage';
 import { getNetworkStatus, checkConnectivity, getSupabaseUrl } from '../lib/network';
 
@@ -23,10 +29,15 @@ let lastPollTime = 0;
 const MIN_POLL_INTERVAL_MS = 25000; // Minimum 25 seconds between polls
 let realtimeHealthy = false; // Track if realtime subscriptions are working
 
-// Real-time subscriptions
-let focusSessionChannel: RealtimeChannel | null = null;
-let blockListChannel: RealtimeChannel | null = null;
-let blockedWebsitesChannel: RealtimeChannel | null = null;
+// Single consolidated realtime channel (egress optimization)
+let realtimeChannel: RealtimeChannel | null = null;
+
+// Explicit column definitions to reduce egress (no SELECT *)
+const COLUMNS = {
+  focus_sessions: 'id,user_id,phase,status,phase_started_at,focus_duration,break_duration,ended_at',
+  block_lists: 'id,user_id,name,active_days,is_enabled,order,deleted',
+  blocked_websites: 'id,block_list_id,domain,deleted'
+} as const;
 
 // Initialize
 browser.runtime.onInstalled.addListener(() => {
@@ -105,6 +116,25 @@ browser.runtime.onMessage.addListener((message: { type: string }, _sender: brows
     });
     return;
   }
+
+  // EGRESS OPTIMIZATION: Popup requests full focus status from service worker
+  // instead of making its own Supabase queries
+  if (message.type === 'GET_FOCUS_STATUS') {
+    sendResponse({
+      isOnline,
+      realtimeHealthy,
+      focusSession: currentFocusSession
+    });
+    return;
+  }
+
+  // EGRESS OPTIMIZATION: Popup requests block lists from service worker cache
+  if (message.type === 'GET_BLOCK_LISTS') {
+    blockListsCache.getAll().then(lists => {
+      sendResponse({ lists });
+    });
+    return true; // Keep channel open for async response
+  }
 });
 
 // Web navigation blocking
@@ -179,13 +209,15 @@ async function init() {
 }
 
 // Set up real-time subscriptions for instant updates
+// EGRESS OPTIMIZATION: Uses single consolidated channel instead of 3 separate channels
 async function setupRealtimeSubscriptions() {
   if (!isOnline) return;
 
   const session = await getSession();
   if (!session) return;
 
-  const user = await getUser();
+  // Use session.user instead of separate getUser() call (egress optimization)
+  const user = session.user;
   if (!user) return;
 
   const supabase = getSupabase();
@@ -198,9 +230,10 @@ async function setupRealtimeSubscriptions() {
 
   const timestamp = Date.now();
 
-  // Subscribe to focus sessions changes
-  focusSessionChannel = supabase
-    .channel(`sw-focus-sessions-${user.id}-${timestamp}`)
+  // EGRESS OPTIMIZATION: Single consolidated channel for all tables
+  realtimeChannel = supabase
+    .channel(`stellar-ext-${user.id}-${timestamp}`)
+    // Focus sessions subscription
     .on(
       'postgres_changes',
       {
@@ -214,23 +247,23 @@ async function setupRealtimeSubscriptions() {
         // Use the payload data directly instead of making another query
         // This reduces egress since realtime already includes the data
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          const session = payload.new as FocusSessionCache & { ended_at?: string | null };
-          if (!session.ended_at) {
+          const focusSession = payload.new as FocusSessionCache & { ended_at?: string | null };
+          if (!focusSession.ended_at) {
             // Active session - update cache directly
             const sessionData: FocusSessionCache = {
               id: 'current',
-              user_id: session.user_id,
-              phase: session.phase,
-              status: session.status,
-              phase_started_at: session.phase_started_at,
-              focus_duration: session.focus_duration,
-              break_duration: session.break_duration,
+              user_id: focusSession.user_id,
+              phase: focusSession.phase,
+              status: focusSession.status,
+              phase_started_at: focusSession.phase_started_at,
+              focus_duration: focusSession.focus_duration,
+              break_duration: focusSession.break_duration,
               cached_at: new Date().toISOString()
             };
             focusSessionCacheStore.put(sessionData).then(() => {
               currentFocusSession = sessionData;
               // Only refresh block lists when session starts (phase becomes focus)
-              if (session.status === 'running' && session.phase === 'focus') {
+              if (focusSession.status === 'running' && focusSession.phase === 'focus') {
                 refreshBlockLists();
               }
             });
@@ -245,22 +278,11 @@ async function setupRealtimeSubscriptions() {
             currentFocusSession = null;
           });
         }
+        // Notify popup of focus session change
+        notifyPopup('FOCUS_STATUS_CHANGED');
       }
     )
-    .subscribe((status) => {
-      console.log('[Stellar Focus] Focus session subscription:', status);
-      if (status === 'SUBSCRIBED') {
-        realtimeHealthy = true;
-        console.log('[Stellar Focus] ✅ Realtime healthy - disabling polling fallback');
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        realtimeHealthy = false;
-        console.log('[Stellar Focus] ❌ Realtime unhealthy - polling enabled');
-      }
-    });
-
-  // Subscribe to block lists changes
-  blockListChannel = supabase
-    .channel(`sw-block-lists-${user.id}-${timestamp}`)
+    // Block lists subscription
     .on(
       'postgres_changes',
       {
@@ -271,16 +293,11 @@ async function setupRealtimeSubscriptions() {
       },
       (payload) => {
         console.log('[Stellar Focus] 🚀 Real-time: Block list update', payload.eventType);
-        refreshBlockLists();
+        // EGRESS OPTIMIZATION: Use payload data directly instead of re-fetching
+        handleBlockListRealtimeUpdate(payload);
       }
     )
-    .subscribe((status) => {
-      console.log('[Stellar Focus] Block list subscription:', status);
-    });
-
-  // Subscribe to blocked websites changes (most important for instant blocking)
-  blockedWebsitesChannel = supabase
-    .channel(`sw-blocked-websites-${user.id}-${timestamp}`)
+    // Blocked websites subscription
     .on(
       'postgres_changes',
       {
@@ -290,32 +307,112 @@ async function setupRealtimeSubscriptions() {
       },
       (payload) => {
         console.log('[Stellar Focus] 🚀 Real-time: Blocked website update', payload.eventType);
-        // Refresh block lists to get the updated websites
-        refreshBlockLists();
+        // EGRESS OPTIMIZATION: Use payload data directly instead of re-fetching
+        handleBlockedWebsiteRealtimeUpdate(payload);
       }
     )
     .subscribe((status) => {
-      console.log('[Stellar Focus] Blocked websites subscription:', status);
+      console.log('[Stellar Focus] Realtime subscription:', status);
+      if (status === 'SUBSCRIBED') {
+        realtimeHealthy = true;
+        console.log('[Stellar Focus] ✅ Realtime healthy - disabling polling fallback');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        realtimeHealthy = false;
+        console.log('[Stellar Focus] ❌ Realtime unhealthy - polling enabled');
+      }
     });
 
-  console.log('[Stellar Focus] Real-time subscriptions set up');
+  console.log('[Stellar Focus] Real-time subscription set up (single consolidated channel)');
+}
+
+// EGRESS OPTIMIZATION: Handle block list updates directly from realtime payload
+async function handleBlockListRealtimeUpdate(payload: { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> }) {
+  try {
+    if (payload.eventType === 'DELETE' || (payload.eventType === 'UPDATE' && (payload.new as { deleted?: boolean })?.deleted)) {
+      // Remove deleted block list from cache
+      const id = (payload.old?.id || payload.new?.id) as string;
+      if (id) {
+        await blockListsCache.delete(id);
+        // Also remove associated websites
+        const websites = await blockedWebsitesCache.getAll();
+        for (const website of websites) {
+          if (website.block_list_id === id) {
+            await blockedWebsitesCache.delete(website.id);
+          }
+        }
+      }
+    } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+      const list = payload.new as { id: string; user_id: string; name: string; active_days: (0|1|2|3|4|5|6)[] | null; is_enabled: boolean; order: number; deleted?: boolean };
+      if (list && !list.deleted && list.is_enabled) {
+        // Add/update enabled block list in cache
+        await blockListsCache.put({
+          id: list.id,
+          user_id: list.user_id,
+          name: list.name,
+          active_days: list.active_days,
+          is_enabled: list.is_enabled,
+          order: list.order
+        });
+      } else if (list && (list.deleted || !list.is_enabled)) {
+        // Remove disabled or deleted list from cache
+        await blockListsCache.delete(list.id);
+      }
+    }
+    // Notify popup of block list change
+    notifyPopup('BLOCK_LISTS_CHANGED');
+  } catch (error) {
+    console.error('[Stellar Focus] Error handling block list update:', error);
+    // Fall back to full refresh only on error
+    refreshBlockLists();
+  }
+}
+
+// EGRESS OPTIMIZATION: Handle blocked website updates directly from realtime payload
+async function handleBlockedWebsiteRealtimeUpdate(payload: { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> }) {
+  try {
+    if (payload.eventType === 'DELETE' || (payload.eventType === 'UPDATE' && (payload.new as { deleted?: boolean })?.deleted)) {
+      // Remove deleted website from cache
+      const id = (payload.old?.id || payload.new?.id) as string;
+      if (id) {
+        await blockedWebsitesCache.delete(id);
+      }
+    } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+      const website = payload.new as { id: string; block_list_id: string; domain: string; deleted?: boolean };
+      if (website && !website.deleted) {
+        // Check if the block list is in our cache (i.e., enabled)
+        const blockLists = await blockListsCache.getAll();
+        const parentList = blockLists.find(l => l.id === website.block_list_id);
+        if (parentList) {
+          // Add/update website in cache
+          await blockedWebsitesCache.put({
+            id: website.id,
+            block_list_id: website.block_list_id,
+            domain: website.domain
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Stellar Focus] Error handling blocked website update:', error);
+    // Fall back to full refresh only on error
+    refreshBlockLists();
+  }
+}
+
+// Notify popup of state changes via messaging
+function notifyPopup(type: string) {
+  browser.runtime.sendMessage({ type }).catch(() => {
+    // Popup might not be open, ignore error
+  });
 }
 
 // Clean up real-time subscriptions
 function cleanupRealtimeSubscriptions() {
   const supabase = getSupabase();
 
-  if (focusSessionChannel) {
-    supabase.removeChannel(focusSessionChannel);
-    focusSessionChannel = null;
-  }
-  if (blockListChannel) {
-    supabase.removeChannel(blockListChannel);
-    blockListChannel = null;
-  }
-  if (blockedWebsitesChannel) {
-    supabase.removeChannel(blockedWebsitesChannel);
-    blockedWebsitesChannel = null;
+  if (realtimeChannel) {
+    supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
   }
 }
 
@@ -346,35 +443,36 @@ async function pollFocusSession() {
       return;
     }
 
-    const user = await getUser();
+    // EGRESS OPTIMIZATION: Use session.user instead of separate getUser() call
+    const user = session.user;
     if (!user) return;
 
-    // Query active focus session
+    // Query active focus session with explicit columns (egress optimization)
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from('focus_sessions')
-      .select('*')
+      .select(COLUMNS.focus_sessions)
       .eq('user_id', user.id)
       .is('ended_at', null)
       .order('created_at', { ascending: false })
       .limit(1);
 
     if (data && data.length > 0 && !error) {
-      const session = data[0];
+      const focusSession = data[0];
 
       // Check if focus session just started (wasn't running before, now it is)
       const wasRunning = currentFocusSession?.status === 'running' && currentFocusSession?.phase === 'focus';
-      const isNowRunning = session.status === 'running' && session.phase === 'focus';
+      const isNowRunning = focusSession.status === 'running' && focusSession.phase === 'focus';
 
       // Update cached session
       const sessionData: FocusSessionCache = {
         id: 'current',
-        user_id: session.user_id,
-        phase: session.phase,
-        status: session.status,
-        phase_started_at: session.phase_started_at,
-        focus_duration: session.focus_duration,
-        break_duration: session.break_duration,
+        user_id: focusSession.user_id,
+        phase: focusSession.phase,
+        status: focusSession.status,
+        phase_started_at: focusSession.phase_started_at,
+        focus_duration: focusSession.focus_duration,
+        break_duration: focusSession.break_duration,
         cached_at: new Date().toISOString()
       };
 
@@ -387,7 +485,7 @@ async function pollFocusSession() {
         await refreshBlockLists();
       }
 
-      console.log('[Stellar Focus] Focus session active:', session.phase, session.status);
+      console.log('[Stellar Focus] Focus session active:', focusSession.phase, focusSession.status);
     } else {
       // No active session
       await focusSessionCacheStore.clear();
@@ -408,15 +506,16 @@ async function refreshBlockLists() {
     const session = await getSession();
     if (!session) return;
 
-    const user = await getUser();
+    // EGRESS OPTIMIZATION: Use session.user instead of separate getUser() call
+    const user = session.user;
     if (!user) return;
 
     const supabase = getSupabase();
 
-    // Fetch block lists
+    // Fetch block lists with explicit columns (egress optimization)
     const { data: lists, error: listsError } = await supabase
       .from('block_lists')
-      .select('*')
+      .select(COLUMNS.block_lists)
       .eq('user_id', user.id)
       .eq('deleted', false)
       .eq('is_enabled', true);
@@ -435,13 +534,13 @@ async function refreshBlockLists() {
         });
       }
 
-      // Fetch blocked websites for enabled lists
+      // Fetch blocked websites for enabled lists with explicit columns
       const enabledListIds = lists.map(l => l.id);
 
       if (enabledListIds.length > 0) {
         const { data: websites, error: websitesError } = await supabase
           .from('blocked_websites')
-          .select('*')
+          .select(COLUMNS.blocked_websites)
           .in('block_list_id', enabledListIds)
           .eq('deleted', false);
 

@@ -8,7 +8,7 @@ const DB_VERSION = 1;
 
 type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-interface CachedBlockList {
+export interface BlockListCache {
   id: string;
   user_id: string;
   name: string;
@@ -17,11 +17,15 @@ interface CachedBlockList {
   order: number;
 }
 
-interface CachedBlockedWebsite {
+export interface BlockedWebsiteCache {
   id: string;
   block_list_id: string;
   domain: string;
 }
+
+// Legacy type aliases for backward compatibility
+type CachedBlockList = BlockListCache;
+type CachedBlockedWebsite = BlockedWebsiteCache;
 
 export interface FocusSessionCache {
   id: string;

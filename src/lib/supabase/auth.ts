@@ -218,13 +218,16 @@ export async function updateProfile(
  * Change user password
  * Verifies current password first, then updates
  * Also updates cached offline credentials
+ *
+ * EGRESS OPTIMIZATION: Uses session.user instead of separate getUser() call
  */
 export async function changePassword(
   currentPassword: string,
   newPassword: string
 ): Promise<{ error: string | null }> {
-  // Get current user email
-  const { data: { user } } = await supabase.auth.getUser();
+  // Get current user email from session (egress optimization: avoids separate getUser() call)
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user?.email) {
     return { error: 'No authenticated user found' };
   }

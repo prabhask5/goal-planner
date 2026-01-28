@@ -1,10 +1,14 @@
 /**
  * Stellar Focus Extension - Popup Logic
  * Simple, beautiful, read-only view with real-time sync
+ *
+ * EGRESS OPTIMIZATION: Popup no longer creates its own realtime subscriptions.
+ * Instead, it receives updates from the service worker via messaging.
+ * This reduces realtime connections from 6 (3 SW + 3 popup) to 1 consolidated channel.
  */
 
 import browser from 'webextension-polyfill';
-import { createClient, type RealtimeChannel } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { config } from '../config';
 
 // Types
@@ -81,8 +85,6 @@ const activeBlockListCount = document.getElementById('activeBlockListCount') as 
 // State
 let isOnline = navigator.onLine;
 let currentUserId: string | null = null;
-let focusSubscription: RealtimeChannel | null = null;
-let blockListSubscription: RealtimeChannel | null = null;
 let syncStatus: SyncStatus = 'idle';
 let syncTimeout: ReturnType<typeof setTimeout> | null = null;
 let cachedBlockLists: BlockList[] = [];
@@ -95,12 +97,15 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   // Set links (for right-click open in new tab)
   if (openStellarBtn) openStellarBtn.href = config.appUrl;
-  if (signupLink) signupLink.href = config.appUrl + '/auth/signup';
+  if (signupLink) signupLink.href = config.appUrl + '/login';
   if (privacyLink) privacyLink.href = config.appUrl + '/policy';
 
   // Network listeners
   window.addEventListener('online', handleOnline);
   window.addEventListener('offline', handleOffline);
+
+  // EGRESS OPTIMIZATION: Listen for messages from service worker instead of creating our own subscriptions
+  setupServiceWorkerMessageListener();
 
   // Initial state
   updateView();
@@ -135,6 +140,27 @@ async function init() {
   }
 }
 
+// EGRESS OPTIMIZATION: Listen for updates from service worker instead of creating own subscriptions
+function setupServiceWorkerMessageListener() {
+  browser.runtime.onMessage.addListener((message: { type: string }) => {
+    if (message.type === 'FOCUS_STATUS_CHANGED') {
+      console.log('[Stellar Focus] Received focus status update from service worker');
+      // Refresh focus status display
+      loadFocusStatus();
+      loadFocusTimeToday();
+      setSyncStatus('syncing');
+      setTimeout(() => setSyncStatus('synced'), 800);
+    }
+    if (message.type === 'BLOCK_LISTS_CHANGED') {
+      console.log('[Stellar Focus] Received block lists update from service worker');
+      // Refresh block lists display
+      loadBlockLists();
+      setSyncStatus('syncing');
+      setTimeout(() => setSyncStatus('synced'), 800);
+    }
+  });
+}
+
 function handleOnline() {
   isOnline = true;
   updateView();
@@ -143,7 +169,6 @@ function handleOnline() {
 
 function handleOffline() {
   isOnline = false;
-  unsubscribeFromRealtime();
   stopFocusTimeTick();
   hasActiveRunningSession = false;
   updateView();
@@ -176,7 +201,8 @@ async function checkAuth() {
       updateUserInfo(session.user);
       updateView();
       await loadData();
-      await subscribeToRealtime();
+      // EGRESS OPTIMIZATION: No longer subscribe to realtime here
+      // Service worker handles realtime and notifies popup via messaging
     } else {
       currentUserId = null;
       updateView();
@@ -216,7 +242,8 @@ async function handleLogin(e: Event) {
       updateUserInfo(data.user);
       updateView();
       await loadData();
-      await subscribeToRealtime();
+      // EGRESS OPTIMIZATION: No longer subscribe to realtime here
+      // Service worker handles realtime and notifies popup via messaging
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -228,7 +255,6 @@ async function handleLogin(e: Event) {
 
 async function handleLogout() {
   try {
-    unsubscribeFromRealtime();
     stopFocusTimeTick();
     hasActiveRunningSession = false;
     await supabase.auth.signOut();
@@ -624,176 +650,10 @@ function renderBlockLists(lists: BlockList[]) {
   }
 }
 
-// Real-time subscription - instant updates
-async function subscribeToRealtime() {
-  if (!currentUserId) return;
-
-  // Clean up existing subscriptions first
-  if (focusSubscription) {
-    supabase.removeChannel(focusSubscription);
-    focusSubscription = null;
-  }
-  if (blockListSubscription) {
-    supabase.removeChannel(blockListSubscription);
-    blockListSubscription = null;
-  }
-
-  // Get the current session and set auth token for realtime
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    supabase.realtime.setAuth(session.access_token);
-    console.log('[Stellar Focus] Realtime auth token set');
-  }
-
-  const timestamp = Date.now();
-
-  // Focus sessions subscription
-  const focusChannelName = `focus-sessions-${currentUserId}-${timestamp}`;
-  console.log('[Stellar Focus] Setting up realtime subscriptions...');
-
-  focusSubscription = supabase
-    .channel(focusChannelName)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'focus_sessions',
-        filter: `user_id=eq.${currentUserId}`
-      },
-      (payload) => {
-        console.log('[Stellar Focus] 🚀 INSTANT Real-time update:', payload.eventType);
-
-        // Handle the update directly from payload for instant response
-        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          const session = payload.new as FocusSession;
-
-          // Update the lastSessionJson to prevent duplicate updates from polling
-          lastSessionJson = session ? JSON.stringify({ id: session.id, phase: session.phase, status: session.status }) : null;
-
-          // Check if this is an active session (not ended)
-          if (!session.ended_at) {
-            updateStatusDisplay(session);
-          } else {
-            // Session ended - show idle
-            updateStatusDisplay(null);
-          }
-
-          // Refresh focus time today when session changes
-          loadFocusTimeToday();
-        } else if (payload.eventType === 'DELETE') {
-          lastSessionJson = null;
-          updateStatusDisplay(null);
-          loadFocusTimeToday();
-        }
-
-        // Notify service worker to refresh its focus session state
-        browser.runtime.sendMessage({ type: 'FOCUS_SESSION_UPDATED' }).catch(() => {
-          // Service worker might not be ready, ignore error
-        });
-
-        // Show sync indicator with enough time to see the animation
-        setSyncStatus('syncing');
-        setTimeout(() => setSyncStatus('synced'), 800);
-      }
-    )
-    .subscribe((status, err) => {
-      console.log('[Stellar Focus] Focus subscription status:', status, err || '');
-      if (status === 'SUBSCRIBED') {
-        console.log('[Stellar Focus] ✅ Focus real-time connected!');
-        // Realtime is working - stop polling to reduce egress
-        realtimeHealthy = true;
-        stopPolling();
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        console.error('[Stellar Focus] ❌ Focus realtime failed:', err);
-        // Realtime failed - fall back to polling
-        realtimeHealthy = false;
-        startPolling();
-      }
-    });
-
-  // Block lists subscription
-  const blockListChannelName = `block-lists-${currentUserId}-${timestamp}`;
-
-  blockListSubscription = supabase
-    .channel(blockListChannelName)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'block_lists',
-        filter: `user_id=eq.${currentUserId}`
-      },
-      (payload) => {
-        console.log('[Stellar Focus] 🚀 Block list update:', payload.eventType);
-
-        // Reload block lists to get the latest data
-        loadBlockLists();
-
-        // Notify service worker to refresh its block lists cache
-        browser.runtime.sendMessage({ type: 'BLOCK_LIST_UPDATED' }).catch(() => {
-          // Service worker might not be ready, ignore error
-        });
-
-        // Show sync indicator
-        setSyncStatus('syncing');
-        setTimeout(() => setSyncStatus('synced'), 800);
-      }
-    )
-    .subscribe((status, err) => {
-      console.log('[Stellar Focus] Block list subscription status:', status, err || '');
-      if (status === 'SUBSCRIBED') {
-        console.log('[Stellar Focus] ✅ Block list real-time connected!');
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.error('[Stellar Focus] ❌ Block list realtime failed:', err);
-      }
-    });
-
-  // Fast polling as fallback (1 second = near-instant if realtime fails)
-  startPolling();
-}
-
-function unsubscribeFromRealtime() {
-  if (focusSubscription) {
-    supabase.removeChannel(focusSubscription);
-    focusSubscription = null;
-  }
-  if (blockListSubscription) {
-    supabase.removeChannel(blockListSubscription);
-    blockListSubscription = null;
-  }
-  stopPolling();
-}
-
-let pollInterval: ReturnType<typeof setInterval> | null = null;
-let realtimeHealthy = false; // Track if realtime is working to avoid redundant polling
-
-function startPolling() {
-  // Don't start polling if realtime is working
-  if (realtimeHealthy) {
-    console.log('[Stellar Focus] Skipping polling - realtime is healthy');
-    return;
-  }
-  stopPolling();
-  // Poll every 30 seconds as fallback when realtime is unavailable
-  // Reduced from 1 second to minimize Supabase egress
-  pollInterval = setInterval(async () => {
-    if (isOnline && currentUserId && !realtimeHealthy) {
-      console.log('[Stellar Focus] Polling fallback (realtime unavailable)');
-      await loadFocusStatus();
-    }
-  }, 30000); // 30 seconds - only as fallback when realtime fails
-  console.log('[Stellar Focus] Started 30s polling fallback');
-}
-
-function stopPolling() {
-  if (pollInterval) {
-    clearInterval(pollInterval);
-    pollInterval = null;
-    console.log('[Stellar Focus] Stopped polling');
-  }
-}
+// EGRESS OPTIMIZATION: Realtime subscriptions removed from popup
+// Service worker handles all realtime and notifies popup via browser.runtime.sendMessage
+// This reduces realtime connections from 6 (3 SW + 3 popup) to 1 consolidated channel
+// Popup still receives instant updates via the service worker messaging
 
 // Sync status indicator (matches main app SyncStatus behavior)
 function setSyncStatus(status: SyncStatus) {

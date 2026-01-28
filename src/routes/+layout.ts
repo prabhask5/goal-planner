@@ -76,11 +76,13 @@ export const load: LayoutLoad = async (): Promise<LayoutData> => {
     try {
       const isOffline = !navigator.onLine;
 
+      // EGRESS OPTIMIZATION: Get session once and reuse (avoids duplicate getSession() calls)
+      const session = await getSession();
+      const hasValidSession = session && !isSessionExpired(session);
+
       // ONLINE: Always use Supabase authentication
       if (!isOffline) {
-        const session = await getSession();
-
-        if (session && !isSessionExpired(session)) {
+        if (hasValidSession) {
           // Valid Supabase session - use it
           await startSyncEngine();
           return { session, authMode: 'supabase', offlineProfile: null };
@@ -92,9 +94,7 @@ export const load: LayoutLoad = async (): Promise<LayoutData> => {
       }
 
       // OFFLINE: Try Supabase session from localStorage first, then offline session
-      const session = await getSession();
-
-      if (session && !isSessionExpired(session)) {
+      if (hasValidSession) {
         // Supabase session still valid in localStorage - use it
         // Start sync engine even when offline - it will queue operations and sync when online
         await startSyncEngine();

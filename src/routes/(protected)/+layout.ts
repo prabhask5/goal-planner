@@ -17,23 +17,25 @@ export const load: LayoutLoad = async ({ url }): Promise<ProtectedLayoutData> =>
   if (browser) {
     const isOffline = !navigator.onLine;
 
+    // EGRESS OPTIMIZATION: Get session once and reuse
+    let session = null;
+    try {
+      session = await getSession();
+    } catch (e) {
+      console.warn('[Auth] Session check failed:', e);
+    }
+
+    const hasValidSession = session && !isSessionExpired(session);
+
     // ONLINE: Always use Supabase authentication only
     if (!isOffline) {
-      try {
-        const session = await getSession();
-
-        if (session && !isSessionExpired(session)) {
-          // Valid Supabase session - use it
-          return { session, authMode: 'supabase', offlineProfile: null };
-        }
-
-        // No valid Supabase session while online - redirect to login
-        // Do NOT fall back to offline session when online
-      } catch (e) {
-        console.warn('[Auth] Session check failed:', e);
+      if (hasValidSession) {
+        // Valid Supabase session - use it
+        return { session, authMode: 'supabase', offlineProfile: null };
       }
 
-      // Redirect to login
+      // No valid Supabase session while online - redirect to login
+      // Do NOT fall back to offline session when online
       const returnUrl = url.pathname + url.search;
       const loginUrl = returnUrl && returnUrl !== '/'
         ? `/login?redirect=${encodeURIComponent(returnUrl)}`
@@ -42,15 +44,9 @@ export const load: LayoutLoad = async ({ url }): Promise<ProtectedLayoutData> =>
     }
 
     // OFFLINE: Try Supabase session from localStorage first, then offline session
-    try {
-      const session = await getSession();
-
-      if (session && !isSessionExpired(session)) {
-        // Supabase session still valid in localStorage - use it
-        return { session, authMode: 'supabase', offlineProfile: null };
-      }
-    } catch (e) {
-      console.warn('[Auth] Session check failed:', e);
+    if (hasValidSession) {
+      // Supabase session still valid in localStorage - use it
+      return { session, authMode: 'supabase', offlineProfile: null };
     }
 
     // Check for valid offline session
