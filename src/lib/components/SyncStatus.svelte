@@ -69,22 +69,15 @@
     }
   }
 
-  // Manual refresh for PWA - syncs data and reloads page data
-  async function handleRefresh() {
-    if (isRefreshing || !online) return;
+  // Manual refresh for PWA - full page reload to get new deployments
+  function handleRefresh() {
+    if (isRefreshing) return;
     isRefreshing = true;
 
-    try {
-      await performSync();
-      await invalidateAll();
-    } catch (error) {
-      console.error('Refresh failed:', error);
-    } finally {
-      // Keep refreshing state for animation to complete
-      setTimeout(() => {
-        isRefreshing = false;
-      }, 600);
-    }
+    // Full page reload to fetch latest PWA version
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
   }
 
   function handleMouseEnter() {

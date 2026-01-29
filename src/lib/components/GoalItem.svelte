@@ -882,12 +882,12 @@
     }
 
     .checkbox {
-      width: 8px;
-      height: 8px;
+      width: 16px !important;
+      height: 16px !important;
     }
 
     .checkmark {
-      font-size: 0.625rem;
+      font-size: 0.5rem !important;
     }
 
     .increment-controls {

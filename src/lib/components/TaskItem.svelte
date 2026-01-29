@@ -217,12 +217,12 @@
     }
 
     .checkbox {
-      width: 16px;
-      height: 16px;
+      width: 16px !important;
+      height: 16px !important;
     }
 
     .checkmark {
-      font-size: 0.625rem;
+      font-size: 0.5rem !important;
     }
 
     .task-name {

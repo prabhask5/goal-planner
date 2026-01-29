@@ -290,13 +290,13 @@
     }
 
     .checkbox {
-      width: 14px;
-      height: 14px;
+      width: 16px !important;
+      height: 16px !important;
     }
 
     .checkbox svg {
-      width: 8px;
-      height: 8px;
+      width: 10px !important;
+      height: 10px !important;
     }
 
     .task-name {
