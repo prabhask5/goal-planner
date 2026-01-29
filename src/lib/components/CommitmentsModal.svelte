@@ -22,8 +22,8 @@
 
   const sections: { key: CommitmentSection; label: string }[] = [
     { key: 'career', label: 'CAREER' },
-    { key: 'projects', label: 'PROJECTS' },
-    { key: 'personal', label: 'PERSONAL' }
+    { key: 'personal', label: 'PERSONAL' },
+    { key: 'projects', label: 'PROJECTS' }
   ];
 
   // Check if a commitment is project-owned (cannot be edited/deleted independently)
@@ -133,26 +133,30 @@
 <Modal {open} title="Commitments" {onClose}>
   <div class="commitments-content">
     {#each sections as section}
-      <div class="section">
+      <div class="section" class:projects-section={section.key === 'projects'}>
         <div class="section-header">
           <h3 class="section-title">{section.label}</h3>
-          <button
-            class="add-section-btn"
-            onclick={() => handleAddClick(section.key)}
-            aria-label="Add commitment"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
+          {#if section.key !== 'projects'}
+            <button
+              class="add-section-btn"
+              onclick={() => handleAddClick(section.key)}
+              aria-label="Add commitment"
             >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          {:else}
+            <span class="section-hint">via Plans</span>
+          {/if}
         </div>
 
         {#if addingTo === section.key}
@@ -278,7 +282,13 @@
               {/if}
             </div>
           {:else}
-            <div class="empty-section">No commitments yet</div>
+            <div class="empty-section">
+              {#if section.key === 'projects'}
+                No projects yet
+              {:else}
+                No commitments yet
+              {/if}
+            </div>
           {/each}
         </div>
       </div>
@@ -312,6 +322,18 @@
     letter-spacing: 0.08em;
     color: var(--color-text-muted);
     text-transform: uppercase;
+  }
+
+  .section-hint {
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
+    opacity: 0.6;
+    font-style: italic;
+  }
+
+  .projects-section {
+    padding-top: 1rem;
+    border-top: 1px solid rgba(108, 92, 231, 0.1);
   }
 
   .add-section-btn {
