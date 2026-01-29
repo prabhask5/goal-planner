@@ -129,7 +129,15 @@
 
   async function handleSetCurrentProject(id: string) {
     try {
-      await projectsStore.setCurrent(id);
+      // Toggle off if clicking the already-current project
+      if (currentProject?.id === id) {
+        const session = $page.data.session;
+        if (session?.user?.id) {
+          await projectsStore.clearCurrent(session.user.id);
+        }
+      } else {
+        await projectsStore.setCurrent(id);
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to set current project';
     }
@@ -161,12 +169,10 @@
       </button>
     </header>
 
-    {#if currentProject}
-      <div class="current-project-line">
-        <span class="current-label">Current Project:</span>
-        <span class="current-name">{currentProject.name}</span>
-      </div>
-    {/if}
+    <div class="current-project-line" class:empty={!currentProject}>
+      <span class="current-label">Current Project:</span>
+      <span class="current-name">{currentProject?.name || 'None selected'}</span>
+    </div>
 
     {#if loadingProjects}
       <div class="lists-grid">
@@ -386,6 +392,11 @@
     border-radius: var(--radius-lg);
   }
 
+  .current-project-line.empty {
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.08) 0%, rgba(108, 92, 231, 0.02) 100%);
+    border-color: rgba(108, 92, 231, 0.15);
+  }
+
   .current-label {
     font-size: 0.875rem;
     color: var(--color-text-muted);
@@ -396,6 +407,12 @@
     font-size: 0.875rem;
     font-weight: 700;
     color: #ffd700;
+  }
+
+  .current-project-line.empty .current-name {
+    font-weight: 500;
+    color: var(--color-text-muted);
+    opacity: 0.6;
   }
 
   .error-banner {

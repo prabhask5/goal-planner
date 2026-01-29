@@ -232,7 +232,6 @@
     class:error={displayState() === 'error'}
     class:pending={displayState() === 'pending'}
     class:synced={displayState() === 'synced'}
-    class:transitioning={isTransitioning}
     onclick={handleSyncClick}
     disabled={!online || status === 'syncing'}
     aria-label={statusLabel()}
@@ -240,7 +239,7 @@
     <span class="indicator-ring"></span>
 
     <!-- Morphing Icon Container -->
-    <span class="indicator-core">
+    <span class="indicator-core" class:transitioning={isTransitioning}>
       <!-- Offline Icon -->
       <svg
         class="icon icon-offline"
@@ -509,8 +508,8 @@
     transform: scale(0.95);
   }
 
-  /* Transition pulse effect */
-  .sync-indicator.transitioning {
+  /* Transition pulse effect - only on the icon core, not the whole button */
+  .indicator-core.transitioning {
     animation: transitionPulse 0.6s var(--ease-spring);
   }
 
@@ -1414,7 +1413,7 @@
       animation: none;
     }
 
-    .sync-indicator.transitioning {
+    .indicator-core.transitioning {
       animation: none;
     }
 
