@@ -186,7 +186,7 @@
       <EmptyState
         icon="🚀"
         title="No projects yet"
-        description="Projects combine a goal list, tag, and commitment into a unified concept"
+        description="Create a project to manage tasks and goals collectively"
       >
         <button class="btn btn-primary" onclick={() => (showCreateProjectModal = true)}>
           Create First Project
@@ -233,7 +233,7 @@
       <EmptyState
         icon="📝"
         title="No goal lists yet"
-        description="Create a goal list to track goals without a project"
+        description="Create a goal list to track general goals"
       >
         <button class="btn btn-primary" onclick={() => (showCreateListModal = true)}>
           Create First List
@@ -320,7 +320,7 @@
       />
     </div>
     <p class="form-hint">
-      Creating a project will also create a goal list, tag, and commitment with the same name.
+      Creating a project will also add a commitment and a long term task tag for you to manage associated tasks.
     </p>
     <div class="form-actions">
       <button
