@@ -500,11 +500,14 @@
   }
 
   .sync-indicator:not(:disabled):hover {
-    transform: scale(1.1);
     border-color: rgba(108, 92, 231, 0.5);
   }
 
-  .sync-indicator:not(:disabled):active {
+  .sync-indicator:not(:disabled):hover .indicator-core {
+    transform: scale(1.1);
+  }
+
+  .sync-indicator:not(:disabled):active .indicator-core {
     transform: scale(0.95);
   }
 
@@ -545,6 +548,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.3s var(--ease-spring);
   }
 
   /* Base icon styles - all icons are absolutely positioned and transition */
