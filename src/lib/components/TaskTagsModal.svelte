@@ -54,6 +54,7 @@
   let editingCategoryId = $state<string | null>(null);
   let editingCategoryName = $state('');
   let showColorPicker = $state<string | null>(null);
+  let colorPickerPos = $state<{ top: number; left: number }>({ top: 0, left: 0 });
 
   // Group incomplete tasks by category, sorted by date (soonest first)
   const tasksByCategory = $derived(() => {
@@ -169,10 +170,37 @@
   }
 
   // Toggle color picker
-  function toggleColorPicker(categoryId: string) {
+  function toggleColorPicker(categoryId: string, event: MouseEvent) {
     if (showColorPicker === categoryId) {
       showColorPicker = null;
     } else {
+      const button = event.currentTarget as HTMLElement;
+      const rect = button.getBoundingClientRect();
+
+      // Calculate position - place below and to the right of the button
+      // Color picker is roughly 150px wide (5 cols * 24px + gaps + padding)
+      const pickerWidth = 150;
+      const pickerHeight = 80;
+
+      let left = rect.left;
+      let top = rect.bottom + 8;
+
+      // Ensure it doesn't go off the right edge
+      if (left + pickerWidth > window.innerWidth - 16) {
+        left = window.innerWidth - pickerWidth - 16;
+      }
+
+      // Ensure it doesn't go off the bottom edge
+      if (top + pickerHeight > window.innerHeight - 16) {
+        top = rect.top - pickerHeight - 8;
+      }
+
+      // Ensure it doesn't go off the left edge
+      if (left < 16) {
+        left = 16;
+      }
+
+      colorPickerPos = { top, left };
       showColorPicker = categoryId;
       editingCategoryId = null; // Close name editing if open
     }
@@ -238,11 +266,15 @@
                     <button
                       class="category-color"
                       style="background-color: {category.color}"
-                      onclick={() => toggleColorPicker(category.id)}
+                      onclick={(e) => toggleColorPicker(category.id, e)}
                       aria-label="Change color"
                     ></button>
                     {#if showColorPicker === category.id}
-                      <div class="color-picker" transition:scale={{ duration: 150, start: 0.9 }}>
+                      <div
+                        class="color-picker"
+                        style="top: {colorPickerPos.top}px; left: {colorPickerPos.left}px;"
+                        transition:scale={{ duration: 150, start: 0.9 }}
+                      >
                         {#each CATEGORY_COLORS as color}
                           <button
                             class="color-option"
@@ -518,9 +550,7 @@
 
   /* Color picker dropdown */
   .color-picker {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
+    position: fixed;
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 6px;
@@ -529,7 +559,7 @@
     border: 1px solid rgba(108, 92, 231, 0.3);
     border-radius: var(--radius-lg);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    z-index: 10;
+    z-index: 10000;
   }
 
   .color-option {
@@ -794,11 +824,6 @@
 
     .delete-tag-btn {
       opacity: 0.5;
-    }
-
-    .color-picker {
-      left: 50%;
-      transform: translateX(-50%);
     }
   }
 </style>
