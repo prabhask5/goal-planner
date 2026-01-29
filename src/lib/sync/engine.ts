@@ -727,13 +727,60 @@ export function scheduleSyncPush(): void {
 }
 
 // Get current user ID for sync cursor isolation
+// CRITICAL: This validates the session is actually valid, not just cached
 async function getCurrentUserId(): Promise<string | null> {
   try {
+    // First check if we have a session at all
     const {
-      data: { user }
+      data: { session },
+      error: sessionError
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.warn('[SYNC] Session error:', sessionError.message);
+      return null;
+    }
+
+    if (!session) {
+      console.warn('[SYNC] No active session');
+      return null;
+    }
+
+    // Check if session is expired
+    const expiresAt = session.expires_at;
+    if (expiresAt && expiresAt * 1000 < Date.now()) {
+      console.log('[SYNC] Session expired, attempting refresh...');
+      // Try to refresh the session
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
+        console.warn('[SYNC] Failed to refresh session:', refreshError?.message);
+        return null;
+      }
+      console.log('[SYNC] Session refreshed successfully');
+      return refreshData.session.user?.id || null;
+    }
+
+    // Session is valid, but also validate with getUser() which makes a network call
+    // This catches cases where the token is revoked server-side
+    const {
+      data: { user },
+      error: userError
     } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.warn('[SYNC] User validation failed:', userError.message);
+      // Try to refresh the session
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
+        console.warn('[SYNC] Failed to refresh after user validation error');
+        return null;
+      }
+      return refreshData.session.user?.id || null;
+    }
+
     return user?.id || null;
-  } catch {
+  } catch (e) {
+    console.error('[SYNC] Auth validation error:', e);
     return null;
   }
 }
@@ -1076,6 +1123,27 @@ async function pushPendingOps(): Promise<PushStats> {
   const originalItems = await getPendingSync();
   const originalCount = originalItems.length;
 
+  // CRITICAL: Pre-flight auth check before attempting to push
+  // This catches expired/invalid sessions early, before we try operations that would fail silently
+  if (originalCount > 0) {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      console.error('[SYNC] Auth validation failed before push - session may be expired');
+      const authError = {
+        message: 'Session expired - please sign in again',
+        table: 'auth',
+        operation: 'validate',
+        entityId: 'session'
+      };
+      pushErrors.push(authError);
+      syncStatusStore.addSyncError({
+        ...authError,
+        timestamp: new Date().toISOString()
+      });
+      throw new Error('Authentication required - please sign in again');
+    }
+  }
+
   // Coalesce multiple updates to the same entity before pushing
   // This merges e.g. 50 rapid increments into 1 update request
   const coalescedCount = await coalescePendingOps();
@@ -1094,14 +1162,16 @@ async function pushPendingOps(): Promise<PushStats> {
 
     for (const item of pendingItems) {
       try {
+        console.log(`[SYNC] Processing: ${item.operationType} ${item.table}/${item.entityId}`);
         await processSyncItem(item);
         if (item.id) {
           await removeSyncItem(item.id);
           processedAny = true;
           actualPushed++;
+          console.log(`[SYNC] Success: ${item.operationType} ${item.table}/${item.entityId}`);
         }
       } catch (error) {
-        console.error(`Failed to sync item ${item.id}:`, error);
+        console.error(`[SYNC] Failed: ${item.operationType} ${item.table}/${item.entityId}:`, error);
 
         // Determine if this is a transient error that will likely succeed on retry
         const transient = isTransientError(error);
@@ -1209,6 +1279,8 @@ function isTransientError(error: unknown): boolean {
 }
 
 // Process a single sync item (intent-based operation format)
+// CRITICAL: All operations use .select() to verify they succeeded
+// RLS can silently block operations - returning success but affecting 0 rows
 async function processSyncItem(item: SyncOperationItem): Promise<void> {
   const { table, entityId, operationType, field, value, timestamp } = item;
   const deviceId = getDeviceId();
@@ -1217,25 +1289,47 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
     case 'create': {
       // Create: insert the full payload with device_id
       const payload = value as Record<string, unknown>;
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(table)
-        .insert({ id: entityId, ...payload, device_id: deviceId });
+        .insert({ id: entityId, ...payload, device_id: deviceId })
+        .select('id')
+        .maybeSingle();
       // Ignore duplicate key errors (item already synced from another device)
       if (error && !isDuplicateKeyError(error)) {
         throw error;
+      }
+      // If no error but also no data returned, RLS likely blocked the insert
+      if (!error && !data && !isDuplicateKeyError({ message: '' })) {
+        // Check if it already exists (could be a race condition)
+        const { data: existing } = await supabase
+          .from(table)
+          .select('id')
+          .eq('id', entityId)
+          .maybeSingle();
+        if (!existing) {
+          throw new Error(`Insert blocked by RLS - please re-authenticate`);
+        }
+        // Already exists, treat as success
       }
       break;
     }
 
     case 'delete': {
       // Delete: soft delete with tombstone and device_id
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(table)
         .update({ deleted: true, updated_at: timestamp, device_id: deviceId })
-        .eq('id', entityId);
+        .eq('id', entityId)
+        .select('id')
+        .maybeSingle();
       // Ignore "not found" errors - item may already be deleted
       if (error && !isNotFoundError(error)) {
         throw error;
+      }
+      // If update returned no data, the row may not exist or RLS blocked it
+      // For deletes, we treat this as success (already deleted or will be on next sync)
+      if (!error && !data) {
+        console.log(`[SYNC] Delete may have been blocked or row missing: ${table}/${entityId}`);
       }
       break;
     }
@@ -1269,8 +1363,17 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
         updatePayload.completed = localEntity.completed;
       }
 
-      const { error } = await supabase.from(table).update(updatePayload).eq('id', entityId);
+      const { data, error } = await supabase
+        .from(table)
+        .update(updatePayload)
+        .eq('id', entityId)
+        .select('id')
+        .maybeSingle();
       if (error) throw error;
+      // Check if update actually affected any rows
+      if (!data) {
+        throw new Error(`Update blocked by RLS or row missing: ${table}/${entityId}`);
+      }
       break;
     }
 
@@ -1294,8 +1397,17 @@ async function processSyncItem(item: SyncOperationItem): Promise<void> {
         };
       }
 
-      const { error } = await supabase.from(table).update(updatePayload).eq('id', entityId);
+      const { data, error } = await supabase
+        .from(table)
+        .update(updatePayload)
+        .eq('id', entityId)
+        .select('id')
+        .maybeSingle();
       if (error) throw error;
+      // Check if update actually affected any rows
+      if (!data) {
+        throw new Error(`Update blocked by RLS or row missing: ${table}/${entityId}`);
+      }
       break;
     }
 
@@ -2130,6 +2242,7 @@ if (typeof window !== 'undefined') {
 // Store cleanup functions for realtime subscriptions
 let realtimeDataUnsubscribe: (() => void) | null = null;
 let realtimeConnectionUnsubscribe: (() => void) | null = null;
+let authStateUnsubscribe: { data: { subscription: { unsubscribe: () => void } } } | null = null;
 
 export async function startSyncEngine(): Promise<void> {
   if (typeof window === 'undefined') return;
@@ -2164,6 +2277,36 @@ export async function startSyncEngine(): Promise<void> {
     realtimeConnectionUnsubscribe();
     realtimeConnectionUnsubscribe = null;
   }
+  if (authStateUnsubscribe) {
+    authStateUnsubscribe.data.subscription.unsubscribe();
+    authStateUnsubscribe = null;
+  }
+
+  // Subscribe to auth state changes - critical for iOS PWA where sessions can expire
+  authStateUnsubscribe = supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log(`[SYNC] Auth state change: ${event}`);
+
+    if (event === 'SIGNED_OUT') {
+      // User signed out - stop realtime and show error
+      console.warn('[SYNC] User signed out - stopping sync');
+      stopRealtimeSubscriptions();
+      syncStatusStore.setStatus('error');
+      syncStatusStore.setError('Signed out', 'Please sign in to sync your data.');
+    } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      // User signed in or token refreshed - restart sync
+      console.log('[SYNC] Auth restored - resuming sync');
+      if (navigator.onLine) {
+        // Clear any auth errors
+        syncStatusStore.reset();
+        // Restart realtime
+        if (session?.user?.id) {
+          startRealtimeSubscriptions(session.user.id);
+        }
+        // Run a sync to push any pending changes
+        runFullSync(false);
+      }
+    }
+  });
 
   // Reset sync status to clean state (clears any stale error from previous session)
   // This prevents error flash when navigating back after a previous sync failure
@@ -2339,6 +2482,10 @@ export async function stopSyncEngine(): Promise<void> {
   if (realtimeConnectionUnsubscribe) {
     realtimeConnectionUnsubscribe();
     realtimeConnectionUnsubscribe = null;
+  }
+  if (authStateUnsubscribe) {
+    authStateUnsubscribe.data.subscription.unsubscribe();
+    authStateUnsubscribe = null;
   }
 
   // Stop realtime subscriptions

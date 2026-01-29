@@ -77,7 +77,54 @@ if (typeof window !== 'undefined') {
 // Run cleanup before creating client
 clearCorruptedAuthData();
 
+// Detect if running as iOS PWA (standalone mode)
+const isIOSPWA =
+  typeof window !== 'undefined' &&
+  // @ts-expect-error - navigator.standalone is iOS-specific
+  (window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches);
+
+if (isIOSPWA) {
+  console.log('[Auth] Running as iOS PWA - using enhanced auth persistence');
+}
+
 export const supabase: SupabaseClient = createClient(
   PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-  PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || 'placeholder'
+  PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || 'placeholder',
+  {
+    auth: {
+      // Use localStorage for persistence (default, but explicit for clarity)
+      persistSession: true,
+      // Auto-refresh tokens before they expire
+      autoRefreshToken: true,
+      // Detect session from URL (for OAuth redirects)
+      detectSessionInUrl: true,
+      // Storage key prefix
+      storageKey: 'stellar-auth',
+      // Flow type - PKCE is more secure and works better with PWAs
+      flowType: 'pkce'
+    },
+    global: {
+      // Add custom headers to help debug PWA issues
+      headers: {
+        'x-client-info': isIOSPWA ? 'stellar-ios-pwa' : 'stellar-web'
+      }
+    }
+  }
 );
+
+// Set up auth state change listener to log auth events (helps debug PWA issues)
+if (typeof window !== 'undefined') {
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log(`[Auth] State change: ${event}`, session ? `User: ${session.user?.id}` : 'No session');
+
+    // If session is lost unexpectedly, this helps identify the issue
+    if (event === 'SIGNED_OUT' && isIOSPWA) {
+      console.warn('[Auth] Signed out on iOS PWA - session may have been evicted');
+    }
+
+    if (event === 'TOKEN_REFRESHED') {
+      console.log('[Auth] Token refreshed successfully');
+    }
+  });
+}
