@@ -367,10 +367,15 @@ const syncCompleteCallbacks: Set<() => void> = new Set();
 
 export function onSyncComplete(callback: () => void): () => void {
   syncCompleteCallbacks.add(callback);
-  return () => syncCompleteCallbacks.delete(callback);
+  console.log(`[SYNC] Store registered for sync complete (total: ${syncCompleteCallbacks.size})`);
+  return () => {
+    syncCompleteCallbacks.delete(callback);
+    console.log(`[SYNC] Store unregistered from sync complete (total: ${syncCompleteCallbacks.size})`);
+  };
 }
 
 function notifySyncComplete(): void {
+  console.log(`[SYNC] Notifying ${syncCompleteCallbacks.size} store callbacks to refresh`);
   for (const callback of syncCompleteCallbacks) {
     try {
       callback();
@@ -2390,7 +2395,8 @@ export async function startSyncEngine(): Promise<void> {
   const userId = await getCurrentUserId();
   if (userId && navigator.onLine) {
     // Subscribe to realtime data updates - refresh stores when remote changes arrive
-    realtimeDataUnsubscribe = onRealtimeDataUpdate(() => {
+    realtimeDataUnsubscribe = onRealtimeDataUpdate((table, entityId) => {
+      console.log(`[SYNC] Realtime update received: ${table}/${entityId} - refreshing stores`);
       // Notify stores to refresh from local DB
       notifySyncComplete();
     });

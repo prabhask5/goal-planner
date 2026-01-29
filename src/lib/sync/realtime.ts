@@ -169,6 +169,7 @@ function setConnectionState(newState: RealtimeConnectionState, error?: string): 
  * Notify data update subscribers
  */
 function notifyDataUpdate(table: string, entityId: string): void {
+  console.log(`[Realtime] Notifying ${dataUpdateCallbacks.size} subscribers of update: ${table}/${entityId}`);
   for (const callback of dataUpdateCallbacks) {
     try {
       callback(table, entityId);
@@ -217,6 +218,9 @@ async function handleRealtimeChange(
 
   // Determine entity ID
   const entityId = (newRecord?.id || oldRecord?.id) as string;
+
+  console.log(`[Realtime] Received ${eventType} on ${table}:`, entityId);
+
   if (!entityId) {
     console.warn('[Realtime] Change without entity ID:', table, eventType);
     return;
@@ -224,13 +228,17 @@ async function handleRealtimeChange(
 
   // Skip if this change came from our own device (prevents echo)
   if (isOwnDeviceChange(newRecord)) {
+    console.log(`[Realtime] Skipping own device change: ${table}/${entityId}`);
     return;
   }
 
   // Skip if we just processed this entity (prevents rapid duplicate processing)
   if (wasRecentlyProcessed(entityId)) {
+    console.log(`[Realtime] Skipping recently processed: ${table}/${entityId}`);
     return;
   }
+
+  console.log(`[Realtime] Processing remote change: ${eventType} ${table}/${entityId}`);
 
   const dexieTable = TABLE_MAP[table];
   if (!dexieTable) {
@@ -492,6 +500,7 @@ export async function startRealtimeSubscriptions(userId: string): Promise<void> 
     state.channel = supabase.channel(channelName);
 
     // Subscribe to each table
+    console.log(`[Realtime] Setting up subscriptions for ${REALTIME_TABLES.length} tables for user ${userId}`);
     for (const table of REALTIME_TABLES) {
       state.channel = state.channel.on(
         'postgres_changes',
@@ -502,6 +511,7 @@ export async function startRealtimeSubscriptions(userId: string): Promise<void> 
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
+          console.log(`[Realtime] Raw payload received for ${table}:`, payload.eventType);
           // Handle async function properly - catch errors to prevent unhandled rejections
           handleRealtimeChange(
             table,
