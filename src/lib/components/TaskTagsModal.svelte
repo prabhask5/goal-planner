@@ -658,7 +658,7 @@
     width: 18px;
     height: 18px;
     border: 2px solid rgba(108, 92, 231, 0.4);
-    border-radius: var(--radius-sm);
+    border-radius: 50%;
     flex-shrink: 0;
     background: transparent;
     cursor: pointer;

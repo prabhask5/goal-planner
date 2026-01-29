@@ -323,10 +323,10 @@
   }
 
   .checkbox {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     border: 2px solid;
-    border-radius: var(--radius-lg);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -341,7 +341,7 @@
     content: '';
     position: absolute;
     inset: -6px;
-    border-radius: var(--radius-lg);
+    border-radius: 50%;
     background: currentColor;
     opacity: 0;
     filter: blur(12px);
@@ -375,7 +375,7 @@
 
   .checkmark {
     color: white;
-    font-size: 1.125rem;
+    font-size: 0.9375rem;
     font-weight: bold;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     animation: checkAppear 0.3s var(--ease-spring);
@@ -871,16 +871,63 @@
 
   @media (max-width: 480px) {
     .goal-item {
-      flex-wrap: wrap;
-      padding: 1rem 1.125rem;
+      padding: 0.75rem 1rem;
+      gap: 0.75rem;
+    }
+
+    .goal-main {
+      gap: 0.75rem;
+    }
+
+    .checkbox {
+      width: 22px;
+      height: 22px;
+    }
+
+    .checkmark {
+      font-size: 0.8125rem;
+    }
+
+    .increment-controls {
+      gap: 0.375rem;
+    }
+
+    .increment-btn {
+      width: 28px;
+      height: 28px;
+      font-size: 1.125rem;
+    }
+
+    .current-value {
+      min-width: 3.5rem;
+      font-size: 0.875rem;
+      padding: 0.375rem 0.5rem;
+    }
+
+    .value-input {
+      width: 3.5rem;
+      font-size: 0.875rem;
+      padding: 0.375rem 0.5rem;
+    }
+
+    .goal-name {
+      font-size: 0.875rem;
     }
 
     .goal-actions {
-      width: 100%;
-      justify-content: flex-end;
-      margin-top: 0.75rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid rgba(108, 92, 231, 0.12);
+      gap: 0.5rem;
+    }
+
+    .action-btn {
+      width: 28px;
+      height: 28px;
+      font-size: 0.9375rem;
+    }
+
+    .mini-progress-wrapper {
+      width: 60px;
+      height: 8px;
+      margin: 10px 15px 10px 5px;
     }
   }
 

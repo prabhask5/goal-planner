@@ -467,8 +467,8 @@
 
   .modal-sheet .modal-content {
     padding: 1.25rem;
-    /* Extra padding at bottom for home indicator */
-    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0));
+    /* Extra padding at bottom for home indicator + comfortable spacing */
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 20px));
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════════

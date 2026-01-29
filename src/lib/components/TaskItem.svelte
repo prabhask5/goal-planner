@@ -136,10 +136,10 @@
   }
 
   .checkbox {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border: 2px solid var(--color-red);
-    border-radius: var(--radius-md);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -212,11 +212,31 @@
 
   @media (max-width: 480px) {
     .task-item {
-      padding: 0.75rem;
+      padding: 0.625rem 0.75rem;
+      gap: 0.625rem;
+    }
+
+    .checkbox {
+      width: 18px;
+      height: 18px;
+    }
+
+    .checkmark {
+      font-size: 0.75rem;
+    }
+
+    .task-name {
+      font-size: 0.875rem;
     }
 
     .delete-btn {
+      width: 24px;
+      height: 24px;
       opacity: 0.3;
+    }
+
+    .drag-handle {
+      padding: 0.25rem;
     }
   }
 </style>

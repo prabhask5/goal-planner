@@ -175,10 +175,10 @@
   }
 
   .checkbox {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border: 2px solid rgba(108, 92, 231, 0.4);
-    border-radius: var(--radius-md);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -285,10 +285,36 @@
 
   @media (max-width: 480px) {
     .task-row {
-      padding: 0.625rem 0.75rem;
+      padding: 0.5rem 0.75rem;
+      gap: 0.625rem;
+    }
+
+    .checkbox {
+      width: 18px;
+      height: 18px;
+    }
+
+    .checkbox svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .task-name {
+      font-size: 0.875rem;
+    }
+
+    .due-date {
+      font-size: 0.6875rem;
+    }
+
+    .category-tag {
+      font-size: 0.625rem;
+      padding: 0.125rem 0.375rem;
     }
 
     .delete-btn {
+      width: 24px;
+      height: 24px;
       opacity: 0.3;
     }
   }
