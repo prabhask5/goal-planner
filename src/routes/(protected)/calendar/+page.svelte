@@ -15,6 +15,7 @@
   import Modal from '$lib/components/Modal.svelte';
   import RoutineForm from '$lib/components/RoutineForm.svelte';
   import DraggableList from '$lib/components/DraggableList.svelte';
+  import EmptyState from '$lib/components/EmptyState.svelte';
   import { remoteChangeAnimation } from '$lib/actions/remoteChange';
 
   let currentDate = $state(new Date());
@@ -278,12 +279,15 @@
         {/each}
       </div>
     {:else if routines.length === 0}
-      <div class="empty-routines">
-        <p>No routines yet. Create your first daily routine to start tracking.</p>
+      <EmptyState
+        icon="🔄"
+        title="No routines yet"
+        description="Create your first daily routine to start tracking."
+      >
         <button class="btn btn-primary" onclick={() => (showCreateModal = true)}>
           Create First Routine
         </button>
-      </div>
+      </EmptyState>
     {:else}
       {#if activeRoutines.length > 0}
         <div class="routine-group">
@@ -770,41 +774,6 @@
     background-clip: text;
   }
 
-  .empty-routines {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: linear-gradient(165deg, rgba(15, 15, 30, 0.95) 0%, rgba(20, 20, 40, 0.9) 100%);
-    border: 1px solid rgba(108, 92, 231, 0.2);
-    border-radius: var(--radius-2xl);
-    backdrop-filter: blur(24px);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .empty-routines::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 15%;
-    right: 15%;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(108, 92, 231, 0.4),
-      rgba(255, 255, 255, 0.2),
-      rgba(108, 92, 231, 0.4),
-      transparent
-    );
-  }
-
-  .empty-routines p {
-    color: var(--color-text-muted);
-    margin-bottom: 2rem;
-    line-height: 1.8;
-    font-size: 1rem;
-  }
-
   .routine-group {
     margin-bottom: 2.5rem;
   }
@@ -1070,10 +1039,6 @@
 
     .routine-with-handle .drag-handle {
       min-width: 36px;
-    }
-
-    .empty-routines {
-      padding: 2.5rem 1.5rem;
     }
 
     .error-banner {
