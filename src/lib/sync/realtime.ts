@@ -36,7 +36,8 @@ const REALTIME_TABLES = [
   'focus_settings',
   'focus_sessions',
   'block_lists',
-  'blocked_websites'
+  'blocked_websites',
+  'projects'
 ] as const;
 
 type RealtimeTable = (typeof REALTIME_TABLES)[number];
@@ -54,7 +55,8 @@ const TABLE_MAP: Record<RealtimeTable, keyof typeof db> = {
   focus_settings: 'focusSettings',
   focus_sessions: 'focusSessions',
   block_lists: 'blockLists',
-  blocked_websites: 'blockedWebsites'
+  blocked_websites: 'blockedWebsites',
+  projects: 'projects'
 };
 
 // Protection window for recently modified entities (matches engine.ts)

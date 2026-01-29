@@ -11,7 +11,9 @@ import type {
   CommitmentSection,
   DailyTask,
   LongTermTask,
-  LongTermTaskWithCategory
+  LongTermTaskWithCategory,
+  Project,
+  ProjectWithDetails
 } from '$lib/types';
 import * as repo from '$lib/db/repositories';
 import * as sync from '$lib/sync/engine';
@@ -863,3 +865,97 @@ function createLongTermTasksStore() {
 }
 
 export const longTermTasksStore = createLongTermTasksStore();
+
+// ============================================================
+// PROJECTS FEATURE STORE
+// ============================================================
+
+// Projects Store - returns projects with their related goal list progress and tag
+function createProjectsStore() {
+  const { subscribe, set, update }: Writable<ProjectWithDetails[]> = writable([]);
+  const loading = writable(true);
+  let unsubscribe: (() => void) | null = null;
+
+  async function loadProjectsWithDetails(): Promise<ProjectWithDetails[]> {
+    const projects = await sync.getProjects();
+    const goalLists = await sync.getGoalLists();
+    const categories = await sync.getTaskCategories();
+
+    // Join projects with their goal lists and tags
+    return projects.map((project) => {
+      const goalList = project.goal_list_id
+        ? goalLists.find((gl) => gl.id === project.goal_list_id) || null
+        : null;
+      const tag = project.tag_id
+        ? categories.find((c) => c.id === project.tag_id) || null
+        : null;
+
+      return {
+        ...project,
+        goalList,
+        tag
+      };
+    });
+  }
+
+  return {
+    subscribe,
+    loading: { subscribe: loading.subscribe },
+    load: async () => {
+      loading.set(true);
+      try {
+        const projectsWithDetails = await loadProjectsWithDetails();
+        set(projectsWithDetails);
+
+        if (browser && !unsubscribe) {
+          unsubscribe = sync.onSyncComplete(async () => {
+            const refreshed = await loadProjectsWithDetails();
+            set(refreshed);
+          });
+        }
+      } finally {
+        loading.set(false);
+      }
+    },
+    create: async (name: string, userId: string) => {
+      const newProject = await repo.createProject(name, userId);
+      // Record for animation before updating store
+      remoteChangesStore.recordLocalChange(newProject.id, 'projects', 'create');
+      // Refresh to get full details
+      const projectsWithDetails = await loadProjectsWithDetails();
+      set(projectsWithDetails);
+      return newProject;
+    },
+    update: async (id: string, name: string) => {
+      const updated = await repo.updateProject(id, name);
+      if (updated) {
+        // Refresh to get updated related entities
+        const projectsWithDetails = await loadProjectsWithDetails();
+        set(projectsWithDetails);
+      }
+      return updated;
+    },
+    delete: async (id: string) => {
+      await repo.deleteProject(id);
+      update((projects) => projects.filter((p) => p.id !== id));
+    },
+    setCurrent: async (id: string) => {
+      await repo.setCurrentProject(id);
+      // Refresh to reflect is_current changes
+      const projectsWithDetails = await loadProjectsWithDetails();
+      set(projectsWithDetails);
+    },
+    clearCurrent: async (userId: string) => {
+      await repo.clearCurrentProject(userId);
+      // Refresh to reflect is_current changes
+      const projectsWithDetails = await loadProjectsWithDetails();
+      set(projectsWithDetails);
+    },
+    refresh: async () => {
+      const projectsWithDetails = await loadProjectsWithDetails();
+      set(projectsWithDetails);
+    }
+  };
+}
+
+export const projectsStore = createProjectsStore();

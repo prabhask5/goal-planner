@@ -20,6 +20,7 @@ export interface GoalList {
   id: string;
   user_id: string;
   name: string;
+  project_id?: string | null; // If set, this goal list belongs to a project
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
@@ -104,7 +105,7 @@ export interface GoalListWithProgress extends GoalList {
 // TASKS FEATURE TYPES
 // ============================================================
 
-export type CommitmentSection = 'career' | 'social' | 'personal';
+export type CommitmentSection = 'career' | 'projects' | 'personal';
 
 export interface TaskCategory {
   id: string;
@@ -112,6 +113,7 @@ export interface TaskCategory {
   name: string;
   color: string; // hex color for visual tag
   order: number;
+  project_id?: string | null; // If set, this category belongs to a project
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
@@ -125,6 +127,7 @@ export interface Commitment {
   name: string;
   section: CommitmentSection;
   order: number;
+  project_id?: string | null; // If set, this commitment belongs to a project
   created_at: string;
   updated_at: string;
   deleted?: boolean; // Tombstone flag
@@ -259,4 +262,29 @@ export interface BlockedWebsite {
   deleted?: boolean;
   _version?: number; // Optimistic concurrency version
   device_id?: string; // Device that last modified this record
+}
+
+// ============================================================
+// PROJECTS FEATURE TYPES
+// ============================================================
+
+export interface Project {
+  id: string;
+  user_id: string;
+  name: string;
+  is_current: boolean;
+  order: number;
+  tag_id: string | null;
+  commitment_id: string | null;
+  goal_list_id: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted?: boolean;
+  _version?: number; // Optimistic concurrency version
+  device_id?: string; // Device that last modified this record
+}
+
+export interface ProjectWithDetails extends Project {
+  tag?: TaskCategory | null;
+  goalList?: GoalListWithProgress | null;
 }

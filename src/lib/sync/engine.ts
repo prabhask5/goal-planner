@@ -23,7 +23,8 @@ import type {
   FocusSettings,
   FocusSession,
   BlockList,
-  BlockedWebsite
+  BlockedWebsite,
+  Project
 } from '$lib/types';
 import type { SyncOperationItem } from './types';
 import { syncStatusStore } from '$lib/stores/sync';
@@ -260,15 +261,15 @@ if (typeof window !== 'undefined') {
 
 // Column definitions for each table (explicit to reduce egress vs select('*'))
 const COLUMNS = {
-  goal_lists: 'id,user_id,name,created_at,updated_at,deleted,_version,device_id',
+  goal_lists: 'id,user_id,name,project_id,created_at,updated_at,deleted,_version,device_id',
   goals:
     'id,goal_list_id,name,type,target_value,current_value,completed,order,created_at,updated_at,deleted,_version,device_id',
   daily_routine_goals:
     'id,user_id,name,type,target_value,start_date,end_date,active_days,order,created_at,updated_at,deleted,_version,device_id',
   daily_goal_progress:
     'id,daily_routine_goal_id,date,current_value,completed,updated_at,deleted,_version,device_id',
-  task_categories: 'id,user_id,name,color,order,created_at,updated_at,deleted,_version,device_id',
-  commitments: 'id,user_id,name,section,order,created_at,updated_at,deleted,_version,device_id',
+  task_categories: 'id,user_id,name,color,order,project_id,created_at,updated_at,deleted,_version,device_id',
+  commitments: 'id,user_id,name,section,order,project_id,created_at,updated_at,deleted,_version,device_id',
   daily_tasks: 'id,user_id,name,order,completed,created_at,updated_at,deleted,_version,device_id',
   long_term_tasks:
     'id,user_id,name,due_date,category_id,completed,created_at,updated_at,deleted,_version,device_id',
@@ -278,7 +279,9 @@ const COLUMNS = {
     'id,user_id,started_at,ended_at,phase,status,current_cycle,total_cycles,focus_duration,break_duration,phase_started_at,phase_remaining_ms,elapsed_duration,created_at,updated_at,deleted,_version,device_id',
   block_lists:
     'id,user_id,name,active_days,is_enabled,order,created_at,updated_at,deleted,_version,device_id',
-  blocked_websites: 'id,block_list_id,domain,created_at,updated_at,deleted,_version,device_id'
+  blocked_websites: 'id,block_list_id,domain,created_at,updated_at,deleted,_version,device_id',
+  projects:
+    'id,user_id,name,is_current,order,tag_id,commitment_id,goal_list_id,created_at,updated_at,deleted,_version,device_id'
 } as const;
 
 let syncTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -697,6 +700,18 @@ export async function getLongTermTask(id: string): Promise<LongTermTaskWithCateg
   return { ...task, category };
 }
 
+// Get all projects from LOCAL DB
+export async function getProjects(): Promise<Project[]> {
+  const projects = await db.projects.toArray();
+  return projects.filter((p) => !p.deleted).sort((a, b) => a.order - b.order);
+}
+
+// Get a single project from LOCAL DB
+export async function getProject(id: string): Promise<Project | null> {
+  const project = await db.projects.get(id);
+  return project && !project.deleted ? project : null;
+}
+
 // ============================================================
 // SYNC OPERATIONS - Background sync to/from Supabase
 // ============================================================
@@ -894,6 +909,17 @@ async function pullRemoteChanges(minCursor?: string): Promise<{ bytes: number; r
   pullBytes += blockedWebsitesEgress.bytes;
   pullRecords += blockedWebsitesEgress.records;
 
+  // Pull projects changed since last sync
+  const { data: remoteProjects, error: projectsError } = await supabase
+    .from('projects')
+    .select(COLUMNS.projects)
+    .gt('updated_at', lastSync);
+
+  if (projectsError) throw projectsError;
+  const projectsEgress = trackEgress('projects', remoteProjects);
+  pullBytes += projectsEgress.bytes;
+  pullRecords += projectsEgress.records;
+
   // Helper function to apply remote changes with field-level conflict resolution
   async function applyRemoteWithConflictResolution<T extends { id: string; updated_at: string }>(
     entityType: string,
@@ -968,6 +994,7 @@ async function pullRemoteChanges(minCursor?: string): Promise<{ bytes: number; r
       db.focusSessions,
       db.blockLists,
       db.blockedWebsites,
+      db.projects,
       db.conflictHistory
     ],
     async () => {
@@ -1012,6 +1039,7 @@ async function pullRemoteChanges(minCursor?: string): Promise<{ bytes: number; r
         remoteBlockedWebsites,
         db.blockedWebsites
       );
+      await applyRemoteWithConflictResolution('projects', remoteProjects, db.projects);
     }
   );
 
@@ -1668,6 +1696,12 @@ export async function hydrateFromRemote(): Promise<void> {
       .or('deleted.is.null,deleted.eq.false');
     if (blockedWebsitesError) throw blockedWebsitesError;
 
+    const { data: projects, error: projectsError } = await supabase
+      .from('projects')
+      .select(COLUMNS.projects)
+      .or('deleted.is.null,deleted.eq.false');
+    if (projectsError) throw projectsError;
+
     // Track egress for initial hydration
     trackEgress('goal_lists', lists);
     trackEgress('goals', goals);
@@ -1681,6 +1715,7 @@ export async function hydrateFromRemote(): Promise<void> {
     trackEgress('focus_sessions', focusSessions);
     trackEgress('block_lists', blockLists);
     trackEgress('blocked_websites', blockedWebsites);
+    trackEgress('projects', projects);
 
     const totalRecords =
       (lists?.length || 0) +
@@ -1694,7 +1729,8 @@ export async function hydrateFromRemote(): Promise<void> {
       (focusSettings?.length || 0) +
       (focusSessions?.length || 0) +
       (blockLists?.length || 0) +
-      (blockedWebsites?.length || 0);
+      (blockedWebsites?.length || 0) +
+      (projects?.length || 0);
     console.log(
       `[SYNC] Initial hydration: ${totalRecords} records (${formatBytes(egressStats.totalBytes)})`
     );
@@ -1714,7 +1750,8 @@ export async function hydrateFromRemote(): Promise<void> {
       ...(focusSettings || []),
       ...(focusSessions || []),
       ...(blockLists || []),
-      ...(blockedWebsites || [])
+      ...(blockedWebsites || []),
+      ...(projects || [])
     ];
     for (const item of allData) {
       if (item.updated_at && item.updated_at > maxUpdatedAt) {
@@ -1737,7 +1774,8 @@ export async function hydrateFromRemote(): Promise<void> {
         db.focusSettings,
         db.focusSessions,
         db.blockLists,
-        db.blockedWebsites
+        db.blockedWebsites,
+        db.projects
       ],
       async () => {
         if (lists && lists.length > 0) {
@@ -1775,6 +1813,9 @@ export async function hydrateFromRemote(): Promise<void> {
         }
         if (blockedWebsites && blockedWebsites.length > 0) {
           await db.blockedWebsites.bulkPut(blockedWebsites);
+        }
+        if (projects && projects.length > 0) {
+          await db.projects.bulkPut(projects);
         }
       }
     );
@@ -1835,7 +1876,8 @@ async function cleanupLocalTombstones(): Promise<number> {
         db.focusSettings,
         db.focusSessions,
         db.blockLists,
-        db.blockedWebsites
+        db.blockedWebsites,
+        db.projects
       ],
       async () => {
         // Delete old tombstones from each table and count
@@ -1851,7 +1893,8 @@ async function cleanupLocalTombstones(): Promise<number> {
           { table: db.focusSettings, name: 'focusSettings' },
           { table: db.focusSessions, name: 'focusSessions' },
           { table: db.blockLists, name: 'blockLists' },
-          { table: db.blockedWebsites, name: 'blockedWebsites' }
+          { table: db.blockedWebsites, name: 'blockedWebsites' },
+          { table: db.projects, name: 'projects' }
         ];
 
         for (const { table, name } of tables) {
@@ -1902,7 +1945,8 @@ async function cleanupServerTombstones(force = false): Promise<number> {
     'focus_settings',
     'focus_sessions',
     'block_lists',
-    'blocked_websites'
+    'blocked_websites',
+    'projects'
   ];
 
   let totalDeleted = 0;
@@ -2337,6 +2381,7 @@ export async function clearLocalCache(): Promise<void> {
       db.focusSessions,
       db.blockLists,
       db.blockedWebsites,
+      db.projects,
       db.conflictHistory
     ],
     async () => {
@@ -2352,6 +2397,7 @@ export async function clearLocalCache(): Promise<void> {
       await db.focusSessions.clear();
       await db.blockLists.clear();
       await db.blockedWebsites.clear();
+      await db.projects.clear();
       await db.syncQueue.clear();
       await db.conflictHistory.clear();
     }

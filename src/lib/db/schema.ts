@@ -15,7 +15,8 @@ import type {
   FocusSession,
   BlockList,
   BlockedWebsite,
-  ConflictHistoryEntry
+  ConflictHistoryEntry,
+  Project
 } from '$lib/types';
 
 export class GoalPlannerDB extends Dexie {
@@ -35,6 +36,7 @@ export class GoalPlannerDB extends Dexie {
   blockLists!: Table<BlockList, string>;
   blockedWebsites!: Table<BlockedWebsite, string>;
   conflictHistory!: Table<ConflictHistoryEntry, number>;
+  projects!: Table<Project, string>;
 
   constructor() {
     super('GoalPlannerDB');
@@ -230,6 +232,29 @@ export class GoalPlannerDB extends Dexie {
       conflictHistory: '++id, entityId, entityType, timestamp'
     });
     // Note: No upgrade function needed - device_id will be set on next write
+
+    // Version 11: Add projects table and project_id indexes to related tables
+    // Projects combine a goal list, tag, and commitment into a unified concept
+    this.version(11).stores({
+      goalLists: 'id, user_id, project_id, created_at, updated_at',
+      goals: 'id, goal_list_id, order, created_at, updated_at',
+      dailyRoutineGoals: 'id, user_id, order, start_date, end_date, created_at, updated_at',
+      dailyGoalProgress:
+        'id, daily_routine_goal_id, date, [daily_routine_goal_id+date], updated_at',
+      syncQueue: '++id, table, entityId, timestamp',
+      taskCategories: 'id, user_id, project_id, order, created_at, updated_at',
+      commitments: 'id, user_id, project_id, section, order, created_at, updated_at',
+      dailyTasks: 'id, user_id, order, created_at, updated_at',
+      longTermTasks: 'id, user_id, due_date, category_id, created_at, updated_at',
+      offlineCredentials: 'id',
+      offlineSession: 'id',
+      focusSettings: 'id, user_id, updated_at',
+      focusSessions: 'id, user_id, started_at, ended_at, status, updated_at',
+      blockLists: 'id, user_id, order, updated_at',
+      blockedWebsites: 'id, block_list_id, updated_at',
+      conflictHistory: '++id, entityId, entityType, timestamp',
+      projects: 'id, user_id, is_current, order, created_at, updated_at'
+    });
   }
 }
 

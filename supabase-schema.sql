@@ -105,7 +105,7 @@ create table commitments (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users(id) on delete cascade,
   name text not null,
-  section text not null check (section in ('career', 'social', 'personal')),
+  section text not null check (section in ('career', 'projects', 'personal')),
   "order" double precision default 0 not null,
   deleted boolean default false not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
@@ -134,6 +134,29 @@ create table long_term_tasks (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- ============================================================
+-- TABLES: Projects Feature
+-- ============================================================
+
+create table projects (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users(id) on delete cascade,
+  name text not null,
+  is_current boolean default false not null,
+  "order" double precision default 0 not null,
+  tag_id uuid references task_categories(id) on delete set null,
+  commitment_id uuid references commitments(id) on delete set null,
+  goal_list_id uuid references goal_lists(id) on delete set null,
+  deleted boolean default false not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Add project_id to related tables (for project ownership tracking)
+alter table task_categories add column project_id uuid references projects(id) on delete set null;
+alter table commitments add column project_id uuid references projects(id) on delete set null;
+alter table goal_lists add column project_id uuid references projects(id) on delete set null;
 
 -- ============================================================
 -- INDEXES
@@ -183,6 +206,19 @@ create index idx_long_term_tasks_category_id on long_term_tasks(category_id);
 create index idx_long_term_tasks_updated_at on long_term_tasks(updated_at);
 create index idx_long_term_tasks_deleted on long_term_tasks(deleted) where deleted = false;
 
+-- Projects
+create index idx_projects_user_id on projects(user_id);
+create index idx_projects_is_current on projects(is_current);
+create index idx_projects_order on projects("order");
+create index idx_projects_updated_at on projects(updated_at);
+create index idx_projects_deleted on projects(deleted) where deleted = false;
+create index idx_projects_tag_id on projects(tag_id);
+create index idx_projects_commitment_id on projects(commitment_id);
+create index idx_projects_goal_list_id on projects(goal_list_id);
+create index idx_task_categories_project_id on task_categories(project_id);
+create index idx_commitments_project_id on commitments(project_id);
+create index idx_goal_lists_project_id on goal_lists(project_id);
+
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================================
@@ -194,6 +230,7 @@ alter table daily_goal_progress enable row level security;
 alter table task_categories enable row level security;
 alter table commitments enable row level security;
 alter table daily_tasks enable row level security;
+alter table projects enable row level security;
 alter table long_term_tasks enable row level security;
 
 -- ============================================================
@@ -405,6 +442,26 @@ create policy "Users can delete their own long term tasks"
   using ((select auth.uid()) = user_id);
 
 -- ============================================================
+-- RLS POLICIES: Projects
+-- ============================================================
+
+create policy "Users can view their own projects"
+  on projects for select
+  using ((select auth.uid()) = user_id);
+
+create policy "Users can create their own projects"
+  on projects for insert
+  with check ((select auth.uid()) = user_id);
+
+create policy "Users can update their own projects"
+  on projects for update
+  using ((select auth.uid()) = user_id);
+
+create policy "Users can delete their own projects"
+  on projects for delete
+  using ((select auth.uid()) = user_id);
+
+-- ============================================================
 -- TRIGGERS: Auto-set user_id on insert
 -- ============================================================
 
@@ -430,6 +487,10 @@ create trigger set_daily_tasks_user_id
 
 create trigger set_long_term_tasks_user_id
   before insert on long_term_tasks
+  for each row execute function set_user_id();
+
+create trigger set_projects_user_id
+  before insert on projects
   for each row execute function set_user_id();
 
 -- ============================================================
@@ -466,6 +527,10 @@ create trigger update_daily_tasks_updated_at
 
 create trigger update_long_term_tasks_updated_at
   before update on long_term_tasks
+  for each row execute function update_updated_at_column();
+
+create trigger update_projects_updated_at
+  before update on projects
   for each row execute function update_updated_at_column();
 
 -- ============================================================
@@ -725,6 +790,7 @@ alter publication supabase_realtime add table focus_settings;
 alter publication supabase_realtime add table focus_sessions;
 alter publication supabase_realtime add table block_lists;
 alter publication supabase_realtime add table blocked_websites;
+alter publication supabase_realtime add table projects;
 
 -- ============================================================
 -- VERSIONING: Add version columns to all entity tables
@@ -743,6 +809,7 @@ alter table focus_settings add column if not exists _version integer default 1 n
 alter table focus_sessions add column if not exists _version integer default 1 not null;
 alter table block_lists add column if not exists _version integer default 1 not null;
 alter table blocked_websites add column if not exists _version integer default 1 not null;
+alter table projects add column if not exists _version integer default 1 not null;
 
 -- ============================================================
 -- DEVICE ID: Track which device last modified each record
@@ -761,6 +828,7 @@ alter table focus_settings add column if not exists device_id text;
 alter table focus_sessions add column if not exists device_id text;
 alter table block_lists add column if not exists device_id text;
 alter table blocked_websites add column if not exists device_id text;
+alter table projects add column if not exists device_id text;
 
 -- ============================================================
 -- SYNC OPERATIONS LOG: Track all sync operations for conflict resolution

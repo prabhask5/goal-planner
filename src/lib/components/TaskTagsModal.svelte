@@ -82,6 +82,11 @@
     return categories.find((c) => c.id === id);
   }
 
+  // Check if a category is project-owned (cannot be edited/deleted independently)
+  function isProjectOwned(category: TaskCategory): boolean {
+    return !!category.project_id;
+  }
+
   function formatDate(dateStr: string): string {
     const date = parseDateString(dateStr);
     const today = new Date();
@@ -225,37 +230,52 @@
           <div class="categories-list">
             {#each categories as category (category.id)}
               {@const categoryTasks = tasksByCategory().get(category.id) || []}
+              {@const projectOwned = isProjectOwned(category)}
               <div
                 class="category-section"
+                class:project-owned={projectOwned}
                 use:remoteChangeAnimation={{ entityId: category.id, entityType: 'task_categories' }}
               >
                 <div class="category-header">
                   <div class="category-info">
-                    <!-- Color button with picker -->
-                    <div class="color-picker-container">
-                      <button
-                        class="category-color"
+                    <!-- Color button with picker (or static for project-owned) -->
+                    {#if projectOwned}
+                      <span
+                        class="category-color-static"
                         style="background-color: {category.color}"
-                        onclick={() => toggleColorPicker(category.id)}
-                        aria-label="Change color"
-                      ></button>
-                      {#if showColorPicker === category.id}
-                        <div class="color-picker" transition:scale={{ duration: 150, start: 0.9 }}>
-                          {#each CATEGORY_COLORS as color}
-                            <button
-                              class="color-option"
-                              class:selected={category.color === color}
-                              style="background-color: {color}"
-                              onclick={() => selectColor(category.id, color)}
-                              aria-label="Select {color}"
-                            ></button>
-                          {/each}
-                        </div>
-                      {/if}
-                    </div>
+                        title="Managed by project"
+                      ></span>
+                      <span class="project-icon" title="Managed by project">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                        </svg>
+                      </span>
+                    {:else}
+                      <div class="color-picker-container">
+                        <button
+                          class="category-color"
+                          style="background-color: {category.color}"
+                          onclick={() => toggleColorPicker(category.id)}
+                          aria-label="Change color"
+                        ></button>
+                        {#if showColorPicker === category.id}
+                          <div class="color-picker" transition:scale={{ duration: 150, start: 0.9 }}>
+                            {#each CATEGORY_COLORS as color}
+                              <button
+                                class="color-option"
+                                class:selected={category.color === color}
+                                style="background-color: {color}"
+                                onclick={() => selectColor(category.id, color)}
+                                aria-label="Select {color}"
+                              ></button>
+                            {/each}
+                          </div>
+                        {/if}
+                      </div>
+                    {/if}
 
-                    <!-- Editable name -->
-                    {#if editingCategoryId === category.id}
+                    <!-- Editable name (only if not project-owned) -->
+                    {#if editingCategoryId === category.id && !projectOwned}
                       <input
                         type="text"
                         class="category-name-input"
@@ -264,6 +284,8 @@
                         onblur={saveEditName}
                         autofocus
                       />
+                    {:else if projectOwned}
+                      <span class="category-name-static">{category.name}</span>
                     {:else}
                       <button class="category-name" onclick={() => startEditName(category)}>
                         {category.name}
@@ -272,24 +294,26 @@
 
                     <span class="task-count">{categoryTasks.length}</span>
                   </div>
-                  <button
-                    class="delete-tag-btn"
-                    onclick={() =>
-                      handleDeleteTag(category.id, category.name, categoryTasks.length)}
-                    aria-label="Delete tag"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
+                  {#if !projectOwned}
+                    <button
+                      class="delete-tag-btn"
+                      onclick={() =>
+                        handleDeleteTag(category.id, category.name, categoryTasks.length)}
+                      aria-label="Delete tag"
                     >
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  {/if}
                 </div>
 
                 {#if categoryTasks.length > 0}
@@ -876,6 +900,25 @@
   .category-section.untagged .category-header {
     background: rgba(30, 30, 50, 0.4);
     border-style: dashed;
+  }
+
+  /* Project-owned tags */
+  .category-section.project-owned .category-header {
+    border-color: rgba(255, 215, 0, 0.15);
+    background: rgba(255, 215, 0, 0.03);
+  }
+
+  .category-section.project-owned .category-header:hover {
+    border-color: rgba(255, 215, 0, 0.25);
+    background: rgba(255, 215, 0, 0.05);
+  }
+
+  .project-icon {
+    color: #ffd700;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Tablet breakpoint */

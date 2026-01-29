@@ -22,9 +22,14 @@
 
   const sections: { key: CommitmentSection; label: string }[] = [
     { key: 'career', label: 'CAREER' },
-    { key: 'social', label: 'SOCIAL' },
+    { key: 'projects', label: 'PROJECTS' },
     { key: 'personal', label: 'PERSONAL' }
   ];
+
+  // Check if a commitment is project-owned (cannot be edited/deleted independently)
+  function isProjectOwned(commitment: Commitment): boolean {
+    return !!commitment.project_id;
+  }
 
   let addingTo = $state<CommitmentSection | null>(null);
   let newName = $state('');
@@ -208,24 +213,33 @@
               class="commitment-item"
               class:dragging={draggedId === commitment.id}
               class:drop-target={dropTargetId === commitment.id && draggedId !== commitment.id}
-              draggable="true"
-              ondragstart={(e) => handleDragStart(e, commitment)}
+              class:project-owned={isProjectOwned(commitment)}
+              draggable={!isProjectOwned(commitment)}
+              ondragstart={(e) => !isProjectOwned(commitment) && handleDragStart(e, commitment)}
               ondragover={(e) => handleDragOver(e, commitment.id)}
               ondragend={handleDragEnd}
               use:remoteChangeAnimation={{ entityId: commitment.id, entityType: 'commitments' }}
             >
-              <span class="drag-handle-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="9" cy="6" r="1.5" />
-                  <circle cx="15" cy="6" r="1.5" />
-                  <circle cx="9" cy="12" r="1.5" />
-                  <circle cx="15" cy="12" r="1.5" />
-                  <circle cx="9" cy="18" r="1.5" />
-                  <circle cx="15" cy="18" r="1.5" />
-                </svg>
-              </span>
+              {#if !isProjectOwned(commitment)}
+                <span class="drag-handle-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.5" />
+                    <circle cx="15" cy="6" r="1.5" />
+                    <circle cx="9" cy="12" r="1.5" />
+                    <circle cx="15" cy="12" r="1.5" />
+                    <circle cx="9" cy="18" r="1.5" />
+                    <circle cx="15" cy="18" r="1.5" />
+                  </svg>
+                </span>
+              {:else}
+                <span class="project-icon" title="Managed by project">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                  </svg>
+                </span>
+              {/if}
 
-              {#if editingId === commitment.id}
+              {#if editingId === commitment.id && !isProjectOwned(commitment)}
                 <input
                   type="text"
                   bind:value={editingName}
@@ -235,28 +249,33 @@
                   use:focus
                 />
               {:else}
-                <span class="commitment-name" ondblclick={() => startEditing(commitment)}>
+                <span
+                  class="commitment-name"
+                  ondblclick={() => !isProjectOwned(commitment) && startEditing(commitment)}
+                >
                   {commitment.name}
                 </span>
               {/if}
 
-              <button
-                class="delete-btn"
-                onclick={() => onDelete(commitment.id)}
-                aria-label="Delete commitment"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
+              {#if !isProjectOwned(commitment)}
+                <button
+                  class="delete-btn"
+                  onclick={() => onDelete(commitment.id)}
+                  aria-label="Delete commitment"
                 >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              {/if}
             </div>
           {:else}
             <div class="empty-section">No commitments yet</div>
@@ -474,5 +493,24 @@
     font-size: 0.875rem;
     font-style: italic;
     opacity: 0.6;
+  }
+
+  .commitment-item.project-owned {
+    cursor: default;
+    border-color: rgba(255, 215, 0, 0.15);
+    background: rgba(255, 215, 0, 0.03);
+  }
+
+  .commitment-item.project-owned:hover {
+    border-color: rgba(255, 215, 0, 0.25);
+    background: rgba(255, 215, 0, 0.05);
+  }
+
+  .project-icon {
+    color: #ffd700;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 </style>

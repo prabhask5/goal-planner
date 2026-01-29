@@ -2,51 +2,69 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { goalListsStore } from '$lib/stores/data';
-  import type { GoalListWithProgress } from '$lib/types';
+  import { goalListsStore, projectsStore } from '$lib/stores/data';
+  import type { GoalListWithProgress, ProjectWithDetails } from '$lib/types';
   import ProgressBar from '$lib/components/ProgressBar.svelte';
+  import ProjectCard from '$lib/components/ProjectCard.svelte';
   import Modal from '$lib/components/Modal.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
   import { remoteChangeAnimation } from '$lib/actions/remoteChange';
 
   let error = $state<string | null>(null);
-  let showCreateModal = $state(false);
+  let showCreateListModal = $state(false);
+  let showCreateProjectModal = $state(false);
   let newListName = $state('');
-  let creating = $state(false);
+  let newProjectName = $state('');
+  let creatingList = $state(false);
+  let creatingProject = $state(false);
 
-  // Focus action for accessibility (replaces autofocus attribute)
+  // Focus action for accessibility
   function focus(node: HTMLElement) {
     node.focus();
   }
 
   // Subscribe to stores
   let lists = $state<GoalListWithProgress[]>([]);
-  let loading = $state(true);
+  let projects = $state<ProjectWithDetails[]>([]);
+  let loadingLists = $state(true);
+  let loadingProjects = $state(true);
+
+  // Filter goal lists to exclude project-owned ones
+  const standaloneLists = $derived(lists.filter((l) => !l.project_id));
+  const currentProject = $derived(projects.find((p) => p.is_current) || null);
 
   $effect(() => {
     const unsubLists = goalListsStore.subscribe((value) => {
       lists = value;
     });
-    const unsubLoading = goalListsStore.loading.subscribe((value) => {
-      loading = value;
+    const unsubLoadingLists = goalListsStore.loading.subscribe((value) => {
+      loadingLists = value;
+    });
+    const unsubProjects = projectsStore.subscribe((value) => {
+      projects = value;
+    });
+    const unsubLoadingProjects = projectsStore.loading.subscribe((value) => {
+      loadingProjects = value;
     });
 
     return () => {
       unsubLists();
-      unsubLoading();
+      unsubLoadingLists();
+      unsubProjects();
+      unsubLoadingProjects();
     };
   });
 
   onMount(async () => {
-    await goalListsStore.load();
+    await Promise.all([goalListsStore.load(), projectsStore.load()]);
   });
 
   async function handleCreateList(event: Event) {
     event.preventDefault();
-    if (!newListName.trim() || creating) return;
+    if (!newListName.trim() || creatingList) return;
 
     try {
-      creating = true;
+      creatingList = true;
       const session = $page.data.session;
       if (!session?.user?.id) {
         error = 'Not authenticated';
@@ -54,11 +72,32 @@
       }
       await goalListsStore.create(newListName.trim(), session.user.id);
       newListName = '';
-      showCreateModal = false;
+      showCreateListModal = false;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to create list';
     } finally {
-      creating = false;
+      creatingList = false;
+    }
+  }
+
+  async function handleCreateProject(event: Event) {
+    event.preventDefault();
+    if (!newProjectName.trim() || creatingProject) return;
+
+    try {
+      creatingProject = true;
+      const session = $page.data.session;
+      if (!session?.user?.id) {
+        error = 'Not authenticated';
+        return;
+      }
+      await projectsStore.create(newProjectName.trim(), session.user.id);
+      newProjectName = '';
+      showCreateProjectModal = false;
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to create project';
+    } finally {
+      creatingProject = false;
     }
   }
 
@@ -72,21 +111,40 @@
     }
   }
 
+  async function handleDeleteProject(id: string) {
+    const confirmed = confirm(
+      'Are you sure you want to delete this project? This will also delete:\n\n' +
+        "- The project's goal list and all its goals\n" +
+        "- The project's tag (tasks using this tag will become untagged)\n" +
+        "- The project's commitment"
+    );
+    if (!confirmed) return;
+
+    try {
+      await projectsStore.delete(id);
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to delete project';
+    }
+  }
+
+  async function handleSetCurrentProject(id: string) {
+    try {
+      await projectsStore.setCurrent(id);
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to set current project';
+    }
+  }
+
   function navigateToList(id: string) {
     goto(`/lists/${id}`);
   }
 </script>
 
 <svelte:head>
-  <title>Goal Lists - Stellar</title>
+  <title>Plans - Stellar</title>
 </svelte:head>
 
 <div class="container">
-  <header class="page-header">
-    <h1>Goal Lists</h1>
-    <button class="btn btn-primary" onclick={() => (showCreateModal = true)}> + New List </button>
-  </header>
-
   {#if error}
     <div class="error-banner">
       <p>{error}</p>
@@ -94,67 +152,132 @@
     </div>
   {/if}
 
-  {#if loading}
-    <div class="lists-grid">
-      {#each Array(3) as _, i}
-        <div class="skeleton-card" style="--delay: {i * 0.15}s">
-          <div class="skeleton-header">
-            <div class="skeleton-title"></div>
-            <div class="skeleton-btn"></div>
-          </div>
-          <div class="skeleton-stats"></div>
-          <div class="skeleton-progress"></div>
-          <div class="skeleton-shimmer"></div>
-        </div>
-      {/each}
-    </div>
-  {:else if lists.length === 0}
-    <EmptyState
-      icon="📝"
-      title="No goal lists yet"
-      description="Create your first goal list to start tracking your goals"
-    >
-      <button class="btn btn-primary" onclick={() => (showCreateModal = true)}>
-        Create First List
+  <!-- Projects Section -->
+  <section class="section">
+    <header class="section-header">
+      <h2>Projects</h2>
+      <button class="btn btn-primary" onclick={() => (showCreateProjectModal = true)}>
+        + New Project
       </button>
-    </EmptyState>
-  {:else}
-    <div class="lists-grid">
-      {#each lists as list (list.id)}
-        <div
-          class="list-card"
-          role="button"
-          tabindex="0"
-          onclick={() => navigateToList(list.id)}
-          onkeypress={(e) => e.key === 'Enter' && navigateToList(list.id)}
-          use:remoteChangeAnimation={{ entityId: list.id, entityType: 'goal_lists' }}
-        >
-          <div class="list-header">
-            <h3 class="list-name">{list.name}</h3>
-            <button
-              class="delete-btn"
-              onclick={(e) => {
-                e.stopPropagation();
-                handleDeleteList(list.id);
-              }}
-              aria-label="Delete list"
-            >
-              ×
-            </button>
+    </header>
+
+    {#if currentProject}
+      <div class="current-project-line">
+        <span class="current-label">Current Project:</span>
+        <span class="current-name">{currentProject.name}</span>
+      </div>
+    {/if}
+
+    {#if loadingProjects}
+      <div class="lists-grid">
+        {#each Array(2) as _, i}
+          <div class="skeleton-card" style="--delay: {i * 0.15}s">
+            <div class="skeleton-header">
+              <div class="skeleton-title"></div>
+              <div class="skeleton-btn"></div>
+            </div>
+            <div class="skeleton-stats"></div>
+            <div class="skeleton-progress"></div>
+            <div class="skeleton-shimmer"></div>
           </div>
-          <div class="list-stats">
-            <span class="stat-text">
-              {list.completedGoals} / {list.totalGoals} goals
-            </span>
+        {/each}
+      </div>
+    {:else if projects.length === 0}
+      <EmptyState
+        icon="🚀"
+        title="No projects yet"
+        description="Projects combine a goal list, tag, and commitment into a unified concept"
+      >
+        <button class="btn btn-primary" onclick={() => (showCreateProjectModal = true)}>
+          Create First Project
+        </button>
+      </EmptyState>
+    {:else}
+      <div class="lists-grid">
+        {#each projects as project (project.id)}
+          <ProjectCard
+            {project}
+            onNavigate={navigateToList}
+            onSetCurrent={handleSetCurrentProject}
+            onDelete={handleDeleteProject}
+          />
+        {/each}
+      </div>
+    {/if}
+  </section>
+
+  <!-- Goal Lists Section -->
+  <section class="section">
+    <header class="section-header">
+      <h2>Goal Lists</h2>
+      <button class="btn btn-primary" onclick={() => (showCreateListModal = true)}>
+        + New List
+      </button>
+    </header>
+
+    {#if loadingLists}
+      <div class="lists-grid">
+        {#each Array(3) as _, i}
+          <div class="skeleton-card" style="--delay: {i * 0.15}s">
+            <div class="skeleton-header">
+              <div class="skeleton-title"></div>
+              <div class="skeleton-btn"></div>
+            </div>
+            <div class="skeleton-stats"></div>
+            <div class="skeleton-progress"></div>
+            <div class="skeleton-shimmer"></div>
           </div>
-          <ProgressBar percentage={list.completionPercentage} />
-        </div>
-      {/each}
-    </div>
-  {/if}
+        {/each}
+      </div>
+    {:else if standaloneLists.length === 0}
+      <EmptyState
+        icon="📝"
+        title="No goal lists yet"
+        description="Create a goal list to track goals without a project"
+      >
+        <button class="btn btn-primary" onclick={() => (showCreateListModal = true)}>
+          Create First List
+        </button>
+      </EmptyState>
+    {:else}
+      <div class="lists-grid">
+        {#each standaloneLists as list (list.id)}
+          <div
+            class="list-card"
+            role="button"
+            tabindex="0"
+            onclick={() => navigateToList(list.id)}
+            onkeypress={(e) => e.key === 'Enter' && navigateToList(list.id)}
+            use:remoteChangeAnimation={{ entityId: list.id, entityType: 'goal_lists' }}
+          >
+            <div class="list-header">
+              <h3 class="list-name">{list.name}</h3>
+              <button
+                class="delete-btn"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteList(list.id);
+                }}
+                aria-label="Delete list"
+              >
+                ×
+              </button>
+            </div>
+            <div class="list-stats">
+              <span class="stat-text">
+                {list.completedGoals} / {list.totalGoals} goals
+              </span>
+            </div>
+            <ProgressBar percentage={list.completionPercentage} />
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </section>
 </div>
 
-<Modal open={showCreateModal} title="Create New List" onClose={() => (showCreateModal = false)}>
+<!-- Create List Modal -->
+<Modal open={showCreateListModal} title="Create New List" onClose={() => (showCreateListModal = false)}>
   <form class="create-form" onsubmit={handleCreateList}>
     <div class="form-group">
       <label for="list-name">List Name</label>
@@ -168,26 +291,66 @@
       />
     </div>
     <div class="form-actions">
-      <button type="button" class="btn btn-secondary" onclick={() => (showCreateModal = false)}>
+      <button type="button" class="btn btn-secondary" onclick={() => (showCreateListModal = false)}>
         Cancel
       </button>
-      <button type="submit" class="btn btn-primary" disabled={creating}>
-        {creating ? 'Creating...' : 'Create List'}
+      <button type="submit" class="btn btn-primary" disabled={creatingList}>
+        {creatingList ? 'Creating...' : 'Create List'}
+      </button>
+    </div>
+  </form>
+</Modal>
+
+<!-- Create Project Modal -->
+<Modal
+  open={showCreateProjectModal}
+  title="Create New Project"
+  onClose={() => (showCreateProjectModal = false)}
+>
+  <form class="create-form" onsubmit={handleCreateProject}>
+    <div class="form-group">
+      <label for="project-name">Project Name</label>
+      <input
+        id="project-name"
+        type="text"
+        bind:value={newProjectName}
+        placeholder="Enter project name..."
+        required
+        use:focus
+      />
+    </div>
+    <p class="form-hint">
+      Creating a project will also create a goal list, tag, and commitment with the same name.
+    </p>
+    <div class="form-actions">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        onclick={() => (showCreateProjectModal = false)}
+      >
+        Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" disabled={creatingProject}>
+        {creatingProject ? 'Creating...' : 'Create Project'}
       </button>
     </div>
   </form>
 </Modal>
 
 <style>
-  .page-header {
+  .section {
+    margin-bottom: 3rem;
+  }
+
+  .section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 2.5rem;
+    margin-bottom: 1.5rem;
   }
 
-  .page-header h1 {
-    font-size: 2.25rem;
+  .section-header h2 {
+    font-size: 1.75rem;
     font-weight: 800;
     background: linear-gradient(
       135deg,
@@ -210,6 +373,29 @@
     100% {
       background-position: 200% center;
     }
+  }
+
+  .current-project-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.03) 100%);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: var(--radius-lg);
+  }
+
+  .current-label {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+
+  .current-name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #ffd700;
   }
 
   .error-banner {
@@ -486,6 +672,16 @@
     letter-spacing: 0.1em;
   }
 
+  .form-hint {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+    padding: 0.75rem 1rem;
+    background: rgba(108, 92, 231, 0.08);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(108, 92, 231, 0.15);
+  }
+
   .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -500,22 +696,32 @@
      ═══════════════════════════════════════════════════════════════════════════════════ */
 
   @media (max-width: 640px) {
-    .page-header {
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section-header {
       flex-direction: column;
       align-items: stretch;
       gap: 1rem;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
     }
 
-    .page-header h1 {
-      font-size: 1.75rem;
+    .section-header h2 {
+      font-size: 1.5rem;
       text-align: center;
     }
 
-    .page-header .btn {
+    .section-header .btn {
       width: 100%;
       justify-content: center;
       padding: 1rem;
+    }
+
+    .current-project-line {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
     }
 
     .lists-grid {
@@ -569,8 +775,8 @@
 
   /* iPhone 14/15/16 Pro Max specific (430px) */
   @media (min-width: 430px) and (max-width: 640px) {
-    .page-header h1 {
-      font-size: 2rem;
+    .section-header h2 {
+      font-size: 1.625rem;
     }
 
     .list-card {
@@ -580,8 +786,8 @@
 
   /* Very small devices (iPhone SE) */
   @media (max-width: 375px) {
-    .page-header h1 {
-      font-size: 1.5rem;
+    .section-header h2 {
+      font-size: 1.375rem;
     }
 
     .list-card {

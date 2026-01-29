@@ -37,7 +37,8 @@ export type SyncEntityType =
   | 'focus_settings'
   | 'focus_sessions'
   | 'block_lists'
-  | 'blocked_websites';
+  | 'blocked_websites'
+  | 'projects';
 
 /**
  * Intent-based sync operation item.
