@@ -25,6 +25,29 @@
     }
   }
 
+  // Prevent body scroll when modal is open (especially important for iOS)
+  $effect(() => {
+    if (open) {
+      // Save current scroll position and lock body
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        // Restore scroll position when modal closes
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  });
+
   // Check if mobile
   let isMobile = $state(false);
   $effect(() => {
@@ -138,6 +161,9 @@
     padding: calc(64px + 1.5rem) 1.5rem 1.5rem 1.5rem;
     z-index: 1000;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Prevent iOS momentum scrolling on backdrop */
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Sheet-style backdrop on mobile */
@@ -434,6 +460,9 @@
     position: relative;
     z-index: 1;
     flex: 1;
+    /* Prevent scroll chaining to body */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .modal-sheet .modal-content {
