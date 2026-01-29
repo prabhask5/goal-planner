@@ -145,9 +145,11 @@ create table projects (
   name text not null,
   is_current boolean default false not null,
   "order" double precision default 0 not null,
-  tag_id uuid references task_categories(id) on delete set null,
-  commitment_id uuid references commitments(id) on delete set null,
-  goal_list_id uuid references goal_lists(id) on delete set null,
+  -- Note: No FK constraints on tag_id, commitment_id, goal_list_id to avoid circular dependency
+  -- The ownership relationship is tracked via project_id on the child tables instead
+  tag_id uuid,
+  commitment_id uuid,
+  goal_list_id uuid,
   deleted boolean default false not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
