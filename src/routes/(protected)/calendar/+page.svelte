@@ -921,16 +921,18 @@
   }
 
   .action-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-lg);
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-xl);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.125rem;
-    opacity: 0.4;
+    font-size: 1.5rem;
+    opacity: 0.6;
     transition: all 0.3s var(--ease-spring);
-    border: 1px solid transparent;
+    border: 1px solid rgba(108, 92, 231, 0.25);
+    background: rgba(108, 92, 231, 0.1);
+    flex-shrink: 0;
   }
 
   .action-btn:hover {
@@ -1032,9 +1034,10 @@
     }
 
     .action-btn {
-      width: 44px;
-      height: 44px;
-      opacity: 0.5;
+      width: 48px;
+      height: 48px;
+      font-size: 1.625rem;
+      opacity: 0.7;
     }
 
     .routine-with-handle .drag-handle {

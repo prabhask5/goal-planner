@@ -486,14 +486,20 @@
   /* Color picker container */
   .color-picker-container {
     position: relative;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
   }
 
   .category-color {
     width: 12px;
     height: 12px;
+    min-width: 12px;
+    min-height: 12px;
     border-radius: var(--radius-sm);
     flex-shrink: 0;
     border: none;
+    padding: 0;
     cursor: pointer;
     transition: all 0.2s var(--ease-out);
   }
