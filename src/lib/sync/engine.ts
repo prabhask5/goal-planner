@@ -43,6 +43,7 @@ import {
   onConnectionStateChange,
   cleanupRealtimeTracking,
   isRealtimeHealthy,
+  getConnectionState,
   pauseRealtime,
   wasRecentlyProcessedByRealtime,
   type RealtimeConnectionState
@@ -805,6 +806,72 @@ function setLastSyncCursor(cursor: string, userId: string | null): void {
   }
 }
 
+/**
+ * Reset the sync cursor to force a full sync on next sync cycle.
+ * This is useful when data is out of sync between devices.
+ */
+export async function resetSyncCursor(): Promise<void> {
+  const userId = await getCurrentUserId();
+  if (typeof localStorage !== 'undefined') {
+    const key = userId ? `lastSyncCursor_${userId}` : 'lastSyncCursor';
+    localStorage.removeItem(key);
+    console.log('[SYNC] Sync cursor reset - next sync will pull all data');
+  }
+}
+
+/**
+ * Force a full sync by resetting the cursor and running sync.
+ * This clears local data and re-downloads everything from the server.
+ */
+export async function forceFullSync(): Promise<void> {
+  console.log('[SYNC] Starting force full sync...');
+
+  // Reset cursor to pull all data
+  await resetSyncCursor();
+
+  // Clear local data (except sync queue - keep pending changes)
+  await db.transaction(
+    'rw',
+    [
+      db.goalLists,
+      db.goals,
+      db.dailyRoutineGoals,
+      db.dailyGoalProgress,
+      db.taskCategories,
+      db.commitments,
+      db.dailyTasks,
+      db.longTermTasks,
+      db.focusSettings,
+      db.focusSessions,
+      db.blockLists,
+      db.blockedWebsites,
+      db.projects
+    ],
+    async () => {
+      await db.goalLists.clear();
+      await db.goals.clear();
+      await db.dailyRoutineGoals.clear();
+      await db.dailyGoalProgress.clear();
+      await db.taskCategories.clear();
+      await db.commitments.clear();
+      await db.dailyTasks.clear();
+      await db.longTermTasks.clear();
+      await db.focusSettings.clear();
+      await db.focusSessions.clear();
+      await db.blockLists.clear();
+      await db.blockedWebsites.clear();
+      await db.projects.clear();
+    }
+  );
+
+  console.log('[SYNC] Local data cleared, pulling from server...');
+
+  // Run full sync
+  await runFullSync(false);
+
+  console.log('[SYNC] Force full sync complete');
+}
+
 // PULL: Fetch changes from remote since last sync
 // Returns egress stats for this pull operation
 // minCursor: optional minimum cursor to use (e.g., timestamp after push completes)
@@ -821,6 +888,8 @@ async function pullRemoteChanges(minCursor?: string): Promise<{ bytes: number; r
   const storedCursor = getLastSyncCursor(userId);
   const lastSync = minCursor && minCursor > storedCursor ? minCursor : storedCursor;
   const pendingEntityIds = await getPendingEntityIds();
+
+  console.log(`[SYNC] Pulling changes since: ${lastSync} (stored: ${storedCursor}, min: ${minCursor || 'none'})`);
 
   // Track the newest updated_at we see
   let newestUpdate = lastSync;
@@ -1029,6 +1098,23 @@ async function pullRemoteChanges(minCursor?: string): Promise<{ bytes: number; r
       }
     }
   }
+
+  // Log what we're about to apply
+  console.log(`[SYNC] Pulled from server:`, {
+    goal_lists: remoteLists?.length || 0,
+    goals: remoteGoals?.length || 0,
+    daily_routine_goals: remoteRoutines?.length || 0,
+    daily_goal_progress: remoteProgress?.length || 0,
+    task_categories: remoteCategories?.length || 0,
+    commitments: remoteCommitments?.length || 0,
+    daily_tasks: remoteDailyTasks?.length || 0,
+    long_term_tasks: remoteLongTermTasks?.length || 0,
+    focus_settings: remoteFocusSettings?.length || 0,
+    focus_sessions: remoteFocusSessions?.length || 0,
+    block_lists: remoteBlockLists?.length || 0,
+    blocked_websites: remoteBlockedWebsites?.length || 0,
+    projects: remoteProjects?.length || 0
+  });
 
   // Apply changes to local DB with conflict handling
   await db.transaction(
@@ -2570,4 +2656,48 @@ export async function clearLocalCache(): Promise<void> {
 // Manual sync trigger (for UI button / pull-to-refresh)
 export async function performSync(): Promise<void> {
   await runFullSync(false); // Always show syncing indicator for manual sync
+}
+
+// Expose debug utilities to window for troubleshooting sync issues
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).stellarSync = {
+    // Force full sync - clears local data and re-downloads from server
+    forceFullSync,
+    // Reset sync cursor without clearing data
+    resetSyncCursor,
+    // Get current sync status
+    getStatus: () => ({
+      cursor: typeof localStorage !== 'undefined'
+        ? localStorage.getItem('lastSyncCursor') ||
+          Object.entries(localStorage)
+            .filter(([k]) => k.startsWith('lastSyncCursor_'))
+            .map(([k, v]) => ({ [k]: v }))[0]
+        : 'N/A',
+      pendingOps: getPendingSync().then((ops) => ops.length)
+    }),
+    // Check Supabase connection
+    checkConnection: async () => {
+      try {
+        const { data, error } = await supabase.from('goal_lists').select('id').limit(1);
+        if (error) {
+          console.error('[SYNC DEBUG] Supabase query failed:', error);
+          return { connected: false, error: error.message };
+        }
+        console.log('[SYNC DEBUG] Supabase connected, found', data?.length || 0, 'records');
+        return { connected: true, records: data?.length || 0 };
+      } catch (e) {
+        console.error('[SYNC DEBUG] Connection check failed:', e);
+        return { connected: false, error: String(e) };
+      }
+    },
+    // Manual sync
+    sync: performSync,
+    // Check realtime status
+    realtimeStatus: () => ({
+      state: getConnectionState(),
+      healthy: isRealtimeHealthy()
+    })
+  };
+  console.log('[SYNC] Debug utilities available at window.stellarSync');
 }
