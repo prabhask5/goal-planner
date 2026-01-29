@@ -31,6 +31,11 @@ async function getNextProjectOrder(userId: string): Promise<number> {
 /**
  * Creates a new project with its associated tag, commitment, and goal list atomically.
  * All child entities are marked with project_id to indicate project ownership.
+ *
+ * Order of operations for sync (to satisfy foreign key constraints):
+ * 1. Create project (without child entity IDs)
+ * 2. Create tag, commitment, goal list (with project_id)
+ * 3. Update project with child entity IDs
  */
 export async function createProject(name: string, userId: string): Promise<Project> {
   const timestamp = now();
@@ -38,6 +43,7 @@ export async function createProject(name: string, userId: string): Promise<Proje
   const tagId = generateId();
   const commitmentId = generateId();
   const goalListId = generateId();
+  const tagColor = getRandomColor();
 
   const order = await getNextProjectOrder(userId);
 
@@ -46,7 +52,7 @@ export async function createProject(name: string, userId: string): Promise<Proje
     id: tagId,
     user_id: userId,
     name,
-    color: getRandomColor(),
+    color: tagColor,
     order: 0,
     project_id: projectId,
     created_at: timestamp,
@@ -75,7 +81,7 @@ export async function createProject(name: string, userId: string): Promise<Proje
     updated_at: timestamp
   };
 
-  // Create the project itself
+  // Create the project itself (local DB has full data for immediate use)
   const newProject: Project = {
     id: projectId,
     user_id: userId,
@@ -94,16 +100,30 @@ export async function createProject(name: string, userId: string): Promise<Proje
     'rw',
     [db.projects, db.taskCategories, db.commitments, db.goalLists, db.syncQueue],
     async () => {
-      // Add all entities
+      // Add all entities to local DB (order doesn't matter locally)
+      await db.projects.add(newProject);
       await db.taskCategories.add(newTag);
       await db.commitments.add(newCommitment);
       await db.goalLists.add(newGoalList);
-      await db.projects.add(newProject);
 
-      // Queue sync operations for all entities
+      // Queue sync operations in correct order for foreign key constraints:
+      // 1. First create project WITHOUT child entity IDs
+      await queueCreateOperation('projects', projectId, {
+        name,
+        is_current: false,
+        order,
+        tag_id: null,
+        commitment_id: null,
+        goal_list_id: null,
+        user_id: userId,
+        created_at: timestamp,
+        updated_at: timestamp
+      });
+
+      // 2. Create child entities WITH project_id (project now exists)
       await queueCreateOperation('task_categories', tagId, {
         name,
-        color: newTag.color,
+        color: tagColor,
         order: 0,
         project_id: projectId,
         user_id: userId,
@@ -129,25 +149,26 @@ export async function createProject(name: string, userId: string): Promise<Proje
         updated_at: timestamp
       });
 
-      await queueCreateOperation('projects', projectId, {
-        name,
-        is_current: false,
-        order,
-        tag_id: tagId,
-        commitment_id: commitmentId,
-        goal_list_id: goalListId,
-        user_id: userId,
-        created_at: timestamp,
-        updated_at: timestamp
+      // 3. Update project with child entity IDs (children now exist)
+      await queueSyncOperation({
+        table: 'projects',
+        entityId: projectId,
+        operationType: 'set',
+        value: {
+          tag_id: tagId,
+          commitment_id: commitmentId,
+          goal_list_id: goalListId,
+          updated_at: timestamp
+        }
       });
     }
   );
 
   // Mark all entities as modified
+  markEntityModified(projectId);
   markEntityModified(tagId);
   markEntityModified(commitmentId);
   markEntityModified(goalListId);
-  markEntityModified(projectId);
   scheduleSyncPush();
 
   return newProject;
