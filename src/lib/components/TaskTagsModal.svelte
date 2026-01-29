@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { fade, scale } from 'svelte/transition';
+  import Modal from './Modal.svelte';
+  import { scale } from 'svelte/transition';
   import type { TaskCategory, LongTermTaskWithCategory } from '$lib/types';
   import { parseDateString } from '$lib/utils/dates';
   import { remoteChangeAnimation } from '$lib/actions/remoteChange';
@@ -76,12 +77,6 @@
     return grouped;
   });
 
-  // Get category by ID
-  function getCategory(id: string | null): TaskCategory | undefined {
-    if (!id) return undefined;
-    return categories.find((c) => c.id === id);
-  }
-
   // Check if a category is project-owned (cannot be edited/deleted independently)
   function isProjectOwned(category: TaskCategory): boolean {
     return !!category.project_id;
@@ -120,21 +115,17 @@
     return taskDate.getTime() === today.getTime();
   }
 
+  // Handle Escape key for nested states (color picker, editing)
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       if (editingCategoryId) {
+        event.stopPropagation();
         cancelEditName();
       } else if (showColorPicker) {
+        event.stopPropagation();
         showColorPicker = null;
-      } else {
-        onClose();
       }
-    }
-  }
-
-  function handleBackdropClick(event: MouseEvent) {
-    if (event.target === event.currentTarget) {
-      onClose();
+      // Otherwise let Modal handle it
     }
   }
 
@@ -201,105 +192,137 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-{#if open}
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <div
-    class="modal-backdrop"
-    in:fade={{ duration: 0 }}
-    out:fade={{ duration: 150 }}
-    onclick={handleBackdropClick}
-    onkeydown={(e) => e.key === 'Escape' && onClose()}
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="modal-title"
-    tabindex="-1"
-  >
-    <div class="modal" transition:scale={{ duration: 150, start: 0.95 }}>
-      <div class="modal-header">
-        <h2 id="modal-title">Task Tags</h2>
-        <button class="close-btn" onclick={onClose} aria-label="Close modal">×</button>
+<Modal {open} title="Task Tags" {onClose}>
+  <div class="tags-content">
+    {#if categories.length === 0}
+      <div class="empty-state">
+        <div class="empty-icon">🏷️</div>
+        <p class="empty-text">No tags created yet</p>
+        <p class="empty-hint">Create tags when adding new tasks</p>
       </div>
-      <div class="modal-content">
-        {#if categories.length === 0}
-          <div class="empty-state">
-            <div class="empty-icon">🏷️</div>
-            <p class="empty-text">No tags created yet</p>
-            <p class="empty-hint">Create tags when adding new tasks</p>
-          </div>
-        {:else}
-          <div class="categories-list">
-            {#each categories as category (category.id)}
-              {@const categoryTasks = tasksByCategory().get(category.id) || []}
-              {@const projectOwned = isProjectOwned(category)}
-              <div
-                class="category-section"
-                class:project-owned={projectOwned}
-                use:remoteChangeAnimation={{ entityId: category.id, entityType: 'task_categories' }}
-              >
-                <div class="category-header">
-                  <div class="category-info">
-                    <!-- Color button with picker (or static for project-owned) -->
-                    {#if projectOwned}
-                      <span
-                        class="category-color-static"
-                        style="background-color: {category.color}"
-                        title="Managed by project"
-                      ></span>
-                      <span class="project-icon" title="Managed by project">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-                        </svg>
-                      </span>
-                    {:else}
-                      <div class="color-picker-container">
-                        <button
-                          class="category-color"
-                          style="background-color: {category.color}"
-                          onclick={() => toggleColorPicker(category.id)}
-                          aria-label="Change color"
-                        ></button>
-                        {#if showColorPicker === category.id}
-                          <div class="color-picker" transition:scale={{ duration: 150, start: 0.9 }}>
-                            {#each CATEGORY_COLORS as color}
-                              <button
-                                class="color-option"
-                                class:selected={category.color === color}
-                                style="background-color: {color}"
-                                onclick={() => selectColor(category.id, color)}
-                                aria-label="Select {color}"
-                              ></button>
-                            {/each}
-                          </div>
-                        {/if}
+    {:else}
+      <div class="categories-list">
+        {#each categories as category (category.id)}
+          {@const categoryTasks = tasksByCategory().get(category.id) || []}
+          {@const projectOwned = isProjectOwned(category)}
+          <div
+            class="category-section"
+            class:project-owned={projectOwned}
+            use:remoteChangeAnimation={{ entityId: category.id, entityType: 'task_categories' }}
+          >
+            <div class="category-header">
+              <div class="category-info">
+                <!-- Color button with picker (or static for project-owned) -->
+                {#if projectOwned}
+                  <span
+                    class="category-color-static"
+                    style="background-color: {category.color}"
+                    title="Managed by project"
+                  ></span>
+                  <span class="project-icon" title="Managed by project">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                    </svg>
+                  </span>
+                {:else}
+                  <div class="color-picker-container">
+                    <button
+                      class="category-color"
+                      style="background-color: {category.color}"
+                      onclick={() => toggleColorPicker(category.id)}
+                      aria-label="Change color"
+                    ></button>
+                    {#if showColorPicker === category.id}
+                      <div class="color-picker" transition:scale={{ duration: 150, start: 0.9 }}>
+                        {#each CATEGORY_COLORS as color}
+                          <button
+                            class="color-option"
+                            class:selected={category.color === color}
+                            style="background-color: {color}"
+                            onclick={() => selectColor(category.id, color)}
+                            aria-label="Select {color}"
+                          ></button>
+                        {/each}
                       </div>
                     {/if}
-
-                    <!-- Editable name (only if not project-owned) -->
-                    {#if editingCategoryId === category.id && !projectOwned}
-                      <input
-                        type="text"
-                        class="category-name-input"
-                        bind:value={editingCategoryName}
-                        onkeydown={handleNameKeydown}
-                        onblur={saveEditName}
-                        autofocus
-                      />
-                    {:else if projectOwned}
-                      <span class="category-name-static">{category.name}</span>
-                    {:else}
-                      <button class="category-name" onclick={() => startEditName(category)}>
-                        {category.name}
-                      </button>
-                    {/if}
-
-                    <span class="task-count">{categoryTasks.length}</span>
                   </div>
-                  {#if !projectOwned}
+                {/if}
+
+                <!-- Editable name (only if not project-owned) -->
+                {#if editingCategoryId === category.id && !projectOwned}
+                  <input
+                    type="text"
+                    class="category-name-input"
+                    bind:value={editingCategoryName}
+                    onkeydown={handleNameKeydown}
+                    onblur={saveEditName}
+                    autofocus
+                  />
+                {:else if projectOwned}
+                  <span class="category-name-static">{category.name}</span>
+                {:else}
+                  <button class="category-name" onclick={() => startEditName(category)}>
+                    {category.name}
+                  </button>
+                {/if}
+
+                <span class="task-count">{categoryTasks.length}</span>
+              </div>
+              {#if !projectOwned}
+                <button
+                  class="delete-tag-btn"
+                  onclick={() =>
+                    handleDeleteTag(category.id, category.name, categoryTasks.length)}
+                  aria-label="Delete tag"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              {/if}
+            </div>
+
+            {#if categoryTasks.length > 0}
+              <div class="tasks-list">
+                {#each categoryTasks as task (task.id)}
+                  <div
+                    class="task-row"
+                    class:overdue={isOverdue(task.due_date)}
+                    class:due-today={isDueToday(task.due_date)}
+                    use:remoteChangeAnimation={{
+                      entityId: task.id,
+                      entityType: 'long_term_tasks'
+                    }}
+                  >
                     <button
-                      class="delete-tag-btn"
-                      onclick={() =>
-                        handleDeleteTag(category.id, category.name, categoryTasks.length)}
-                      aria-label="Delete tag"
+                      class="checkbox"
+                      onclick={() => onToggle(task.id)}
+                      aria-label="Mark complete"
+                    ></button>
+
+                    <button class="task-info" onclick={() => onTaskClick(task)}>
+                      <span class="task-name">{task.name}</span>
+                      <span
+                        class="due-date"
+                        class:overdue={isOverdue(task.due_date)}
+                        class:due-today={isDueToday(task.due_date)}
+                      >
+                        {formatDate(task.due_date)}
+                      </span>
+                    </button>
+
+                    <button
+                      class="delete-btn"
+                      onclick={() => onDelete(task.id)}
+                      aria-label="Delete task"
                     >
                       <svg
                         width="14"
@@ -313,267 +336,96 @@
                         <line x1="6" y1="6" x2="18" y2="18" />
                       </svg>
                     </button>
-                  {/if}
-                </div>
-
-                {#if categoryTasks.length > 0}
-                  <div class="tasks-list">
-                    {#each categoryTasks as task (task.id)}
-                      <div
-                        class="task-row"
-                        class:overdue={isOverdue(task.due_date)}
-                        class:due-today={isDueToday(task.due_date)}
-                        use:remoteChangeAnimation={{
-                          entityId: task.id,
-                          entityType: 'long_term_tasks'
-                        }}
-                      >
-                        <button
-                          class="checkbox"
-                          onclick={() => onToggle(task.id)}
-                          aria-label="Mark complete"
-                        ></button>
-
-                        <button class="task-info" onclick={() => onTaskClick(task)}>
-                          <span class="task-name">{task.name}</span>
-                          <span
-                            class="due-date"
-                            class:overdue={isOverdue(task.due_date)}
-                            class:due-today={isDueToday(task.due_date)}
-                          >
-                            {formatDate(task.due_date)}
-                          </span>
-                        </button>
-
-                        <button
-                          class="delete-btn"
-                          onclick={() => onDelete(task.id)}
-                          aria-label="Delete task"
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      </div>
-                    {/each}
                   </div>
-                {:else}
-                  <div class="no-tasks">No incomplete tasks</div>
-                {/if}
+                {/each}
               </div>
-            {/each}
+            {:else}
+              <div class="no-tasks">No incomplete tasks</div>
+            {/if}
+          </div>
+        {/each}
 
-            <!-- Untagged tasks -->
-            {#if (tasksByCategory().get(null) || []).length > 0}
-              {@const untaggedTasks = tasksByCategory().get(null) || []}
-              <div class="category-section untagged">
-                <div class="category-header">
-                  <div class="category-info">
+        <!-- Untagged tasks -->
+        {#if (tasksByCategory().get(null) || []).length > 0}
+          {@const untaggedTasks = tasksByCategory().get(null) || []}
+          <div class="category-section untagged">
+            <div class="category-header">
+              <div class="category-info">
+                <span
+                  class="category-color-static"
+                  style="background-color: rgba(108, 92, 231, 0.5)"
+                ></span>
+                <span class="category-name-static">Untagged</span>
+                <span class="task-count">{untaggedTasks.length}</span>
+              </div>
+            </div>
+
+            <div class="tasks-list">
+              {#each untaggedTasks as task (task.id)}
+                <div
+                  class="task-row"
+                  class:overdue={isOverdue(task.due_date)}
+                  class:due-today={isDueToday(task.due_date)}
+                  use:remoteChangeAnimation={{
+                    entityId: task.id,
+                    entityType: 'long_term_tasks'
+                  }}
+                >
+                  <button
+                    class="checkbox"
+                    onclick={() => onToggle(task.id)}
+                    aria-label="Mark complete"
+                  ></button>
+
+                  <button class="task-info" onclick={() => onTaskClick(task)}>
+                    <span class="task-name">{task.name}</span>
                     <span
-                      class="category-color-static"
-                      style="background-color: rgba(108, 92, 231, 0.5)"
-                    ></span>
-                    <span class="category-name-static">Untagged</span>
-                    <span class="task-count">{untaggedTasks.length}</span>
-                  </div>
-                </div>
-
-                <div class="tasks-list">
-                  {#each untaggedTasks as task (task.id)}
-                    <div
-                      class="task-row"
+                      class="due-date"
                       class:overdue={isOverdue(task.due_date)}
                       class:due-today={isDueToday(task.due_date)}
-                      use:remoteChangeAnimation={{
-                        entityId: task.id,
-                        entityType: 'long_term_tasks'
-                      }}
                     >
-                      <button
-                        class="checkbox"
-                        onclick={() => onToggle(task.id)}
-                        aria-label="Mark complete"
-                      ></button>
+                      {formatDate(task.due_date)}
+                    </span>
+                  </button>
 
-                      <button class="task-info" onclick={() => onTaskClick(task)}>
-                        <span class="task-name">{task.name}</span>
-                        <span
-                          class="due-date"
-                          class:overdue={isOverdue(task.due_date)}
-                          class:due-today={isDueToday(task.due_date)}
-                        >
-                          {formatDate(task.due_date)}
-                        </span>
-                      </button>
-
-                      <button
-                        class="delete-btn"
-                        onclick={() => onDelete(task.id)}
-                        aria-label="Delete task"
-                      >
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        >
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-                    </div>
-                  {/each}
+                  <button
+                    class="delete-btn"
+                    onclick={() => onDelete(task.id)}
+                    aria-label="Delete task"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
                 </div>
-              </div>
-            {/if}
+              {/each}
+            </div>
           </div>
         {/if}
       </div>
-    </div>
+    {/if}
   </div>
-{/if}
+</Modal>
 
 <style>
-  .modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 100% 100% at 50% 0%, rgba(108, 92, 231, 0.1) 0%, transparent 50%),
-      radial-gradient(ellipse at center, rgba(5, 5, 16, 0.9) 0%, rgba(0, 0, 0, 0.98) 100%);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: calc(64px + 1.5rem) 1.5rem 1.5rem 1.5rem;
-    z-index: 1000;
-    overflow-y: auto;
-  }
-
-  .modal {
-    background: linear-gradient(
-      165deg,
-      rgba(20, 20, 40, 0.98) 0%,
-      rgba(15, 15, 30, 0.95) 50%,
-      rgba(20, 20, 40, 0.98) 100%
-    );
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
-    border: 1px solid rgba(108, 92, 231, 0.3);
-    border-radius: var(--radius-2xl);
-    width: 100%;
-    max-width: 550px;
-    max-height: calc(100vh - 64px - 3rem);
-    overflow: hidden;
+  .tags-content {
     display: flex;
     flex-direction: column;
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.03) inset,
-      0 30px 60px -15px rgba(0, 0, 0, 0.6),
-      0 0 100px rgba(108, 92, 231, 0.2);
-    position: relative;
-    animation: modalAppear 0.4s var(--ease-spring);
-    margin-bottom: 1.5rem;
-    flex-shrink: 0;
-  }
-
-  @keyframes modalAppear {
-    from {
-      opacity: 0;
-      transform: scale(0.9) translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-    }
-  }
-
-  .modal::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 10%;
-    right: 10%;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(108, 92, 231, 0.6),
-      rgba(255, 255, 255, 0.4),
-      rgba(108, 92, 231, 0.6),
-      transparent
-    );
-  }
-
-  .modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.5rem 1.75rem;
-    border-bottom: 1px solid rgba(108, 92, 231, 0.15);
-    background: linear-gradient(180deg, rgba(108, 92, 231, 0.1) 0%, rgba(108, 92, 231, 0.02) 100%);
-  }
-
-  .modal-header h2 {
-    font-size: 1.375rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    background: linear-gradient(
-      135deg,
-      var(--color-text) 0%,
-      var(--color-primary-light) 50%,
-      var(--color-text) 100%
-    );
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .close-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-lg);
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s var(--ease-spring);
-    color: var(--color-text-muted);
-    border: 1px solid transparent;
-    background: rgba(108, 92, 231, 0.05);
-  }
-
-  .close-btn:hover {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 107, 107, 0.25) 0%,
-      rgba(255, 107, 107, 0.1) 100%
-    );
-    border-color: rgba(255, 107, 107, 0.4);
-    color: var(--color-red);
-    transform: rotate(90deg) scale(1.1);
-  }
-
-  .modal-content {
-    padding: 1rem 1.75rem 1.75rem;
-    overflow-y: auto;
+    gap: 1rem;
   }
 
   /* Empty state */
   .empty-state {
     text-align: center;
-    padding: 3rem 1rem;
+    padding: 2rem 1rem;
   }
 
   .empty-icon {
@@ -603,7 +455,6 @@
 
   .category-section {
     border-radius: var(--radius-lg);
-    /* Note: no overflow:hidden here to allow color picker dropdown to be visible */
   }
 
   .category-header {
@@ -921,42 +772,8 @@
     justify-content: center;
   }
 
-  /* Tablet breakpoint */
-  @media (min-width: 641px) and (max-width: 900px) {
-    .modal-backdrop {
-      padding: calc(64px + 1rem) 1rem 1rem 1rem;
-    }
-
-    .modal {
-      max-height: calc(100vh - 64px - 2rem);
-    }
-  }
-
-  /* Mobile */
+  /* Mobile adjustments */
   @media (max-width: 640px) {
-    .modal-backdrop {
-      padding: calc(env(safe-area-inset-top, 20px) + 1rem) 1rem
-        calc(80px + env(safe-area-inset-bottom, 0) + 1rem) 1rem;
-      align-items: center;
-    }
-
-    .modal {
-      max-width: 100%;
-      max-height: calc(
-        100vh - env(safe-area-inset-top, 20px) - 80px - env(safe-area-inset-bottom, 0) - 2rem
-      );
-      border-radius: var(--radius-xl);
-      margin-bottom: 0;
-    }
-
-    .modal-header {
-      padding: 1.25rem 1.5rem;
-    }
-
-    .modal-content {
-      padding: 1rem 1.25rem 1.5rem;
-    }
-
     .delete-btn {
       opacity: 0.3;
     }
@@ -968,26 +785,6 @@
     .color-picker {
       left: 50%;
       transform: translateX(-50%);
-    }
-  }
-
-  /* Very short viewports (landscape tablets, etc.) */
-  @media (max-height: 600px) and (min-width: 641px) {
-    .modal-backdrop {
-      padding-top: calc(64px + 0.75rem);
-      padding-bottom: 0.75rem;
-    }
-
-    .modal {
-      max-height: calc(100vh - 64px - 1.5rem);
-    }
-
-    .modal-header {
-      padding: 1rem 1.5rem;
-    }
-
-    .modal-content {
-      padding: 1rem 1.5rem;
     }
   }
 </style>
