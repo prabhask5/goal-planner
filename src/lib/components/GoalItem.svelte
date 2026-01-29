@@ -155,16 +155,16 @@
 
   <div class="goal-actions">
     {#if goal.type === 'incremental'}
+      <!-- Desktop: Progress bar -->
       <div
-        class="mini-progress-wrapper"
+        class="mini-progress-wrapper desktop-only"
         class:celebrating={isCelebrating}
         style="--glow-color: {progressColor}; --celebration-intensity: {celebrationIntensity}"
       >
-        <!-- Pulse rings for celebration -->
         {#if celebrationIntensity > 0.3}
-          <div class="pulse-ring pulse-ring-1"></div>
+          <div class="pulse-ring pulse-ring-1 bar-ring"></div>
           {#if celebrationIntensity > 0.6}
-            <div class="pulse-ring pulse-ring-2"></div>
+            <div class="pulse-ring pulse-ring-2 bar-ring"></div>
           {/if}
         {/if}
 
@@ -174,27 +174,86 @@
             class:celebrating={isCelebrating}
             style="width: {Math.min(100, progress)}%; background-color: {progressColor}"
           ></div>
-
-          <!-- Shimmer overlay -->
           {#if isCelebrating}
             <div class="shimmer-overlay"></div>
           {/if}
         </div>
 
-        <!-- Starburst particles -->
         {#if celebrationIntensity > 0.1}
-          <div class="particle-burst">
+          <div class="particle-burst bar-particles">
             {#each Array(Math.floor(celebrationIntensity * 8)) as _, i}
-              <div
-                class="particle"
-                style="--angle: {i * 45}deg; --delay: {i * 0.15}s; --distance: {20 +
-                  (i % 3) * 10}px"
-              ></div>
+              <div class="particle" style="--angle: {i * 45}deg; --delay: {i * 0.15}s; --distance: {20 + (i % 3) * 10}px"></div>
             {/each}
           </div>
         {/if}
 
-        <!-- Orbiting sparks -->
+        {#if celebrationIntensity > 0.5}
+          <div class="orbit-spark orbit-1 bar-orbit"></div>
+          {#if celebrationIntensity > 0.75}
+            <div class="orbit-spark orbit-2 bar-orbit"></div>
+          {/if}
+        {/if}
+
+        {#if isCelebrating}
+          <span class="overflow-star star-1 bar-star">✦</span>
+          {#if celebrationIntensity > 0.4}
+            <span class="overflow-star star-2 bar-star">✦</span>
+          {/if}
+          {#if celebrationIntensity > 0.7}
+            <span class="overflow-star star-3 bar-star">✧</span>
+          {/if}
+        {/if}
+
+        {#if celebrationIntensity > 0.6}
+          <div class="energy-arc arc-1 bar-arc"></div>
+          {#if celebrationIntensity > 0.85}
+            <div class="energy-arc arc-2 bar-arc"></div>
+          {/if}
+        {/if}
+      </div>
+
+      <!-- Mobile: Star progress -->
+      <div
+        class="star-progress-wrapper mobile-only"
+        class:celebrating={isCelebrating}
+        style="--glow-color: {progressColor}; --celebration-intensity: {celebrationIntensity}"
+      >
+        {#if celebrationIntensity > 0.3}
+          <div class="pulse-ring pulse-ring-1"></div>
+          {#if celebrationIntensity > 0.6}
+            <div class="pulse-ring pulse-ring-2"></div>
+          {/if}
+        {/if}
+
+        <div class="star-container" class:celebrating={isCelebrating}>
+          <svg class="star-bg" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                  stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          <div class="star-fill-container">
+            <svg class="star-fill" viewBox="0 0 24 24" style="color: {progressColor}">
+              <defs>
+                <clipPath id="star-clip-{goal.id}">
+                  <rect x="0" y="{24 - (Math.min(100, progress) / 100) * 24}" width="24" height="{(Math.min(100, progress) / 100) * 24}"/>
+                </clipPath>
+              </defs>
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    fill="currentColor" clip-path="url(#star-clip-{goal.id})"/>
+            </svg>
+          </div>
+          {#if isCelebrating}
+            <div class="star-shimmer"></div>
+          {/if}
+        </div>
+
+        {#if celebrationIntensity > 0.1}
+          <div class="particle-burst">
+            {#each Array(Math.floor(celebrationIntensity * 8)) as _, i}
+              <div class="particle" style="--angle: {i * 45}deg; --delay: {i * 0.15}s; --distance: {15 + (i % 3) * 8}px"></div>
+            {/each}
+          </div>
+        {/if}
+
         {#if celebrationIntensity > 0.5}
           <div class="orbit-spark orbit-1"></div>
           {#if celebrationIntensity > 0.75}
@@ -202,7 +261,6 @@
           {/if}
         {/if}
 
-        <!-- Overflow stars -->
         {#if isCelebrating}
           <span class="overflow-star star-1">✦</span>
           {#if celebrationIntensity > 0.4}
@@ -213,7 +271,6 @@
           {/if}
         {/if}
 
-        <!-- Energy crackle at high intensity -->
         {#if celebrationIntensity > 0.6}
           <div class="energy-arc arc-1"></div>
           {#if celebrationIntensity > 0.85}
@@ -508,17 +565,24 @@
     flex-shrink: 0;
   }
 
-  /* Mini progress wrapper - contains all effects */
+  /* Desktop/Mobile visibility */
+  .desktop-only {
+    display: flex;
+  }
+
+  .mobile-only {
+    display: none;
+  }
+
+  /* Mini progress bar wrapper (desktop) */
   .mini-progress-wrapper {
     position: relative;
     width: 80px;
     height: 10px;
-    /* Extra space for effects */
     margin: 15px 25px 15px 10px;
   }
 
   .mini-progress-wrapper.celebrating {
-    /* Pulsing glow aura */
     filter: drop-shadow(0 0 calc(4px + var(--celebration-intensity, 0) * 12px) var(--glow-color));
     animation: wrapperPulse calc(1.5s - var(--celebration-intensity, 0) * 0.5s) ease-in-out infinite;
   }
@@ -580,13 +644,10 @@
     }
     50% {
       filter: brightness(1.3);
-      box-shadow:
-        0 0 25px currentColor,
-        0 0 40px currentColor;
+      box-shadow: 0 0 25px currentColor, 0 0 40px currentColor;
     }
   }
 
-  /* Shimmer overlay */
   .shimmer-overlay {
     position: absolute;
     top: 0;
@@ -613,16 +674,162 @@
     }
   }
 
-  /* Pulse rings */
+  /* Bar-specific effect positioning (right edge) */
+  .bar-ring {
+    top: 50%;
+    left: auto;
+    right: 0;
+    transform: translate(50%, -50%);
+  }
+
+  .bar-particles {
+    top: 50%;
+    left: auto;
+    right: 0;
+  }
+
+  .bar-orbit {
+    top: 50%;
+    left: auto;
+    right: 0;
+  }
+
+  .bar-star {
+    top: 50%;
+    left: auto;
+  }
+
+  .bar-star.star-1 {
+    right: -14px;
+  }
+
+  .bar-star.star-2 {
+    right: -8px;
+    top: -8px;
+  }
+
+  .bar-star.star-3 {
+    right: -6px;
+    top: auto;
+    bottom: -6px;
+  }
+
+  .bar-arc {
+    top: 50%;
+    left: auto;
+    right: 5px;
+  }
+
+  .bar-arc.arc-2 {
+    right: 15px;
+  }
+
+  /* Star progress wrapper (mobile) */
+  .star-progress-wrapper {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 12px 4px 0;
+  }
+
+  .star-progress-wrapper.celebrating {
+    filter: drop-shadow(0 0 calc(4px + var(--celebration-intensity, 0) * 12px) var(--glow-color));
+    animation: wrapperPulse calc(1.5s - var(--celebration-intensity, 0) * 0.5s) ease-in-out infinite;
+  }
+
+  .star-container {
+    position: relative;
+    width: 24px;
+    height: 24px;
+  }
+
+  .star-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    color: rgba(108, 92, 231, 0.3);
+  }
+
+  .star-fill-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .star-fill {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 4px currentColor);
+    transition: all 0.5s var(--ease-out);
+  }
+
+  .star-container.celebrating .star-fill {
+    animation: starFillPulse calc(0.8s - var(--celebration-intensity, 0) * 0.3s) ease-in-out infinite;
+  }
+
+  @keyframes starFillPulse {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 4px currentColor) brightness(1);
+    }
+    50% {
+      filter: drop-shadow(0 0 12px currentColor) drop-shadow(0 0 20px currentColor) brightness(1.3);
+    }
+  }
+
+  .star-shimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 45%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(255, 255, 255, 0.6) 55%,
+      transparent 100%
+    );
+    animation: starShimmer calc(1.5s - var(--celebration-intensity, 0) * 0.7s) ease-in-out infinite;
+    pointer-events: none;
+    mask: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E");
+    -webkit-mask: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E");
+    mask-size: contain;
+    -webkit-mask-size: contain;
+  }
+
+  @keyframes starShimmer {
+    0% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+  }
+
+  /* Pulse rings - centered for star */
   .pulse-ring {
     position: absolute;
     top: 50%;
-    right: 0;
+    left: 50%;
     width: 20px;
     height: 20px;
     border: 2px solid var(--glow-color);
     border-radius: 50%;
-    transform: translate(50%, -50%);
+    transform: translate(-50%, -50%);
     opacity: 0;
     pointer-events: none;
   }
@@ -651,11 +858,11 @@
     }
   }
 
-  /* Particle burst */
+  /* Particle burst - centered for star */
   .particle-burst {
     position: absolute;
     top: 50%;
-    right: 0;
+    left: 50%;
     width: 0;
     height: 0;
     pointer-events: none;
@@ -685,11 +892,11 @@
     }
   }
 
-  /* Orbiting sparks */
+  /* Orbiting sparks - centered for star */
   .orbit-spark {
     position: absolute;
     top: 50%;
-    right: 0;
+    left: 50%;
     width: 4px;
     height: 4px;
     background: var(--glow-color);
@@ -720,11 +927,10 @@
     }
   }
 
-  /* Multiple overflow stars */
+  /* Multiple overflow stars - positioned around star center */
   .overflow-star {
     position: absolute;
-    top: 50%;
-    font-size: 12px;
+    font-size: 10px;
     color: var(--glow-color);
     text-shadow:
       0 0 8px var(--glow-color),
@@ -733,24 +939,24 @@
   }
 
   .star-1 {
-    right: -14px;
-    transform: translateY(-50%);
+    top: -4px;
+    right: -4px;
     animation: starPulse calc(1s - var(--celebration-intensity, 0) * 0.3s) ease-in-out infinite;
   }
 
   .star-2 {
-    right: -8px;
-    top: -8px;
-    font-size: 8px;
-    animation: starPulse calc(1.2s - var(--celebration-intensity, 0) * 0.4s) ease-in-out infinite;
+    bottom: -2px;
+    left: -4px;
+    font-size: 7px;
+    animation: starPulseAlt calc(1.2s - var(--celebration-intensity, 0) * 0.4s) ease-in-out infinite;
     animation-delay: -0.3s;
   }
 
   .star-3 {
-    right: -6px;
-    top: auto;
-    bottom: -6px;
-    font-size: 10px;
+    top: 50%;
+    right: -8px;
+    font-size: 8px;
+    transform: translateY(-50%);
     animation: starPulse calc(0.9s - var(--celebration-intensity, 0) * 0.3s) ease-in-out infinite;
     animation-delay: -0.6s;
   }
@@ -759,19 +965,14 @@
     0%,
     100% {
       opacity: 0.6;
-      transform: translateY(-50%) scale(1);
+      transform: scale(1);
       filter: brightness(1);
     }
     50% {
       opacity: 1;
-      transform: translateY(-50%) scale(1.4);
+      transform: scale(1.4);
       filter: brightness(1.5);
     }
-  }
-
-  .star-2,
-  .star-3 {
-    transform: none;
   }
 
   @keyframes starPulseAlt {
@@ -796,61 +997,62 @@
     animation-name: starPulseAlt;
   }
 
-  /* Energy arcs */
+  /* Energy arcs - positioned around star */
   .energy-arc {
     position: absolute;
-    top: 50%;
-    right: 5px;
     width: 2px;
-    height: 12px;
+    height: 10px;
     background: var(--glow-color);
     border-radius: 2px;
-    transform-origin: bottom center;
+    transform-origin: center center;
     pointer-events: none;
     filter: blur(0.5px);
     box-shadow: 0 0 4px var(--glow-color);
   }
 
   .arc-1 {
+    top: -6px;
+    left: 50%;
     animation: arcCrackle 0.3s steps(3) infinite;
-    transform: translateY(-50%) rotate(30deg);
+    transform: translateX(-50%) rotate(15deg);
   }
 
   .arc-2 {
-    right: 15px;
+    bottom: -4px;
+    right: 2px;
     height: 8px;
     animation: arcCrackle 0.25s steps(3) infinite;
     animation-delay: -0.1s;
-    transform: translateY(-50%) rotate(-25deg);
+    transform: rotate(-20deg);
   }
 
   @keyframes arcCrackle {
     0% {
       opacity: 0.3;
-      transform: translateY(-50%) rotate(30deg) scaleY(0.7);
+      scaleY: 0.7;
     }
     33% {
       opacity: 1;
-      transform: translateY(-50%) rotate(35deg) scaleY(1.2);
+      scaleY: 1.2;
     }
     66% {
       opacity: 0.5;
-      transform: translateY(-50%) rotate(25deg) scaleY(0.9);
+      scaleY: 0.9;
     }
     100% {
       opacity: 0.3;
-      transform: translateY(-50%) rotate(30deg) scaleY(0.7);
+      scaleY: 0.7;
     }
   }
 
   .action-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.125rem;
+    font-size: 1.5rem;
     opacity: 0.4;
     transition: all 0.3s var(--ease-spring);
     border: 1px solid transparent;
@@ -872,8 +1074,17 @@
   }
 
   @media (max-width: 480px) {
+    /* Toggle visibility */
+    .desktop-only {
+      display: none !important;
+    }
+
+    .mobile-only {
+      display: flex !important;
+    }
+
     .goal-item {
-      padding: 0.5rem 0.75rem;
+      padding: 0.625rem 0.75rem;
       gap: 0.5rem;
     }
 
@@ -891,27 +1102,32 @@
     }
 
     .increment-controls {
-      gap: 0.125rem;
+      gap: 0.25rem;
       flex-shrink: 0;
     }
 
+    /* Smaller buttons */
     .increment-btn {
-      width: 24px;
-      height: 24px;
+      width: 22px;
+      height: 22px;
       font-size: 0.875rem;
       border-radius: var(--radius-md);
     }
 
+    /* Larger numbers relative to buttons */
     .current-value {
-      min-width: auto;
-      font-size: 0.6875rem;
-      padding: 0.125rem 0.25rem;
+      min-width: 3.25rem;
+      font-size: 0.8125rem;
+      padding: 0.25rem 0.375rem;
+      font-weight: 700;
     }
 
+    /* Input field sized for iPhone 16 Pro */
     .value-input {
-      width: 2.5rem;
-      font-size: 0.6875rem;
-      padding: 0.125rem 0.25rem;
+      width: 3.25rem;
+      font-size: 16px !important; /* Prevents iOS zoom */
+      padding: 0.25rem 0.375rem;
+      font-weight: 700;
     }
 
     .goal-name {
@@ -923,43 +1139,48 @@
     }
 
     .action-btn {
-      width: 24px;
-      height: 24px;
-      font-size: 0.75rem;
+      width: 36px;
+      height: 36px;
+      font-size: 1.25rem;
       opacity: 0.5;
     }
 
-    /* Compact progress bar on mobile */
-    .mini-progress-wrapper {
-      width: 40px;
-      height: 6px;
-      margin: 8px 12px 8px 4px;
+    /* Star progress on mobile */
+    .star-progress-wrapper {
+      width: 24px;
+      height: 24px;
+      margin: 2px 8px 2px 0;
     }
 
-    /* Scale down celebration effects for mobile */
+    .star-container {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Scale down celebration effects for star */
     .pulse-ring {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
     }
 
     .overflow-star {
-      font-size: 8px;
+      font-size: 7px;
     }
 
     .star-1 {
-      right: -8px;
+      top: -3px;
+      right: -3px;
     }
 
     .star-2 {
-      right: -4px;
-      top: -5px;
-      font-size: 6px;
+      bottom: -1px;
+      left: -3px;
+      font-size: 5px;
     }
 
     .star-3 {
-      right: -3px;
-      bottom: -4px;
-      font-size: 7px;
+      right: -6px;
+      font-size: 6px;
     }
 
     .orbit-spark {
@@ -968,11 +1189,11 @@
     }
 
     .orbit-1 {
-      --orbit-radius: 10px;
+      --orbit-radius: 12px;
     }
 
     .orbit-2 {
-      --orbit-radius: 14px;
+      --orbit-radius: 16px;
     }
 
     .particle {
@@ -981,13 +1202,17 @@
     }
 
     .energy-arc {
-      height: 8px;
+      height: 7px;
       width: 1px;
+    }
+
+    .arc-1 {
+      top: -4px;
     }
 
     .arc-2 {
       height: 5px;
-      right: 10px;
+      bottom: -3px;
     }
   }
 

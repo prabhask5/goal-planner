@@ -183,13 +183,13 @@
   }
 
   .delete-btn {
-    width: 28px;
-    height: 28px;
+    width: 40px;
+    height: 40px;
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     opacity: 0;
     transition: all 0.3s var(--ease-spring);
     border: 1px solid transparent;
@@ -230,6 +230,9 @@
     }
 
     .delete-btn {
+      width: 36px;
+      height: 36px;
+      font-size: 1.25rem;
       opacity: 0.3;
     }
 

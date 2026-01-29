@@ -738,9 +738,16 @@
     }
 
     .current-project-line {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.25rem;
+      padding: 0.5rem 0.75rem;
+      gap: 0.375rem;
+    }
+
+    .current-label {
+      font-size: 0.6875rem;
+    }
+
+    .current-name {
+      font-size: 0.75rem;
     }
 
     .lists-grid {
